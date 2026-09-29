@@ -1,8 +1,9 @@
 """Database adapter for source identity and exact-revision visibility."""
 
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from sqlalchemy import func, select
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domain.sources import Citation, Locator, RevisionDecision
@@ -39,7 +40,7 @@ class SourceRepository:
         period_note: str | None = None,
         rights_note: str | None = None,
     ) -> SourceRevision:
-        revision = SourceRevision(
+        values = dict(
             source_id=source_id,
             sha256=sha256,
             byte_size=byte_size,
@@ -51,8 +52,26 @@ class SourceRepository:
             period_note=period_note,
             rights_note=rights_note,
         )
-        self.session.add(revision)
-        await self.session.flush()
+        proposed_id = uuid4()
+        statement = (
+            insert(SourceRevision)
+            .values(id=proposed_id, **values)
+            .on_conflict_do_nothing(constraint="uq_source_revisions_source_hash")
+            .returning(SourceRevision.id)
+        )
+        revision_id = await self.session.scalar(statement)
+        if revision_id is None:
+            revision_id = await self.session.scalar(
+                select(SourceRevision.id).where(
+                    SourceRevision.source_id == source_id,
+                    SourceRevision.sha256 == sha256,
+                )
+            )
+        if revision_id is None:
+            raise RuntimeError("revision retry could not resolve existing record")
+        revision = await self.session.get(SourceRevision, revision_id)
+        if revision is None:
+            raise RuntimeError("revision insert could not be read back")
         return revision
 
     async def add_tag(self, revision_id: UUID, kind: str, value: str) -> SourceTag:
@@ -96,6 +115,14 @@ class SourceRepository:
         reason: str,
         evidence_url: str,
     ) -> SourceDecision:
+        # Serialize decisions for one revision so event order matches commit order.
+        locked_id = await self.session.scalar(
+            select(SourceRevision.id)
+            .where(SourceRevision.id == decision.revision_id)
+            .with_for_update()
+        )
+        if locked_id is None:
+            raise ValueError("unknown revision")
         event = SourceDecision(
             revision_id=decision.revision_id,
             kind=decision.kind.value,

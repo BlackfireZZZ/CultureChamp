@@ -30,6 +30,16 @@ def test_repository_round_trip_and_revocation() -> None:
                 title="A candidate source",
                 language="ru",
             )
+            retry = await repository.add_revision(
+                source.id,
+                sha256="a" * 64,
+                byte_size=123,
+                media_type="application/pdf",
+                storage_key=f"test/{source.id}",
+                title="A changed title on retry must not replace the snapshot",
+            )
+            assert retry.id == revision.id
+            assert retry.title == "A candidate source"
             await repository.add_tag(revision.id, "region", "Primorye")
             segment = await repository.add_segment(
                 revision.id,

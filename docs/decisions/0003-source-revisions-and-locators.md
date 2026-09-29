@@ -31,8 +31,9 @@ Comparable design inputs:
 
 1. `source_id` identifies a bibliographic/source record. `revision_id` identifies
    one immutable original byte sequence and its review snapshot. A retry with the
-   same `source_id` and SHA-256 refers to that revision; different bytes create a
-   new revision. Store originals privately under a server-generated key.
+   same `source_id` and SHA-256 resolves to that revision without replacing its
+   captured metadata; different bytes create a new revision. Store originals
+   privately under a server-generated key.
 2. Revision records include source attribution and contextual metadata as captured
    for that revision. Corrections require a new revision or an audited overlay; no
    routine update path rewrites the revision bytes, hash or extracted segment text.
@@ -44,7 +45,8 @@ Comparable design inputs:
    sheet/table and one-based row/column range, but no table extraction is claimed
    until a real fixture passes S04/C06.
 5. Approval/revocation decisions are append-only events keyed to `revision_id`.
-   The latest event is authoritative. Its rights scopes distinguish user text
+   Decisions for one revision serialize on its revision row, and the latest event
+   is authoritative. Its rights scopes distinguish user text
    visibility, original-file access and external-provider transfer. Unknown rights
    default to false. A revocation event immediately fails closed at user retrieval
    and display, regardless of stale indexes. Reviewer ID, time, reason and evidence
