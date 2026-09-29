@@ -1,0 +1,62 @@
+from io import BytesIO
+from pathlib import Path
+from uuid import uuid4
+
+import pytest
+
+from app.infrastructure.ingestion.storage import MAX_PDF_BYTES, IntakeError, PrivatePdfStore
+
+FIXTURES = Path(__file__).parents[2] / "data" / "retrieval-fixtures" / "raw"
+
+
+def test_private_store_retains_exact_fixture_and_deduplicates_retry(tmp_path: Path) -> None:
+    store = PrivatePdfStore(tmp_path / "private", public_root=tmp_path / "public")
+    source_id = uuid4()
+    fixture = next(FIXTURES.glob("51-88-1-SM.pdf"))
+    with fixture.open("rb") as stream:
+        first = store.store(
+            source_id, stream, filename="article.pdf", claimed_media_type="application/pdf"
+        )
+    with fixture.open("rb") as stream:
+        second = store.store(
+            source_id, stream, filename="article.pdf", claimed_media_type="application/pdf"
+        )
+    assert not first.duplicate and second.duplicate
+    assert first.storage_key == second.storage_key
+    assert first.sha256 == second.sha256
+    with store.open_original(first.storage_key) as stored:
+        assert stored.read() == fixture.read_bytes()
+    assert (tmp_path / "private").stat().st_mode & 0o777 == 0o700
+
+
+@pytest.mark.parametrize(
+    ("data", "filename", "media_type"),
+    [
+        (b"not a PDF", "fake.pdf", "application/pdf"),
+        (b"%PDF-1.4\nno trailer", "broken.pdf", "application/pdf"),
+        (b"%PDF-1.4\n%%EOF", "document.txt", "application/pdf"),
+        (b"%PDF-1.4\n%%EOF", "document.pdf", "text/plain"),
+        (b"%PDF-1.4\n%%EOF", "../document.pdf", "application/pdf"),
+    ],
+)
+def test_store_rejects_spoofed_or_malformed_intake(
+    tmp_path: Path, data: bytes, filename: str, media_type: str
+) -> None:
+    store = PrivatePdfStore(tmp_path / "private")
+    with pytest.raises(IntakeError):
+        store.store(uuid4(), BytesIO(data), filename=filename, claimed_media_type=media_type)
+    assert not list((tmp_path / "private").rglob("*.pdf"))
+
+
+def test_store_rejects_oversized_stream(tmp_path: Path) -> None:
+    store = PrivatePdfStore(tmp_path / "private")
+    payload = b"%PDF-1.4\n" + b"x" * MAX_PDF_BYTES + b"%%EOF"
+    with pytest.raises(IntakeError, match="size"):
+        store.store(
+            uuid4(), BytesIO(payload), filename="large.pdf", claimed_media_type="application/pdf"
+        )
+
+
+def test_store_rejects_public_root(tmp_path: Path) -> None:
+    with pytest.raises(IntakeError):
+        PrivatePdfStore(tmp_path / "public" / "uploads", public_root=tmp_path / "public")
