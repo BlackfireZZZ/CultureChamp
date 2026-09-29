@@ -12,6 +12,8 @@ dependencies = [
   "asyncpg==0.31.0",
   "fastapi==0.141.1",
   "geoalchemy2==0.20.0",
+  "httpx>=0.28.1,<0.29",
+  "pypdf==6.19.0",
   "pydantic-settings==2.15.0",
   "sqlalchemy==2.0.54",
   "uvicorn[standard]==0.53.0",
@@ -19,7 +21,6 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
-  "httpx>=0.28.1,<0.29",
   "mypy>=1.18,<2",
   "pytest>=9.0,<10",
   "ruff>=0.14,<0.15",
