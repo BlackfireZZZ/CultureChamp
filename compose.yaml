@@ -1,0 +1,68 @@
+name: ${COMPOSE_PROJECT_NAME:-culturechamp}
+
+services:
+  db:
+    image: postgis/postgis:17-3.5-alpine@sha256:894f570c0cf0664ed5576a8fd5d5bfb8fb1b19d592885b686c3a88c8bd90c41f
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-culturechamp}
+      POSTGRES_USER: ${POSTGRES_USER:-culturechamp}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-culturechamp_local}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/postgis-init:/docker-entrypoint-initdb.d:ro
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  migrate:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    command: ["/workspace/.venv/bin/alembic", "-c", "alembic.ini", "upgrade", "head"]
+    working_dir: /workspace/backend
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://culturechamp:culturechamp_local@db:5432/culturechamp}
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    environment:
+      APP_ENV: ${APP_ENV:-development}
+      DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://culturechamp:culturechamp_local@db:5432/culturechamp}
+      BACKEND_CORS_ORIGINS: '${BACKEND_CORS_ORIGINS:-["http://localhost:5173","http://localhost:8080"]}'
+    ports:
+      - "127.0.0.1:${BACKEND_PORT:-8000}:8000"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health/ready')"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  frontend:
+    build:
+      context: ./frontend
+    ports:
+      - "127.0.0.1:${FRONTEND_PORT:-8080}:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  postgres_data:

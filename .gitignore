@@ -205,6 +205,12 @@ tempCodeRunnerFile.py
 
 # Ruff stuff:
 .ruff_cache/
+node_modules/
+dist/
+.vite/
+*.tsbuildinfo
+frontend/test-results/
+frontend/playwright-report/
 
 # PyPI configuration file
 .pypirc

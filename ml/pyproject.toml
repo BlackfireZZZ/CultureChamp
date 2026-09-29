@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=80"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "culturechamp-ml"
+version = "0.1.0"
+description = "Offline evaluation scaffold for the next CultureChamp concept"
+requires-python = ">=3.13"
+dependencies = ["pydantic>=2.12,<3"]
+
+[project.optional-dependencies]
+dev = ["mypy>=1.18,<2", "pytest>=9,<10", "ruff>=0.14,<0.15"]
+
+[project.scripts]
+culturechamp-ml = "culturechamp_ml.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py313"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+
+[tool.mypy]
+python_version = "3.13"
+strict = true
