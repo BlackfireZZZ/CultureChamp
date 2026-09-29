@@ -4,6 +4,7 @@ from uuid import uuid4
 
 import pytest
 
+from app.infrastructure.ingestion.pdf_text import ExtractionError, extract_pdf_pages
 from app.infrastructure.ingestion.storage import MAX_PDF_BYTES, IntakeError, PrivatePdfStore
 
 FIXTURES = Path(__file__).parents[2] / "data" / "retrieval-fixtures" / "raw"
@@ -60,3 +61,26 @@ def test_store_rejects_oversized_stream(tmp_path: Path) -> None:
 def test_store_rejects_public_root(tmp_path: Path) -> None:
     with pytest.raises(IntakeError):
         PrivatePdfStore(tmp_path / "public" / "uploads", public_root=tmp_path / "public")
+
+
+@pytest.mark.parametrize("name,pages", [("51-88-1-SM", 15), ("perspektivy", 10), ("problemy", 7)])
+def test_pdf_extraction_preserves_nonempty_physical_pages(name: str, pages: int) -> None:
+    fixture = next(FIXTURES.glob(f"{name}*.pdf"))
+    extracted = extract_pdf_pages(fixture.read_bytes())
+    assert len(extracted) == pages
+    assert [page.ordinal for page in extracted] == list(range(pages))
+    assert [page.locator.page for page in extracted] == list(range(1, pages + 1))
+    assert all(page.text for page in extracted)
+
+
+def test_two_column_fixture_stays_in_column_order_on_sampled_page() -> None:
+    fixture = next(FIXTURES.glob("problemy*.pdf"))
+    page_two = extract_pdf_pages(fixture.read_bytes())[1].text
+    assert page_two.index("Для примера") < page_two.index("Неоднократно")
+    assert page_two.index("Неоднократно") < page_two.index("хозяйства, т. е.")
+
+
+@pytest.mark.parametrize("data", [b"not a PDF", b"%PDF-1.4\n%%EOF", b""])
+def test_malformed_pdf_fails_without_partial_pages(data: bytes) -> None:
+    with pytest.raises(ExtractionError):
+        extract_pdf_pages(data)

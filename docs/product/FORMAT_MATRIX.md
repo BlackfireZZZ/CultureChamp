@@ -13,7 +13,7 @@ All pages return text. This does not establish complete transcription fidelity.
 |---|---|---|---|
 | PDF-01 (15 pages; 161,864 bytes) | All 15 pages have text; first page exposes title/author/DOI and print page 175. Prose and headings are legible. | Physical PDF page is available and the article starts at print page 175. Headers, footers, line breaks and hyphenation remain in text. Heading recognition is heuristic; verify sampled citations against render. | Text-layer PDF is a candidate for page-level ingestion; outside first cultural slice. |
 | PDF-02 (10 pages; 502,017 bytes) | All 10 pages have text; first page exposes title, authors and DOI. Body prose is legible; references occupy later pages. | Physical page is stable; article starts at print page 217. Footnotes, line wrapping and bibliography can be confused with body text. Heading locators need manual comparison before approval. | Text-layer PDF is a candidate for page-level ingestion and human review. |
-| PDF-03 (7 pages; 147,069 bytes) | All 7 pages have text; first page has parallel Russian/English title and abstract. Body pages are in two columns. | Physical page is stable; article starts at print page 103. `-layout` output places left and right column text on the same lines; simple line-order ingestion mixes paragraphs. Language/column segmentation must be verified before citing a passage. | Page text can be retained for admin inspection; **do not** claim ordered section extraction or user citation fidelity yet. |
+| PDF-03 (7 pages; 147,069 bytes) | All 7 pages have text; first page has parallel Russian/English title and abstract. Body pages are in two columns. | Physical page is stable; article starts at print page 103. Poppler `-layout` places left and right column text on the same lines. In the sampled page 2, `pypdf` 6.19.0 content-stream extraction yields left-column passages before a right-column passage. Full-document reading order and language segmentation remain unverified. | Page-level candidate extraction is possible; **do not** claim heading or user citation fidelity yet. |
 
 The raw files remain candidate test material. Rights for processing, display and
 model transmission are unresolved in the [source policy](SOURCE_POLICY.md).
@@ -21,7 +21,7 @@ model transmission are unresolved in the [source policy](SOURCE_POLICY.md).
 | Format | Supplied fixture | Tested fidelity/locator | MVP stance |
 |---|---|---|---|
 | Text-layer PDF, single-column prose | PDF-01 and PDF-02 | Nonempty page text; page index survives; heading and footnote semantics incomplete | Implement only with explicit page locator and review flag. |
-| Text-layer PDF, parallel/multicolumn | PDF-03 | Text exists, but reading order fails simple layout extraction | Hold from user publication until column-aware extraction is checked. |
+| Text-layer PDF, parallel/multicolumn | PDF-03 | Text exists; Poppler layout fails page 2 reading order, while sampled `pypdf` content order is better | Hold from user publication until full reading-order review. |
 | Scanned/image-only PDF | None | No OCR or page-text test | Unsupported; reject or hold for separate OCR decision. |
 | TXT/Markdown/DOCX/HTML | None | No fixture or fidelity test | Unsupported in this slice. |
 | CSV/XLSX or embedded PDF table | None verified | No row/column, header or cell-locator test | **Table coverage unverified.** S04 acceptance remains open until a rights-cleared table fixture is supplied and inspected. |
