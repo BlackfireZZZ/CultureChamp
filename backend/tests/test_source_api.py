@@ -291,6 +291,62 @@ def test_admin_upload_review_approval_user_visibility_and_revocation(tmp_path: P
             assert revision_id not in [
                 item["revision_id"] for item in admin.get(f"/api/v1/admin/sources?{query}").json()
             ]
+        revised_description = f"{description}; reviewed after extraction"
+        metadata_change = {
+            "expected_version": 0,
+            "reason": "Corrected the catalogue after comparing the original and extracted text",
+            "description": revised_description,
+            "tags": [
+                {"kind": "region", "value": "Primorye"},
+                {"kind": "topic", "value": "Fixture"},
+            ],
+        }
+        assert admin.patch(
+            f"/api/v1/admin/revisions/{revision_id}/metadata",
+            json={**metadata_change, "tags": [metadata_change["tags"][0]] * 2},
+            headers=admin_headers,
+        ).status_code == 422
+        assert admin.patch(
+            f"/api/v1/admin/revisions/{revision_id}/metadata",
+            json=metadata_change,
+        ).status_code == 403
+        assert user.patch(
+            f"/api/v1/admin/revisions/{revision_id}/metadata",
+            json=metadata_change, headers=user_headers,
+        ).status_code == 403
+        changed = admin.patch(
+            f"/api/v1/admin/revisions/{revision_id}/metadata",
+            json=metadata_change, headers=admin_headers,
+        )
+        assert changed.status_code == 200, changed.text
+        assert changed.json()["metadata_version"] == 1
+        assert changed.json()["description"] == revised_description
+        assert changed.json()["tags"] == metadata_change["tags"]
+        assert changed.json()["sha256"] == review.json()["sha256"]
+        assert changed.json()["segments"] == review.json()["segments"]
+        history = admin.get(f"/api/v1/admin/revisions/{revision_id}/metadata-history")
+        assert history.status_code == 200
+        assert [event["version"] for event in history.json()] == [0, 1]
+        assert [event["description"] for event in history.json()] == [
+            description, revised_description,
+        ]
+        assert history.json()[0]["tags"] == [{"kind": "region", "value": "Primorye"}]
+        assert history.json()[1]["tags"] == metadata_change["tags"]
+        assert send_file(
+            admin, admin_headers, payload, source_id=source_id,
+            description="Duplicate retry cannot replace reviewed metadata",
+            tags="region:Other",
+        ).json()["revision_id"] == revision_id
+        assert admin.get(
+            f"/api/v1/admin/revisions/{revision_id}"
+        ).json()["description"] == revised_description
+        assert user.get(
+            f"/api/v1/admin/revisions/{revision_id}/metadata-history"
+        ).status_code == 403
+        assert admin.patch(
+            f"/api/v1/admin/revisions/{revision_id}/metadata",
+            json=metadata_change, headers=admin_headers,
+        ).status_code == 409
         assert user.get("/api/v1/materials").json() == []
         approval = {
             "reason": "Reviewer confirmed this fixture was created for the integration test",
@@ -326,12 +382,16 @@ def test_admin_upload_review_approval_user_visibility_and_revocation(tmp_path: P
         )
         assert approved.status_code == 200, approved.text
         assert approved.json()["decision"] == "approve"
+        assert admin.patch(
+            f"/api/v1/admin/revisions/{revision_id}/metadata",
+            json={**metadata_change, "expected_version": 1}, headers=admin_headers,
+        ).status_code == 409
         visible_list = user.get("/api/v1/materials")
         assert visible_list.headers["cache-control"] == "no-store"
         assert [item["revision_id"] for item in visible_list.json()] == [revision_id]
         assert visible_list.json()[0]["region"] == "Primorye"
-        assert visible_list.json()[0]["description"] == description
-        assert visible_list.json()[0]["tags"] == [{"kind": "region", "value": "Primorye"}]
+        assert visible_list.json()[0]["description"] == revised_description
+        assert visible_list.json()[0]["tags"] == metadata_change["tags"]
         assert [item["revision_id"] for item in user.get(
             "/api/v1/materials?region=Primorye&q=Owned"
         ).json()] == [revision_id]
@@ -366,6 +426,9 @@ def test_admin_upload_review_approval_user_visibility_and_revocation(tmp_path: P
         assert user.get("/api/v1/materials?region=Primorye").json() == []
         assert user.get(f"/api/v1/materials/{revision_id}").status_code == 404
         assert admin.get(f"/api/v1/admin/revisions/{revision_id}").json()["decision"] == "revoke"
+        assert [event["version"] for event in admin.get(
+            f"/api/v1/admin/revisions/{revision_id}/metadata-history"
+        ).json()] == [0, 1]
         assert any(
             item["revision_id"] == revision_id
             for item in admin.get("/api/v1/admin/sources?decision=revoke&limit=1").json()

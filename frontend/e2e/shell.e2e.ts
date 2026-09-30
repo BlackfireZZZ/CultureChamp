@@ -93,6 +93,7 @@ test("admin can filter inventory with keyboard without exposing it to user navig
     rights_usage_note: null, tags: [], segments: [], sha256: "synthetic-hash", error_code: null,
     original_available: false,
   } }))
+  await page.route("**/api/v1/admin/revisions/00000000-0000-4000-8000-000000000004/metadata-history", (route) => route.fulfill({ json: [] }))
   await page.goto("/")
   await page.getByRole("button", { name: "Админка" }).click()
   const candidate = page.getByRole("button", { name: /Кандидат/ })

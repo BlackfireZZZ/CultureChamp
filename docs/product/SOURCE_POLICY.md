@@ -44,9 +44,12 @@ reviewer records all gates below. Unknown evidence means **hold**, not approval.
 
 An approval applies to one `revision_id`, its bytes and reviewed extraction. A
 replacement PDF, changed text, changed rights scope, or changed sensitivity
-assessment needs a new review decision. Metadata corrections may be recorded with
-an audit event, but cannot rewrite the cited bytes or locator meaning. Revocation
-must update eligibility immediately even if a search index or cache is stale.
+assessment needs a new review decision. Preapproval metadata corrections are
+recorded with an audit event and cannot rewrite the cited bytes or locator
+meaning. The reviewer compares the corrected description and tags with the
+original and extracted text. Postapproval correction needs a new review
+workflow; it is not an in-place edit. Revocation must update eligibility
+immediately even if a search index or cache is stale.
 Downstream retrieval and source display must check the authoritative revision
 decision at read time. Reindexing or retries cannot reinstate a revoked revision.
 

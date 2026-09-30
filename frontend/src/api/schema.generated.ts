@@ -55,6 +55,40 @@ export interface paths {
         readonly patch?: never;
         readonly trace?: never;
     };
+    readonly "/api/v1/admin/revisions/{revision_id}/metadata": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly get?: never;
+        readonly put?: never;
+        readonly post?: never;
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        /** Amend Revision Metadata */
+        readonly patch: operations["amend_revision_metadata_api_v1_admin_revisions__revision_id__metadata_patch"];
+        readonly trace?: never;
+    };
+    readonly "/api/v1/admin/revisions/{revision_id}/metadata-history": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        /** Revision Metadata History */
+        readonly get: operations["revision_metadata_history_api_v1_admin_revisions__revision_id__metadata_history_get"];
+        readonly put?: never;
+        readonly post?: never;
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
+    };
     readonly "/api/v1/admin/revisions/{revision_id}/original": {
         readonly parameters: {
             readonly query?: never;
@@ -337,6 +371,8 @@ export interface components {
             readonly error_code: string | null;
             /** Media Type */
             readonly media_type: string;
+            /** Metadata Version */
+            readonly metadata_version: number;
             /** Origin Url */
             readonly origin_url: string;
             /** Original Available */
@@ -646,6 +682,35 @@ export interface components {
             /** Title */
             readonly title: string;
         };
+        /** MetadataEventView */
+        readonly MetadataEventView: {
+            /**
+             * Changed At
+             * Format: date-time
+             */
+            readonly changed_at: string;
+            /** Description */
+            readonly description: string | null;
+            /** Reason */
+            readonly reason: string;
+            /** Reviewer Id */
+            readonly reviewer_id: string;
+            /** Tags */
+            readonly tags: readonly components["schemas"]["TagView"][];
+            /** Version */
+            readonly version: number;
+        };
+        /** MetadataInput */
+        readonly MetadataInput: {
+            /** Description */
+            readonly description: string | null;
+            /** Expected Version */
+            readonly expected_version: number;
+            /** Reason */
+            readonly reason: string;
+            /** Tags */
+            readonly tags: readonly components["schemas"]["TagView"][];
+        };
         /** RevokeInput */
         readonly RevokeInput: {
             /** Reason */
@@ -792,6 +857,72 @@ export interface operations {
                 };
                 content: {
                     readonly "application/json": components["schemas"]["AdminRevisionView"];
+                };
+            };
+            /** @description Validation Error */
+            readonly 422: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    readonly amend_revision_metadata_api_v1_admin_revisions__revision_id__metadata_patch: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly revision_id: string;
+            };
+            readonly cookie?: never;
+        };
+        readonly requestBody: {
+            readonly content: {
+                readonly "application/json": components["schemas"]["MetadataInput"];
+            };
+        };
+        readonly responses: {
+            /** @description Successful Response */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["AdminRevisionView"];
+                };
+            };
+            /** @description Validation Error */
+            readonly 422: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    readonly revision_metadata_history_api_v1_admin_revisions__revision_id__metadata_history_get: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly revision_id: string;
+            };
+            readonly cookie?: never;
+        };
+        readonly requestBody?: never;
+        readonly responses: {
+            /** @description Successful Response */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": readonly components["schemas"]["MetadataEventView"][];
                 };
             };
             /** @description Validation Error */

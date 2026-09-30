@@ -3,6 +3,8 @@ import type { components, operations } from "./schema.generated"
 
 export type AdminSource = components["schemas"]["AdminSourceView"]
 export type AdminRevision = components["schemas"]["AdminRevisionView"]
+export type MetadataInput = components["schemas"]["MetadataInput"]
+export type MetadataEvent = components["schemas"]["MetadataEventView"]
 export type AdminFilters = NonNullable<operations["admin_sources_api_v1_admin_sources_get"]["parameters"]["query"]>
 
 async function readJson<T>(response: Response): Promise<T> {
@@ -29,6 +31,19 @@ export async function getAdminRevision(revisionId: string, signal?: AbortSignal)
   const response = await fetch(`/api/v1/admin/revisions/${encodeURIComponent(revisionId)}`, { credentials: "same-origin", signal })
   if (!response.ok) throw new ApiError(response.status)
   return (await response.json()) as AdminRevision
+}
+
+export async function getAdminMetadataHistory(revisionId: string, signal?: AbortSignal): Promise<readonly MetadataEvent[]> {
+  const response = await fetch(`/api/v1/admin/revisions/${encodeURIComponent(revisionId)}/metadata-history`, { credentials: "same-origin", signal })
+  return readJson(response)
+}
+
+export async function amendAdminMetadata(revisionId: string, data: MetadataInput, csrfToken: string): Promise<AdminRevision> {
+  return readJson(await fetch(`/api/v1/admin/revisions/${encodeURIComponent(revisionId)}/metadata`, {
+    method: "PATCH", credentials: "same-origin",
+    headers: { "content-type": "application/json", "x-csrf-token": csrfToken },
+    body: JSON.stringify(data),
+  }))
 }
 
 export async function uploadAdminSource(form: FormData, csrfToken: string): Promise<components["schemas"]["IntakeView"]> {

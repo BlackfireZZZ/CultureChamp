@@ -73,6 +73,10 @@
             "title": "Media Type",
             "type": "string"
           },
+          "metadata_version": {
+            "title": "Metadata Version",
+            "type": "integer"
+          },
           "origin_url": {
             "title": "Origin Url",
             "type": "string"
@@ -176,7 +180,8 @@
           "status",
           "error_code",
           "decision",
-          "sha256"
+          "sha256",
+          "metadata_version"
         ],
         "title": "AdminRevisionView",
         "type": "object"
@@ -1038,6 +1043,98 @@
         "title": "MaterialView",
         "type": "object"
       },
+      "MetadataEventView": {
+        "properties": {
+          "changed_at": {
+            "format": "date-time",
+            "title": "Changed At",
+            "type": "string"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "reviewer_id": {
+            "title": "Reviewer Id",
+            "type": "string"
+          },
+          "tags": {
+            "items": {
+              "$ref": "#/components/schemas/TagView"
+            },
+            "title": "Tags",
+            "type": "array"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "version",
+          "reviewer_id",
+          "reason",
+          "description",
+          "tags",
+          "changed_at"
+        ],
+        "title": "MetadataEventView",
+        "type": "object"
+      },
+      "MetadataInput": {
+        "properties": {
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "expected_version": {
+            "minimum": 0.0,
+            "title": "Expected Version",
+            "type": "integer"
+          },
+          "reason": {
+            "maxLength": 2000,
+            "minLength": 10,
+            "title": "Reason",
+            "type": "string"
+          },
+          "tags": {
+            "items": {
+              "$ref": "#/components/schemas/TagView"
+            },
+            "maxItems": 20,
+            "title": "Tags",
+            "type": "array"
+          }
+        },
+        "required": [
+          "expected_version",
+          "reason",
+          "description",
+          "tags"
+        ],
+        "title": "MetadataInput",
+        "type": "object"
+      },
       "RevokeInput": {
         "properties": {
           "reason": {
@@ -1303,6 +1400,106 @@
           }
         },
         "summary": "Approve Revision",
+        "tags": [
+          "admin-sources"
+        ]
+      }
+    },
+    "/api/v1/admin/revisions/{revision_id}/metadata": {
+      "patch": {
+        "operationId": "amend_revision_metadata_api_v1_admin_revisions__revision_id__metadata_patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "revision_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Revision Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MetadataInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminRevisionView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Amend Revision Metadata",
+        "tags": [
+          "admin-sources"
+        ]
+      }
+    },
+    "/api/v1/admin/revisions/{revision_id}/metadata-history": {
+      "get": {
+        "operationId": "revision_metadata_history_api_v1_admin_revisions__revision_id__metadata_history_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "revision_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Revision Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/MetadataEventView"
+                  },
+                  "title": "Response Revision Metadata History Api V1 Admin Revisions  Revision Id  Metadata History Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Revision Metadata History",
         "tags": [
           "admin-sources"
         ]

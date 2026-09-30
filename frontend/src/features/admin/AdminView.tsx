@@ -2,8 +2,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useState } from "react"
 import type { FormEvent } from "react"
 
-import { approveAdminRevision, getAdminRevision, getAdminSources, retryAdminRevision, revokeAdminRevision, uploadAdminSource } from "../../api/admin"
-import type { AdminFilters } from "../../api/admin"
+import { amendAdminMetadata, approveAdminRevision, getAdminMetadataHistory, getAdminRevision, getAdminSources, retryAdminRevision, revokeAdminRevision, uploadAdminSource } from "../../api/admin"
+import type { AdminFilters, MetadataInput } from "../../api/admin"
 
 function textField(form: FormData, name: string): string {
   const value = form.get(name)
@@ -38,11 +38,13 @@ export function AdminView({ csrfToken }: { csrfToken: string }) {
   const filters: AdminFilters = { status: status || undefined, decision: decision || undefined, q: query || undefined, media_type: mediaType || undefined, tag_kind: tagKind || undefined, tag_value: tagValue || undefined, limit: 100 }
   const sources = useQuery({ queryKey: ["admin", "sources", status, decision, query, mediaType, tagKind, tagValue], queryFn: ({ signal }) => getAdminSources(filters, signal), retry: false })
   const revision = useQuery({ queryKey: ["admin", "revision", revisionId], queryFn: ({ signal }) => getAdminRevision(revisionId!, signal), enabled: revisionId !== null, retry: false })
+  const metadataHistory = useQuery({ queryKey: ["admin", "metadata-history", revisionId], queryFn: ({ signal }) => getAdminMetadataHistory(revisionId!, signal), enabled: revisionId !== null, retry: false })
   const refresh = async () => client.invalidateQueries({ queryKey: ["admin"] })
   const upload = useMutation({ mutationFn: (form: FormData) => uploadAdminSource(form, csrfToken), onSuccess: async (value) => { setRevisionId(value.revision_id); await refresh() } })
   const approve = useMutation({ mutationFn: ({ id, data }: { id: string; data: { reason: string; evidence_url: string; user_text: boolean; original_file: boolean; provider_transfer: boolean; sensitivity_cleared: boolean } }) => approveAdminRevision(id, data, csrfToken), onSuccess: refresh })
   const revoke = useMutation({ mutationFn: ({ id, reason }: { id: string; reason: string }) => revokeAdminRevision(id, reason, csrfToken), onSuccess: refresh })
   const retry = useMutation({ mutationFn: (id: string) => retryAdminRevision(id, csrfToken), onSuccess: refresh })
+  const metadata = useMutation({ mutationFn: ({ id, data }: { id: string; data: MetadataInput }) => amendAdminMetadata(id, data, csrfToken), onSuccess: refresh })
 
   function submitUpload(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -69,6 +71,22 @@ export function AdminView({ csrfToken }: { csrfToken: string }) {
     if (!revisionId) return
     const form = new FormData(event.currentTarget)
     revoke.mutate({ id: revisionId, reason: textField(form, "reason") })
+  }
+
+  function submitMetadata(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (!revisionId || !revision.data) return
+    const form = new FormData(event.currentTarget)
+    const tags = textField(form, "tag_entries").split(/\r?\n/).map((item) => item.trim()).filter(Boolean).map((item) => {
+      const separator = item.indexOf(":")
+      return { kind: item.slice(0, separator), value: item.slice(separator + 1).trim() }
+    })
+    metadata.mutate({ id: revisionId, data: {
+      expected_version: revision.data.metadata_version,
+      reason: textField(form, "reason"),
+      description: textField(form, "description").trim() || null,
+      tags,
+    } })
   }
 
   function submitFilters(event: FormEvent<HTMLFormElement>) {
@@ -127,6 +145,8 @@ export function AdminView({ csrfToken }: { csrfToken: string }) {
         {revisionId && revision.isPending && <p role="status">Загружаем ревизию…</p>}
         {revisionId && revision.isError && <div role="alert"><p>Не удалось загрузить ревизию.</p><button type="button" onClick={() => void revision.refetch()}>Повторить</button></div>}
         {revisionId && revision.isSuccess && <><h2>{revision.data.title}</h2><p><a href={`/api/v1/admin/revisions/${encodeURIComponent(revisionId)}/original`} target="_blank" rel="noopener noreferrer">Открыть оригинал для проверки</a></p><dl className="material-meta"><dt>Ревизия</dt><dd>{revision.data.revision_id}</dd><dt>Источник</dt><dd>{revision.data.source_id}</dd><dt>Происхождение</dt><dd><OriginReference value={revision.data.origin_url} /></dd><dt>Автор</dt><dd>{revision.data.creator || "Не указан"}</dd><dt>Формат</dt><dd>{revision.data.media_type}</dd><dt>Описание</dt><dd>{revision.data.description || "Не добавлено"}</dd><dt>Обработка</dt><dd>{revision.data.status}</dd><dt>Ошибка</dt><dd>{revision.data.error_code || "Нет"}</dd><dt>Решение</dt><dd>{revision.data.decision || "Нет"}</dd><dt>Права</dt><dd>{revision.data.rights_usage_note || "Не подтверждены"}</dd><dt>Метки</dt><dd>{revision.data.tags.length ? revision.data.tags.map((tag) => `${tag.kind}: ${tag.value}`).join(" · ") : "Не указаны"}</dd><dt>SHA-256</dt><dd>{revision.data.sha256}</dd></dl><h3>Фрагменты ({revision.data.segments.length})</h3><ol className="segment-list">{revision.data.segments.map((segment) => <li key={segment.segment_id}><strong>{segment.locator.kind === "table" ? `Таблица ${segment.locator.sheet || segment.locator.table || ""}, строка ${segment.locator.row_start}, столбец ${segment.locator.column_start}` : `Страница ${segment.locator.page}`}</strong><p>{segment.text}</p></li>)}</ol>
+          {revision.data.status === "review_pending" && !revision.data.decision && <form key={`${revisionId}-${revision.data.metadata_version}`} className="admin-form" onSubmit={submitMetadata} aria-label="Правка метаданных"><h3>Уточнить описание и метки</h3><p>Сверьте их с оригиналом и извлечёнными фрагментами до одобрения. Каждая правка сохраняется в истории ревизии.</p><label>Краткое описание<textarea name="description" rows={3} maxLength={500} defaultValue={revision.data.description || ""} /></label><label>Метки, по одной в строке<textarea name="tag_entries" rows={4} maxLength={2200} defaultValue={revision.data.tags.map((tag) => `${tag.kind}:${tag.value}`).join("\n")} /></label><label>Причина изменения<textarea name="reason" required minLength={10} maxLength={2000} /></label><button type="submit" disabled={metadata.isPending}>Сохранить описание и метки</button>{metadata.isError && <div role="alert"><p>Правка не сохранена. Проверьте поля или обновите ревизию, если её уже изменили.</p><button type="button" onClick={() => { metadata.reset(); void revision.refetch(); void metadataHistory.refetch() }}>Обновить ревизию</button></div>}</form>}
+          <details className="metadata-history"><summary>История метаданных</summary>{metadataHistory.isPending && <p role="status">Загружаем историю…</p>}{metadataHistory.isError && <p role="alert">Не удалось загрузить историю.</p>}{metadataHistory.isSuccess && <ol>{metadataHistory.data.map((event) => <li key={event.version}><strong>Версия {event.version}</strong> · {event.reason} · {event.reviewer_id}<p>{event.description || "Без описания"}</p><p>{event.tags.map((tag) => `${tag.kind}: ${tag.value}`).join(" · ") || "Без меток"}</p></li>)}</ol>}</details>
           {revision.data.status === "failed" && <div className="admin-form"><button type="button" onClick={() => retry.mutate(revisionId)} disabled={retry.isPending}>Повторить обработку</button>{retry.isError && <p role="alert">Повтор обработки не запущен.</p>}</div>}
           {revision.data.status === "review_pending" && !revision.data.decision && <form className="admin-form" onSubmit={submitApproval} aria-label="Одобрение ревизии"><h3>Решение по точной ревизии</h3><p>Подтвердите права на каждый выбранный способ использования и проверку чувствительности. Ссылка должна вести на документальное основание решения.</p><label>Основание и ограничения<textarea name="reason" required minLength={10} /></label><label>HTTPS-ссылка на доказательство прав<input name="evidence_url" type="url" pattern="https://.*" required /></label><label><input name="user_text" type="checkbox" required /> Показ текстовых фрагментов пользователям разрешён</label><label><input name="sensitivity_cleared" type="checkbox" required /> Чувствительность материала проверена</label><label><input name="original_file" type="checkbox" /> Показ оригинального файла разрешён</label><label><input name="provider_transfer" type="checkbox" /> Передача внешнему провайдеру разрешена</label><button type="submit" disabled={approve.isPending}>Одобрить эту ревизию</button>{approve.isError && <p role="alert">Ревизия не одобрена. Проверьте основание и права.</p>}</form>}
           {revision.data.decision === "approve" && <form className="admin-form" onSubmit={submitRevocation} aria-label="Отзыв ревизии"><h3>Отозвать ревизию</h3><label>Причина отзыва<textarea name="reason" required minLength={10} /></label><button type="submit" disabled={revoke.isPending}>Отозвать эту ревизию</button>{revoke.isError && <p role="alert">Не удалось отозвать ревизию.</p>}</form>}

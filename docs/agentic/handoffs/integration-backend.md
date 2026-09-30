@@ -694,3 +694,41 @@ pagination and realistic-corpus query latency remain open. The inventory
 filter is metadata-only and does not publish unpublished text to users.
 Stop the test stacks, review the diff, commit/push and verify CI. U06 remains
 in progress for PDF and error-state browser coverage.
+
+## 2026-09-30 audited candidate metadata review
+
+Objective and actual status: A reviewer can correct a review-pending revision's
+description and tags after comparing its original and extracted segments.
+Every captured or corrected snapshot appears in admin-only metadata history.
+The user cannot see a candidate or its history. Approval locks further edits;
+a stale metadata version returns 409. The source bytes, hash, segment IDs and
+locators remain unchanged.
+
+Worktree / branch / base SHA: The isolated integration worktree on
+`agent/integration-backend` was clean at `dc8c715` before this slice. The
+integration agent owns the migration, application/SQL gateway, API and
+generated client, admin UI, tests, ADR and tracker. Other worktrees were not
+changed. The falsifiable check was a successful preapproval amendment followed
+by an identical citation and a rejected stale or postapproval amendment.
+
+Evidence and verification: A new Alembic migration upgraded a clean PostgreSQL
+database and passed `alembic check`. On an existing synthetic test database it
+backfilled version 0 for all 38 revisions; a SQL comparison found zero
+description/tag mismatches and retained 56 existing decision events. The
+PostgreSQL source API suite passed 3 tests covering role denial, duplicate tags,
+version conflict, audit history, duplicate upload and postapproval lock. The
+frontend component suite passed 18 tests and the four mocked browser paths
+passed. The built Compose browser journey amended a synthetic CSV before
+approval, inspected version 1 history, and completed cited chat and revocation
+in 9.3 seconds using the fake model. Full `make check` passed architecture,
+61 backend, 18 frontend and 20 ML tests, static checks, generated contract
+comparison and Compose config. `make smoke` passed liveness, readiness and
+frontend checks. Diff review and CI remain to be recorded before integration.
+
+Decision and risk: ADR 0003 now defines captured version 0 and an append-only
+event for each correction. PostgreSQL locks processing and revision rows in the
+same order as approval; a transaction updates the current catalogue projection
+and event atomically. Only description and tags are editable in this pilot.
+Postapproval corrections, expert validation of cultural context, and real-source
+rights remain open. Review the diff, stop isolated stacks, commit/push and
+verify CI.

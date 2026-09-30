@@ -14,6 +14,7 @@ test("live synthetic source flows from admin review to cited chat and revocation
   const marker = `live${Date.now()}`
   const title = `Synthetic live table ${marker}`
   const description = `Self-authored catalogue summary ${marker}`
+  const reviewedDescription = `Reviewed self-authored catalogue summary ${marker}`
   const region = `Synthetic region ${marker}`
   const cell = `item: ${marker}; count: seven`
   const approvedBrief = `${cell} — summarize the source`
@@ -98,6 +99,14 @@ test("live synthetic source flows from admin review to cited chat and revocation
     expect(reviewOriginal.status()).toBe(200)
     expect(await reviewOriginal.body()).toEqual(csv)
     expect((await userContext.request.get(reviewOriginalPath)).status()).toBe(403)
+    const metadataEdit = adminPage.getByRole("form", { name: "Правка метаданных" })
+    await metadataEdit.getByRole("textbox", { name: "Краткое описание" }).fill(reviewedDescription)
+    await metadataEdit.getByRole("textbox", { name: "Метки, по одной в строке" }).fill(`region:${region}\ntopic:Reviewed synthetic testing`)
+    await metadataEdit.getByRole("textbox", { name: "Причина изменения" }).fill("Compared candidate metadata with the original synthetic table")
+    await metadataEdit.getByRole("button", { name: "Сохранить описание и метки" }).click()
+    await expect(adminPage.getByText(reviewedDescription).first()).toBeVisible()
+    await adminPage.getByText("История метаданных").click()
+    await expect(adminPage.getByText("Версия 1")).toBeVisible()
     const review = adminPage.getByRole("form", { name: "Одобрение ревизии" })
     await review.getByLabel("Основание и ограничения").fill("Self-authored synthetic CSV for a private live test")
     await review.getByLabel("HTTPS-ссылка на доказательство прав").fill(`https://example.invalid/${marker}/rights`)
@@ -125,7 +134,7 @@ test("live synthetic source flows from admin review to cited chat and revocation
     await filter.getByRole("textbox", { name: "Регион" }).fill(region)
     await filter.getByRole("button", { name: "Найти" }).click()
     await expect(userPage.getByRole("button", { name: new RegExp(title) })).toBeVisible()
-    await expect(userPage.getByText(description)).toBeVisible()
+    await expect(userPage.getByText(reviewedDescription)).toBeVisible()
     await filter.getByRole("textbox", { name: "Регион" }).fill("Unrelated region")
     await filter.getByRole("button", { name: "Найти" }).click()
     await expect(userPage.getByRole("heading", { name: "Материалов по запросу не найдено" })).toBeVisible()

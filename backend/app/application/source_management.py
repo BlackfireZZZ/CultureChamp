@@ -1,6 +1,7 @@
 """Governed candidate intake and exact-revision material use cases."""
 
 from dataclasses import dataclass
+from datetime import datetime
 from typing import BinaryIO, Protocol
 from urllib.parse import urlsplit
 from uuid import UUID
@@ -76,6 +77,7 @@ class AdminRevisionData:
     error_code: str | None
     decision: str | None
     sha256: str
+    metadata_version: int
 
 
 @dataclass(frozen=True)
@@ -112,6 +114,24 @@ class ApprovalData:
     sensitivity_cleared: bool
 
 
+@dataclass(frozen=True)
+class MetadataAmendment:
+    expected_version: int
+    reason: str
+    description: str | None
+    tags: tuple[TagData, ...]
+
+
+@dataclass(frozen=True)
+class MetadataEventData:
+    version: int
+    reviewer_id: str
+    reason: str
+    description: str | None
+    tags: tuple[TagData, ...]
+    changed_at: datetime
+
+
 class SourceGateway(Protocol):
     async def upload(
         self,
@@ -132,6 +152,12 @@ class SourceGateway(Protocol):
 
     async def admin_original(self, revision_id: UUID) -> OriginalData: ...
 
+    async def amend_metadata(
+        self, revision_id: UUID, reviewer_id: str, data: MetadataAmendment
+    ) -> AdminRevisionData: ...
+
+    async def metadata_history(self, revision_id: UUID) -> list[MetadataEventData]: ...
+
     async def admin_list(self, filters: AdminInventoryFilters) -> list[AdminSourceData]: ...
 
     async def approve(self, revision_id: UUID, reviewer_id: str, data: ApprovalData) -> None: ...
@@ -150,6 +176,25 @@ class SourceGateway(Protocol):
 class SourceService:
     def __init__(self, gateway: SourceGateway) -> None:
         self.gateway = gateway
+
+    @staticmethod
+    def _parse_tags(items: list[str]) -> tuple[TagData, ...]:
+        if len(items) > 20:
+            raise SourceInputError("Too many tags")
+        parsed = []
+        for item in items:
+            kind, separator, value = item.partition(":")
+            if (
+                not separator
+                or kind not in {"region", "people", "period", "topic", "sensitivity"}
+                or not value.strip()
+                or len(value.strip()) > 100
+            ):
+                raise SourceInputError("Invalid source tag")
+            parsed.append(TagData(kind, value.strip()))
+        if len({(item.kind, item.value) for item in parsed}) != len(parsed):
+            raise SourceInputError("Duplicate source tag")
+        return tuple(parsed)
 
     async def upload(
         self,
@@ -184,19 +229,7 @@ class SourceService:
             description = description.strip() or None
             if description is not None and len(description) > 500:
                 raise SourceInputError("Description is too long")
-        parsed_tags = []
-        if len(tags or []) > 20:
-            raise SourceInputError("Too many tags")
-        for item in tags or []:
-            kind, separator, value = item.partition(":")
-            if (
-                not separator
-                or kind not in {"region", "people", "period", "topic", "sensitivity"}
-                or not value.strip()
-                or len(value) > 100
-            ):
-                raise SourceInputError("Invalid source tag")
-            parsed_tags.append(TagData(kind, value.strip()))
+        parsed_tags = self._parse_tags(tags or [])
         return await self.gateway.upload(
             origin_url=origin_url,
             title=title,
@@ -207,7 +240,7 @@ class SourceService:
             stream=stream,
             filename=filename,
             media_type=media_type,
-            tags=tuple(parsed_tags),
+            tags=parsed_tags,
         )
 
     async def admin_detail(self, actor: Actor, revision_id: UUID) -> AdminRevisionData:
@@ -217,6 +250,29 @@ class SourceService:
     async def admin_original(self, actor: Actor, revision_id: UUID) -> OriginalData:
         require_role(actor, Role.ADMIN)
         return await self.gateway.admin_original(revision_id)
+
+    async def amend_metadata(
+        self, actor: Actor, revision_id: UUID, data: MetadataAmendment
+    ) -> AdminRevisionData:
+        require_role(actor, Role.ADMIN)
+        description = data.description.strip() if data.description is not None else None
+        if description is not None and len(description) > 500:
+            raise SourceInputError("Description is too long")
+        tags = self._parse_tags([f"{item.kind}:{item.value}" for item in data.tags])
+        if len(data.reason.strip()) < 10 or data.expected_version < 0:
+            raise SourceInputError("Invalid metadata amendment")
+        return await self.gateway.amend_metadata(
+            revision_id, actor.subject_id,
+            MetadataAmendment(
+                data.expected_version, data.reason.strip(), description or None, tags
+            ),
+        )
+
+    async def metadata_history(
+        self, actor: Actor, revision_id: UUID
+    ) -> list[MetadataEventData]:
+        require_role(actor, Role.ADMIN)
+        return await self.gateway.metadata_history(revision_id)
 
     async def admin_list(
         self, actor: Actor, filters: AdminInventoryFilters | None = None

@@ -15,6 +15,8 @@ from app.application.source_management import (
     IntakeData,
     MaterialData,
     MaterialFilters,
+    MetadataAmendment,
+    MetadataEventData,
     OriginalData,
     SegmentData,
     SourceConflict,
@@ -26,6 +28,7 @@ from app.domain.sources import DecisionKind, Locator, RevisionDecision, RightsSc
 from app.infrastructure.db.source_models import (
     Source,
     SourceDecision,
+    SourceMetadataEvent,
     SourceProcessing,
     SourceRevision,
     SourceSegment,
@@ -93,6 +96,14 @@ class SqlSourceGateway:
             if existing_revision is None:
                 for tag in tags:
                     await repo.add_tag(revision.id, tag.kind, tag.value)
+                session.add(SourceMetadataEvent(
+                    revision_id=revision.id,
+                    version=0,
+                    reviewer_id="system:intake",
+                    reason="Captured metadata at intake",
+                    description=revision.description,
+                    tags=[{"kind": tag.kind, "value": tag.value} for tag in tags],
+                ))
             processing = await session.get(SourceProcessing, revision.id)
             if processing is None:
                 processing = SourceProcessing(revision_id=revision.id, state="candidate")
@@ -178,7 +189,70 @@ class SqlSourceGateway:
                 error_code=processing.error_code if processing else None,
                 decision=decision.kind if decision else None,
                 sha256=revision.sha256,
+                metadata_version=revision.metadata_version,
             )
+
+    async def amend_metadata(
+        self, revision_id: UUID, reviewer_id: str, data: MetadataAmendment
+    ) -> AdminRevisionData:
+        async with self.factory.begin() as session:
+            processing = await session.get(SourceProcessing, revision_id, with_for_update=True)
+            if processing is None:
+                raise SourceNotFound
+            if processing.state != "review_pending":
+                raise SourceConflict("Revision is not ready for metadata review")
+            revision = await session.get(SourceRevision, revision_id, with_for_update=True)
+            if revision is None:
+                raise SourceNotFound
+            if revision.metadata_version != data.expected_version:
+                raise SourceConflict("Metadata version changed; reload the revision")
+            decided = await session.scalar(
+                select(SourceDecision.event_id)
+                .where(SourceDecision.revision_id == revision_id)
+                .limit(1)
+            )
+            if decided is not None:
+                raise SourceConflict("Decided revision metadata is locked")
+            old_tags = (
+                await session.scalars(select(SourceTag).where(SourceTag.revision_id == revision_id))
+            ).all()
+            for old_tag in old_tags:
+                await session.delete(old_tag)
+            await session.flush()
+            for tag in data.tags:
+                session.add(SourceTag(revision_id=revision_id, kind=tag.kind, value=tag.value))
+            revision.description = data.description
+            revision.metadata_version += 1
+            session.add(SourceMetadataEvent(
+                revision_id=revision_id,
+                version=revision.metadata_version,
+                reviewer_id=reviewer_id,
+                reason=data.reason,
+                description=data.description,
+                tags=[{"kind": tag.kind, "value": tag.value} for tag in data.tags],
+            ))
+            await session.flush()
+        return await self.admin_detail(revision_id)
+
+    async def metadata_history(self, revision_id: UUID) -> list[MetadataEventData]:
+        async with self.factory() as session:
+            if await session.get(SourceRevision, revision_id) is None:
+                raise SourceNotFound
+            events = (
+                await session.scalars(
+                    select(SourceMetadataEvent)
+                    .where(SourceMetadataEvent.revision_id == revision_id)
+                    .order_by(SourceMetadataEvent.version)
+                )
+            ).all()
+            return [
+                MetadataEventData(
+                    event.version, event.reviewer_id, event.reason, event.description,
+                    tuple(TagData(tag["kind"], tag["value"]) for tag in event.tags),
+                    event.changed_at,
+                )
+                for event in events
+            ]
 
     async def admin_list(self, filters: AdminInventoryFilters) -> list[AdminSourceData]:
         async with self.factory() as session:

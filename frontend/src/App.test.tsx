@@ -228,6 +228,7 @@ test("admin inventory and exact revision come from admin API", async () => {
     if (input === "/api/v1/admin/sources?status=failed&decision=none&limit=100") return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve([]) })
     if (input.startsWith("/api/v1/admin/sources?")) return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve([source]) })
     if (input === "/api/v1/admin/revisions/rev-3") return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ ...source, sha256: "test-hash", creator: null, rights_usage_note: null, media_type: "application/pdf", tags: [{ kind: "region", value: "Приморье" }], segments: [] }) })
+    if (input === "/api/v1/admin/revisions/rev-3/metadata-history") return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve([]) })
     throw new Error("Unexpected request")
   })
   vi.stubGlobal("fetch", fetchMock)
@@ -258,6 +259,7 @@ test("legacy unsafe source URL is displayed as text in admin review", async () =
     if (input === "/api/v1/auth/me") return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ user: { id: "admin", username: "admin", role: "admin" }, csrf_token: "csrf" }) })
     if (input === "/api/v1/admin/sources?limit=100") return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve([source]) })
     if (input === "/api/v1/admin/revisions/rev-unsafe") return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ ...source, sha256: "unsafe-hash", creator: null, rights_usage_note: null, media_type: "text/csv", tags: [], segments: [], error_code: null }) })
+    if (input === "/api/v1/admin/revisions/rev-unsafe/metadata-history") return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve([]) })
     throw new Error("Unexpected request")
   }))
   renderApp()
@@ -265,6 +267,49 @@ test("legacy unsafe source URL is displayed as text in admin review", async () =
   fireEvent.click(await screen.findByRole("button", { name: /Unsafe fixture/ }))
   expect(await screen.findByText("javascript:alert(1)")).toBeInTheDocument()
   expect(screen.queryByRole("link", { name: "javascript:alert(1)" })).not.toBeInTheDocument()
+})
+
+test("admin can amend review metadata with a version and inspect its history", async () => {
+  const revisionId = "rev-edit"
+  const source = { revision_id: revisionId, source_id: "source-edit", title: "Synthetic edit", origin_url: "https://example.invalid/edit", status: "review_pending", decision: null }
+  let version = 0
+  let description = "Original catalogue text"
+  let tags = [{ kind: "region", value: "Original" }]
+  const amendments: unknown[] = []
+  vi.stubGlobal("fetch", vi.fn((input: string, options?: RequestInit) => {
+    if (input === "/api/v1/auth/me") return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ user: { id: "admin", username: "admin", role: "admin" }, csrf_token: "edit-csrf" }) })
+    if (input === "/api/v1/admin/sources?limit=100") return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve([source]) })
+    if (input === `/api/v1/admin/revisions/${revisionId}`) return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ ...source, metadata_version: version, description, tags, sha256: "stable-hash", creator: null, rights_usage_note: null, media_type: "text/csv", segments: [], error_code: null }) })
+    if (input === `/api/v1/admin/revisions/${revisionId}/metadata-history`) return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve([{ version: 0, reason: "Captured metadata at intake", reviewer_id: "system:intake", description: "Original catalogue text", tags: [{ kind: "region", value: "Original" }], changed_at: "2026-09-30T00:00:00Z" }, ...(version ? [{ version, reason: "Corrected after source review", reviewer_id: "admin", description, tags, changed_at: "2026-09-30T01:00:00Z" }] : [])]) })
+    if (input === `/api/v1/admin/revisions/${revisionId}/metadata` && options?.method === "PATCH") {
+      if (version === 1) return Promise.resolve({ ok: false, status: 409 })
+      const data = JSON.parse(options.body as string) as { expected_version: number; reason: string; description: string; tags: typeof tags }
+      amendments.push({ ...data, csrf: (options.headers as Record<string, string>)["x-csrf-token"] })
+      description = data.description
+      tags = data.tags
+      version++
+      return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ ...source, metadata_version: version, description, tags }) })
+    }
+    throw new Error("Unexpected request")
+  }))
+  renderApp()
+  fireEvent.click(await screen.findByRole("button", { name: /Synthetic edit/ }))
+  const edit = await screen.findByRole("form", { name: "Правка метаданных" })
+  fireEvent.change(within(edit).getByRole("textbox", { name: "Краткое описание" }), { target: { value: "Reviewed catalogue text" } })
+  fireEvent.change(within(edit).getByRole("textbox", { name: "Метки, по одной в строке" }), { target: { value: "region:Reviewed\ntopic:Fixture" } })
+  fireEvent.change(within(edit).getByRole("textbox", { name: "Причина изменения" }), { target: { value: "Corrected after source review" } })
+  fireEvent.click(within(edit).getByRole("button", { name: "Сохранить описание и метки" }))
+  await waitFor(() => expect(amendments).toEqual([{ expected_version: 0, reason: "Corrected after source review", description: "Reviewed catalogue text", tags: [{ kind: "region", value: "Reviewed" }, { kind: "topic", value: "Fixture" }], csrf: "edit-csrf" }]))
+  await waitFor(() => expect(within(screen.getByRole("form", { name: "Правка метаданных" })).getByRole<HTMLTextAreaElement>("textbox", { name: "Краткое описание" }).value).toBe("Reviewed catalogue text"))
+  fireEvent.click(screen.getByText("История метаданных"))
+  expect(await screen.findByText("Версия 1")).toBeInTheDocument()
+  const nextEdit = screen.getByRole("form", { name: "Правка метаданных" })
+  fireEvent.change(within(nextEdit).getByRole("textbox", { name: "Причина изменения" }), { target: { value: "Another correction attempt" } })
+  fireEvent.click(within(nextEdit).getByRole("button", { name: "Сохранить описание и метки" }))
+  const conflict = await screen.findByRole("alert")
+  expect(conflict).toHaveTextContent("Правка не сохранена")
+  fireEvent.click(within(conflict).getByRole("button", { name: "Обновить ревизию" }))
+  await waitFor(() => expect(screen.queryByText("Правка не сохранена")).not.toBeInTheDocument())
 })
 
 test("admin review sends explicit rights scopes and can revoke the exact revision", async () => {
@@ -276,6 +321,7 @@ test("admin review sends explicit rights scopes and can revoke the exact revisio
     if (input === "/api/v1/auth/me") return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ user: { id: "admin", username: "admin", role: "admin" }, csrf_token: "review-csrf" }) })
     if (input === "/api/v1/admin/sources?limit=100") return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve([{ ...source, decision }]) })
     if (input === `/api/v1/admin/revisions/${revisionId}`) return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ ...source, decision, sha256: "hash", creator: null, rights_usage_note: null, media_type: "application/pdf", tags: [], segments: [], error_code: null }) })
+    if (input === `/api/v1/admin/revisions/${revisionId}/metadata-history`) return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve([]) })
     if (input.endsWith("/approve") || input.endsWith("/revoke")) {
       requests.push({ path: input, body: JSON.parse(options?.body as string) as unknown, csrf: (options?.headers as Record<string, string>)["x-csrf-token"] })
       decision = input.endsWith("/approve") ? "approve" : "revoke"

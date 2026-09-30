@@ -1,5 +1,6 @@
 """Transport contracts for governed candidate and visible materials."""
 
+from datetime import datetime
 from pathlib import Path
 from typing import Annotated, Literal
 from uuid import UUID
@@ -16,8 +17,10 @@ from app.application.source_management import (
     ApprovalData,
     MaterialData,
     MaterialFilters,
+    MetadataAmendment,
     OriginalData,
     SourceService,
+    TagData,
 )
 from app.core.config import settings
 from app.infrastructure.db.governed_sources import SqlSourceGateway
@@ -92,6 +95,7 @@ class AdminRevisionView(MaterialDetail):
     error_code: str | None
     decision: str | None
     sha256: str
+    metadata_version: int
 
 
 class AdminSourceView(BaseModel):
@@ -114,6 +118,22 @@ class DecisionInput(BaseModel):
 
 class RevokeInput(BaseModel):
     reason: str = Field(min_length=10, max_length=2000)
+
+
+class MetadataInput(BaseModel):
+    expected_version: int = Field(ge=0)
+    reason: str = Field(min_length=10, max_length=2000)
+    description: str | None = Field(max_length=500)
+    tags: list[TagView] = Field(max_length=20)
+
+
+class MetadataEventView(BaseModel):
+    version: int
+    reviewer_id: str
+    reason: str
+    description: str | None
+    tags: list[TagView]
+    changed_at: datetime
 
 
 def _material_view(material: MaterialData) -> MaterialView:
@@ -170,6 +190,7 @@ def _admin_view(data: AdminRevisionData) -> AdminRevisionView:
         error_code=data.error_code,
         decision=data.decision,
         sha256=data.sha256,
+        metadata_version=data.metadata_version,
     )
 
 
@@ -235,6 +256,47 @@ async def admin_original(
     service: Annotated[SourceService, Depends(get_source_service)],
 ) -> Response:
     return _original_response(await service.admin_original(actor, revision_id))
+
+
+@admin_router.patch("/revisions/{revision_id}/metadata", response_model=AdminRevisionView)
+async def amend_revision_metadata(
+    revision_id: UUID,
+    data: MetadataInput,
+    actor: Annotated[Actor, Depends(current_admin)],
+    service: Annotated[SourceService, Depends(get_source_service)],
+) -> AdminRevisionView:
+    return _admin_view(await service.amend_metadata(
+        actor, revision_id,
+        MetadataAmendment(
+            data.expected_version,
+            data.reason,
+            data.description,
+            tuple(TagData(tag.kind, tag.value) for tag in data.tags),
+        ),
+    ))
+
+
+@admin_router.get(
+    "/revisions/{revision_id}/metadata-history", response_model=list[MetadataEventView]
+)
+async def revision_metadata_history(
+    revision_id: UUID,
+    response: Response,
+    actor: Annotated[Actor, Depends(current_admin)],
+    service: Annotated[SourceService, Depends(get_source_service)],
+) -> list[MetadataEventView]:
+    response.headers["Cache-Control"] = "no-store"
+    return [
+        MetadataEventView(
+            version=item.version,
+            reviewer_id=item.reviewer_id,
+            reason=item.reason,
+            description=item.description,
+            tags=[TagView(kind=tag.kind, value=tag.value) for tag in item.tags],
+            changed_at=item.changed_at,
+        )
+        for item in await service.metadata_history(actor, revision_id)
+    ]
 
 
 @admin_router.get("/sources", response_model=list[AdminSourceView])

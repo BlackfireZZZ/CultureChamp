@@ -18,6 +18,7 @@ from sqlalchemy import (
     func,
     literal_column,
 )
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.infrastructure.db.base import Base
@@ -52,6 +53,7 @@ class SourceRevision(Base):
     language: Mapped[str | None] = mapped_column(String(35))
     period_note: Mapped[str | None] = mapped_column(Text)
     rights_note: Mapped[str | None] = mapped_column(Text)
+    metadata_version: Mapped[int] = mapped_column(nullable=False, default=0, server_default="0")
     captured_at: Mapped[datetime] = mapped_column(server_default=func.now(), nullable=False)
 
 
@@ -70,6 +72,27 @@ class SourceTag(Base):
     )
     kind: Mapped[str] = mapped_column(String(30), nullable=False)
     value: Mapped[str] = mapped_column(Text, nullable=False)
+
+
+class SourceMetadataEvent(Base):
+    __tablename__ = "source_metadata_events"
+    __table_args__ = (
+        UniqueConstraint("revision_id", "version", name="uq_source_metadata_revision_version"),
+        CheckConstraint("version >= 0", name="metadata_version_nonnegative"),
+    )
+
+    event_id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    revision_id: Mapped[UUID] = mapped_column(
+        ForeignKey("source_revisions.id", ondelete="RESTRICT"), nullable=False
+    )
+    version: Mapped[int] = mapped_column(nullable=False)
+    reviewer_id: Mapped[str] = mapped_column(String(100), nullable=False)
+    reason: Mapped[str] = mapped_column(Text, nullable=False)
+    description: Mapped[str | None] = mapped_column(Text)
+    tags: Mapped[list[dict[str, str]]] = mapped_column(JSONB, nullable=False)
+    changed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
 
 
 class SourceSegment(Base):

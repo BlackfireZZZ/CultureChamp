@@ -52,7 +52,8 @@ Comparable design inputs:
    shown to users only after that exact revision is approved. It is catalogue
    context, not a verified source fact or an automatically generated summary.
    A duplicate upload with the same source ID and byte hash retains the first
-   captured description. Editorial corrections still need an audited overlay.
+   captured description. The preapproval audited overlay below records editorial
+   corrections while preserving that captured snapshot as event version 0.
 3. Tags are attached to a revision. A later revision can have different people,
    region, period or sensitivity tags without retroactively changing citations.
 4. A segment has an ID, immutable `revision_id`, ordinal and source locator. A PDF
@@ -124,6 +125,38 @@ The syntax is general, but cultural table semantics and retrieval effectiveness
 still require a real eligible fixture and expert judgements. XLSX merged cells,
 formulas and sheet locators remain unimplemented. The existing parser process
 limits are resource isolation, not a syscall or network sandbox.
+
+## Preapproval metadata amendment (2026-09-30)
+
+Reviewers must be able to correct a candidate's description and contextual
+tags after inspecting the extracted text and original. A duplicate upload with
+the same bytes remains an idempotent retry; using it to change metadata would
+silently replace the capture snapshot. Creating a second byte-identical source
+revision for every editorial correction would also split one original across
+multiple citation identities. We therefore use an audited projection:
+
+- Intake and the migration from earlier revisions record version 0 in
+  `source_metadata_events`. Each event stores a complete description/tag snapshot,
+  reviewer identity, reason and time. Events are append-only.
+- `source_revisions.description` and `source_tags` hold the current projection for
+  catalogue search and governed vector filters. Their captured values remain
+  recoverable from version 0; original bytes, content hash and extracted segments
+  are never edited. A correction increments `metadata_version` and writes the
+  new projection and event in one PostgreSQL transaction.
+- Corrections are allowed only for `review_pending` revisions with no decision.
+  The caller supplies the expected metadata version. The transaction locks the
+  processing row and then the revision row, matching approval's lock order. A
+  stale version or a concurrent approval fails with 409. Once approved or
+  revoked, a new review process must be designed before metadata can change.
+  The user never sees an unapproved correction.
+
+[PostgreSQL 17 row locking](https://www.postgresql.org/docs/17/explicit-locking.html)
+provides the serialization boundary for concurrent review and approval;
+[SQLAlchemy's transaction guidance](https://docs.sqlalchemy.org/en/20/orm/session_transaction.html)
+supports committing the projection and event atomically. This audit records
+who changed catalogue context, but it does not by itself validate the cultural
+accuracy of a tag or description. Source rights and sensitivity decisions still
+require the appointed reviewer under S02.
 
 ## Alternatives and tradeoffs
 
