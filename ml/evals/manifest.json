@@ -16,6 +16,11 @@
     "PDF-02": "ecadbe5afc98a88ade6715079c89363ee1bbc7b4a7889efd2c89ffb77394cf94",
     "PDF-03": "5df1eeb1f3a45937b986ade1f41f92a9f56aa4679d0ff9a6371883955f25393b"
   },
+  "source_files": {
+    "PDF-01": "data/retrieval-fixtures/raw/51-88-1-SM.pdf",
+    "PDF-02": "data/retrieval-fixtures/raw/perspektivy-etnoekologicheskih-issledovaniy-kultury-korennyh-narodov-rossiyskogo-dalnego-vostoka.pdf",
+    "PDF-03": "data/retrieval-fixtures/raw/problemy-traditsionnoy-kultury-korennyh-malochislennyh-narodov-yuga-dalnego-vostoka-rossii-i-roli-gosudarstva-v-etih-protsessah-xx-nachalo-xxi-veka.pdf"
+  },
   "reviewers": [],
   "missing_fixture": "No rights-cleared real table or spreadsheet"
 }

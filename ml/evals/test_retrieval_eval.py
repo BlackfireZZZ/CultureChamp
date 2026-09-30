@@ -60,20 +60,10 @@ def test_duplicate_ranking_is_rejected(tmp_path: Path) -> None:
 
 def test_fixture_hashes_and_synthetic_locator_are_versioned() -> None:
     manifest = json.loads((HERE / "manifest.json").read_text(encoding="utf-8"))
-    names = {
-        "PDF-01": "51-88-1-SM.pdf",
-        "PDF-02": (
-            "perspektivy-etnoekologicheskih-issledovaniy-kultury-korennyh-narodov-"
-            "rossiyskogo-dalnego-vostoka.pdf"
-        ),
-        "PDF-03": (
-            "problemy-traditsionnoy-kultury-korennyh-malochislennyh-narodov-yuga-"
-            "dalnego-vostoka-rossii-i-roli-gosudarstva-v-etih-protsessah-xx-nachalo-"
-            "xxi-veka.pdf"
-        ),
-    }
-    for source_id, name in names.items():
-        digest = hashlib.sha256((RAW / name).read_bytes()).hexdigest()
+    for source_id, relative_path in manifest["source_files"].items():
+        file_path = HERE.parents[1] / relative_path
+        assert file_path.parent == RAW
+        digest = hashlib.sha256(file_path.read_bytes()).hexdigest()
         assert digest == manifest["source_hashes"][source_id]
     table = json.loads((HERE / "synthetic_table.json").read_text(encoding="utf-8"))
     assert table["synthetic"] is True

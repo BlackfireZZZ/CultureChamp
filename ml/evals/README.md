@@ -28,6 +28,8 @@ table fixture, and measured language/format slices.
 - `qrels.jsonl` stores each question, expected evidence pages, explicit no-evidence
   cases and the review prompt. The `label_status` is `provisional_agent` for every
   row. An expert must create a new version rather than silently changing a label.
+  `manifest.json` maps each source ID to the exact file and hash so no hidden
+  filename lookup is required.
 - `synthetic_table.json` exists only to test row/cell locator mechanics. Its invented
   values are **not cultural facts** or a substitute for a rights-cleared table.
 
