@@ -66,6 +66,10 @@
             "title": "Origin Url",
             "type": "string"
           },
+          "original_available": {
+            "title": "Original Available",
+            "type": "boolean"
+          },
           "people": {
             "anyOf": [
               {
@@ -155,6 +159,7 @@
           "rights_usage_note",
           "media_type",
           "segments",
+          "original_available",
           "source_id",
           "status",
           "error_code",
@@ -473,6 +478,10 @@
             "title": "Origin Url",
             "type": "string"
           },
+          "original_available": {
+            "title": "Original Available",
+            "type": "boolean"
+          },
           "people": {
             "anyOf": [
               {
@@ -541,7 +550,8 @@
           "origin_url",
           "rights_usage_note",
           "media_type",
-          "segments"
+          "segments",
+          "original_available"
         ],
         "title": "MaterialDetail",
         "type": "object"
@@ -980,6 +990,63 @@
     "/api/v1/admin/sources": {
       "get": {
         "operationId": "admin_sources_api_v1_admin_sources_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "candidate",
+                    "processing",
+                    "review_pending",
+                    "failed"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "decision",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "approve",
+                    "revoke",
+                    "none"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Decision"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "content": {
@@ -994,6 +1061,16 @@
               }
             },
             "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
           }
         },
         "summary": "Admin Sources",
@@ -1230,6 +1307,50 @@
           }
         },
         "summary": "Material Detail",
+        "tags": [
+          "materials"
+        ]
+      }
+    },
+    "/api/v1/materials/{revision_id}/original": {
+      "get": {
+        "operationId": "material_original_api_v1_materials__revision_id__original_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "revision_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Revision Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/pdf": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Material Original",
         "tags": [
           "materials"
         ]

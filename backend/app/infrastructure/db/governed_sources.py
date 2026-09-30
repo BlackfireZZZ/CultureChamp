@@ -1,5 +1,6 @@
 """PostgreSQL and private-storage adapter for governed material use cases."""
 
+import hashlib
 from typing import BinaryIO
 from uuid import UUID
 
@@ -12,6 +13,7 @@ from app.application.source_management import (
     ApprovalData,
     IntakeData,
     MaterialData,
+    OriginalData,
     SegmentData,
     SourceConflict,
     SourceInputError,
@@ -103,6 +105,12 @@ class SqlSourceGateway:
                 .order_by(SourceSegment.ordinal)
             )
         ).all()
+        latest = await session.scalar(
+            select(SourceDecision)
+            .where(SourceDecision.revision_id == revision.id)
+            .order_by(SourceDecision.event_id.desc())
+            .limit(1)
+        )
         return MaterialData(
             revision_id=revision.id,
             title=revision.title,
@@ -111,6 +119,13 @@ class SqlSourceGateway:
             rights_usage_note=revision.rights_note,
             media_type=revision.media_type,
             segments=tuple(SegmentData(s.id, s.page or 1, s.text) for s in segments),
+            original_available=bool(
+                latest
+                and latest.kind == "approve"
+                and latest.user_text
+                and latest.original_file
+                and latest.sensitivity_cleared
+            ),
         )
 
     async def admin_detail(self, revision_id: UUID) -> AdminRevisionData:
@@ -142,15 +157,32 @@ class SqlSourceGateway:
                 tags=tuple(TagData(tag.kind, tag.value) for tag in tags),
             )
 
-    async def admin_list(self) -> list[AdminSourceData]:
+    async def admin_list(
+        self, *, status: str | None, decision: str | None, limit: int
+    ) -> list[AdminSourceData]:
         async with self.factory() as session:
+            latest_kind = (
+                select(SourceDecision.kind)
+                .where(SourceDecision.revision_id == SourceRevision.id)
+                .order_by(SourceDecision.event_id.desc())
+                .limit(1)
+                .correlate(SourceRevision)
+                .scalar_subquery()
+            )
+            query = (
+                select(SourceRevision, Source, SourceProcessing)
+                .join(Source, Source.id == SourceRevision.source_id)
+                .join(SourceProcessing, SourceProcessing.revision_id == SourceRevision.id)
+            )
+            if status is not None:
+                query = query.where(SourceProcessing.state == status)
+            if decision == "none":
+                query = query.where(latest_kind.is_(None))
+            elif decision is not None:
+                query = query.where(latest_kind == decision)
             rows = (
                 await session.execute(
-                    select(SourceRevision, Source, SourceProcessing)
-                    .join(Source, Source.id == SourceRevision.source_id)
-                    .join(SourceProcessing, SourceProcessing.revision_id == SourceRevision.id)
-                    .order_by(SourceRevision.captured_at.desc())
-                    .limit(100)
+                    query.order_by(SourceRevision.captured_at.desc()).limit(limit)
                 )
             ).all()
             result = []
@@ -264,3 +296,22 @@ class SqlSourceGateway:
             if revision is None:
                 raise SourceNotFound
             return await self._material(session, revision)
+
+    async def visible_original(self, revision_id: UUID) -> OriginalData:
+        async with self.factory() as session:
+            revision = await session.scalar(
+                self._visible_query().where(
+                    SourceRevision.id == revision_id,
+                    SourceDecision.original_file.is_(True),
+                )
+            )
+            if revision is None:
+                raise SourceNotFound
+            try:
+                with self.store.open_original(revision.storage_key) as stream:
+                    content = stream.read()
+            except (OSError, IntakeError) as exc:
+                raise SourceNotFound from exc
+            if hashlib.sha256(content).hexdigest() != revision.sha256:
+                raise SourceNotFound
+            return OriginalData(content, f"source-{revision_id}.pdf")

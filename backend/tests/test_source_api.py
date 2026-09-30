@@ -22,11 +22,11 @@ from app.main import create_app
 PASSWORD = "fixture-account-password-2026"
 
 
-def _self_authored_pdf() -> bytes:
+def _self_authored_pdf(text: str = "Self authored permitted fixture") -> bytes:
     writer = PdfWriter()
     page = writer.add_blank_page(width=300, height=300)
     stream = DecodedStreamObject()
-    stream.set_data(b"BT /F1 12 Tf 30 200 Td (Self authored permitted fixture) Tj ET")
+    stream.set_data(f"BT /F1 12 Tf 30 200 Td ({text}) Tj ET".encode("ascii"))
     page[NameObject("/Contents")] = writer._add_object(stream)
     font = DictionaryObject(
         {
@@ -100,6 +100,7 @@ def test_admin_upload_review_approval_user_visibility_and_revocation(tmp_path: P
         assert uploaded.json()["status"] == "candidate"
         assert user.get("/api/v1/materials").json() == []
         assert user.get(f"/api/v1/materials/{revision_id}").status_code == 404
+        assert user.get(f"/api/v1/materials/{revision_id}/original").status_code == 404
         assert user.get(f"/api/v1/materials/{uuid4()}").status_code == 404
         assert user.get(f"/api/v1/admin/revisions/{revision_id}").status_code == 403
         assert user.get("/api/v1/admin/sources").status_code == 403
@@ -107,6 +108,10 @@ def test_admin_upload_review_approval_user_visibility_and_revocation(tmp_path: P
             item["revision_id"] == revision_id for item in admin.get("/api/v1/admin/sources").json()
         )
         assert admin.get(f"/api/v1/admin/revisions/{revision_id}").json()["status"] == "candidate"
+        assert any(
+            item["revision_id"] == revision_id
+            for item in admin.get("/api/v1/admin/sources?status=candidate&decision=none").json()
+        )
 
         duplicate = send_file(
             admin, admin_headers, payload, source_id=source_id, tags="region:Other"
@@ -146,6 +151,8 @@ def test_admin_upload_review_approval_user_visibility_and_revocation(tmp_path: P
             user.get(f"/api/v1/materials/{revision_id}").json()["segments"][0]["locator"]["page"]
             == 1
         )
+        assert user.get(f"/api/v1/materials/{revision_id}").json()["original_available"] is False
+        assert user.get(f"/api/v1/materials/{revision_id}/original").status_code == 404
         revoked = admin.post(
             f"/api/v1/admin/revisions/{revision_id}/revoke",
             json={"reason": "Fixture publication test completed"},
@@ -155,6 +162,42 @@ def test_admin_upload_review_approval_user_visibility_and_revocation(tmp_path: P
         assert user.get("/api/v1/materials").json() == []
         assert user.get(f"/api/v1/materials/{revision_id}").status_code == 404
         assert admin.get(f"/api/v1/admin/revisions/{revision_id}").json()["decision"] == "revoke"
+        assert any(
+            item["revision_id"] == revision_id
+            for item in admin.get("/api/v1/admin/sources?decision=revoke&limit=1").json()
+        )
+
+        downloadable = _self_authored_pdf("Self authored original allowed")
+        second = send_file(admin, admin_headers, downloadable)
+        assert second.status_code == 201
+        second_id = second.json()["revision_id"]
+        assert asyncio.run(process_one(factory, private_store)) == UUID(second_id)
+        allowed = {**approval, "original_file": True}
+        assert (
+            admin.post(
+                f"/api/v1/admin/revisions/{second_id}/approve",
+                json=allowed,
+                headers=admin_headers,
+            ).status_code
+            == 200
+        )
+        assert user.get(f"/api/v1/materials/{second_id}").json()["original_available"] is True
+        original = user.get(f"/api/v1/materials/{second_id}/original")
+        assert original.status_code == 200
+        assert original.content == downloadable
+        assert original.headers["content-type"] == "application/pdf"
+        assert original.headers["x-content-type-options"] == "nosniff"
+        assert original.headers["cache-control"] == "no-store"
+        assert "source-" in original.headers["content-disposition"]
+        assert (
+            admin.post(
+                f"/api/v1/admin/revisions/{second_id}/revoke",
+                json={"reason": "Original access check completed"},
+                headers=admin_headers,
+            ).status_code
+            == 200
+        )
+        assert user.get(f"/api/v1/materials/{second_id}/original").status_code == 404
 
         broken = send_file(admin, admin_headers, b"%PDF-1.4\n%%EOF")
         assert broken.status_code == 201

@@ -1,10 +1,10 @@
 """Transport contracts for governed candidate and visible materials."""
 
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Literal
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, File, Form, Request, UploadFile
+from fastapi import APIRouter, Depends, File, Form, Query, Request, Response, UploadFile
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
@@ -66,6 +66,7 @@ class MaterialView(BaseModel):
 
 class MaterialDetail(MaterialView):
     segments: list[SegmentView]
+    original_available: bool
 
 
 class TagView(BaseModel):
@@ -119,6 +120,7 @@ def _detail_view(material: MaterialData) -> MaterialDetail:
     view = _material_view(material)
     return MaterialDetail(
         **view.model_dump(),
+        original_available=material.original_available,
         segments=[
             SegmentView(segment_id=s.segment_id, locator=LocatorView(page=s.page), text=s.text)
             for s in material.segments
@@ -181,8 +183,14 @@ async def admin_revision(
 async def admin_sources(
     actor: Annotated[Actor, Depends(current_admin)],
     service: Annotated[SourceService, Depends(get_source_service)],
+    status: Literal["candidate", "processing", "review_pending", "failed"] | None = None,
+    decision: Literal["approve", "revoke", "none"] | None = None,
+    limit: Annotated[int, Query(ge=1, le=100)] = 100,
 ) -> list[AdminSourceView]:
-    return [AdminSourceView(**item.__dict__) for item in await service.admin_list(actor)]
+    return [
+        AdminSourceView(**item.__dict__)
+        for item in await service.admin_list(actor, status=status, decision=decision, limit=limit)
+    ]
 
 
 @admin_router.post("/revisions/{revision_id}/approve", response_model=AdminRevisionView)
@@ -230,3 +238,27 @@ async def material_detail(
     service: Annotated[SourceService, Depends(get_source_service)],
 ) -> MaterialDetail:
     return _detail_view(await service.visible_detail(actor, revision_id))
+
+
+@materials_router.get(
+    "/{revision_id}/original",
+    response_class=Response,
+    responses={
+        200: {"content": {"application/pdf": {"schema": {"type": "string", "format": "binary"}}}}
+    },
+)
+async def material_original(
+    revision_id: UUID,
+    actor: Annotated[Actor, Depends(current_user)],
+    service: Annotated[SourceService, Depends(get_source_service)],
+) -> Response:
+    original = await service.visible_original(actor, revision_id)
+    return Response(
+        content=original.content,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'inline; filename="{original.filename}"',
+            "X-Content-Type-Options": "nosniff",
+            "Cache-Control": "no-store",
+        },
+    )

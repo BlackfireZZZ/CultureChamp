@@ -42,6 +42,7 @@ class MaterialData:
     rights_usage_note: str | None
     media_type: str
     segments: tuple[SegmentData, ...] = ()
+    original_available: bool = False
 
 
 @dataclass(frozen=True)
@@ -73,6 +74,12 @@ class IntakeData:
 
 
 @dataclass(frozen=True)
+class OriginalData:
+    content: bytes
+    filename: str
+
+
+@dataclass(frozen=True)
 class ApprovalData:
     reason: str
     evidence_url: str
@@ -99,7 +106,9 @@ class SourceGateway(Protocol):
 
     async def admin_detail(self, revision_id: UUID) -> AdminRevisionData: ...
 
-    async def admin_list(self) -> list[AdminSourceData]: ...
+    async def admin_list(
+        self, *, status: str | None, decision: str | None, limit: int
+    ) -> list[AdminSourceData]: ...
 
     async def approve(self, revision_id: UUID, reviewer_id: str, data: ApprovalData) -> None: ...
 
@@ -110,6 +119,8 @@ class SourceGateway(Protocol):
     async def visible_list(self) -> list[MaterialData]: ...
 
     async def visible_detail(self, revision_id: UUID) -> MaterialData: ...
+
+    async def visible_original(self, revision_id: UUID) -> OriginalData: ...
 
 
 class SourceService:
@@ -160,9 +171,16 @@ class SourceService:
         require_role(actor, Role.ADMIN)
         return await self.gateway.admin_detail(revision_id)
 
-    async def admin_list(self, actor: Actor) -> list[AdminSourceData]:
+    async def admin_list(
+        self,
+        actor: Actor,
+        *,
+        status: str | None = None,
+        decision: str | None = None,
+        limit: int = 100,
+    ) -> list[AdminSourceData]:
         require_role(actor, Role.ADMIN)
-        return await self.gateway.admin_list()
+        return await self.gateway.admin_list(status=status, decision=decision, limit=limit)
 
     async def approve(
         self, actor: Actor, revision_id: UUID, data: ApprovalData
@@ -193,3 +211,7 @@ class SourceService:
     async def visible_detail(self, actor: Actor, revision_id: UUID) -> MaterialData:
         require_role(actor, Role.USER)
         return await self.gateway.visible_detail(revision_id)
+
+    async def visible_original(self, actor: Actor, revision_id: UUID) -> OriginalData:
+        require_role(actor, Role.USER)
+        return await self.gateway.visible_original(revision_id)
