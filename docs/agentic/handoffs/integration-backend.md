@@ -24,6 +24,17 @@ The three supplied PDFs have been used only in local retrieval diagnostics; no
 provided cultural source has been approved for user answers or sent to a model
 provider. User authorization covers this internal validation, not public use.
 
+The new [retrieval quality plan](../../exec-plans/active/retrieval-quality.md)
+and `ml/evals/run_retrieval_study.py` compare local extraction, chunking and
+embedding candidates in disposable Qdrant collections. On eight provisional
+page labels, E5-large FP16 with the existing 120-word windows reached
+Recall@5/MRR@5/nDCG@5 of 1.00 and used about 1.14 GiB peak CUDA allocation;
+larger token windows and layout-block candidates did not reliably improve the
+page metric. This is not passage-level or held-out evidence. Every raw dense
+configuration returned neighbors for unsupported queries. A map in PDF-02
+showed why figure OCR must stay in a distinct, region-located representation;
+local OCR had recognition errors. Runtime model and chunking remain provisional.
+
 A clean PostgreSQL database upgrade and Alembic check passed. With live
 PostgreSQL and Qdrant, 50 backend tests passed. The complete `make check` passed
 with Node 24: architecture, Ruff, mypy, 41 backend tests plus nine optional

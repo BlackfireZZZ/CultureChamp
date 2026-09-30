@@ -202,16 +202,20 @@ same source identity, rights and citation rules as the text slice.
 | F07 | todo | Institutional source submission, review, correction and revocation workflows. | A provider can submit and correct an exact revision; independent reviewers decide visibility and sensitive use; audit and withdrawal propagate to every modality index. |
 | F08 | todo | Production object storage, index generation lifecycle, backups and scale tests. | Restore and full reindex reproduce approved search state; latency, cost and failure targets are measured on representative media collections. |
 
-The next implementation order is R03 recovery → R05/G05 → C06/U04 → R01/R04/Q02,
-while corpus and UI work proceed against the same contracts. F02–F08 are not
+The next implementation order is R01/R04 passage and extraction evidence →
+R03/R05 replay and authorization verification → Q02 retrieval release gate →
+G05 and external model integration → C06/U04 and end-to-end product work.
+Synthetic UI and source mechanics can continue against the same contracts,
+but cultural answer generation must wait for a credible retrieval gate. F02–F08 are not
 silently discarded after M5; their product ordering follows the concept's
 coverage, creative-domain and institutional-participation axes.
 
 ## Integration order and parallelism
 
-The first vertical slice should use a small approved fixture, vector retrieval, a
-fake model adapter, and one chat/citation path. It should prove source permissions
-and exact citation navigation before optimizing relevance. UI contracts may be
+The synthetic mechanical vertical slice already uses vector retrieval, a fake
+model adapter and a chat/citation path. The next slice must establish extraction
+coverage, passage-level relevance, no-evidence calibration and exact locators
+before enabling cultural claims from an external model. UI contracts may be
 developed against deterministic fixtures while ingestion runs. Frontend and backend
 owners must agree on OpenAPI before working in parallel; no two writing owners edit
 the same contract file. An external model is connected only after the fake-provider
@@ -242,6 +246,20 @@ path, evaluation cases, and data-handling constraints exist.
 
 ## Progress and decisions
 
+- **2026-09-30, evidence-led retrieval study:**
+  [The retrieval plan](retrieval-quality.md) records primary research, PDF-specific
+  parser risks, held-out passage/locator gates and local GPU limits. An offline
+  hash-checked Qdrant ablation compared E5-small, E5-large, BGE-M3 and quantized
+  Qwen3-0.6B with fixed and token-bounded candidate passages. E5-large with the
+  current 120-word baseline ranked all provisional relevant pages within five
+  and had peak CUDA allocation of 1,137.6 MiB; every raw dense run returned
+  candidates for all three no-evidence questions. Eight previously seen,
+  agent-labelled page judgments cannot select an embedder, chunker or refusal
+  threshold for release. Local Docling inspection showed better reading order
+  on a two-column article but figure OCR remained partial and erroneous; figure
+  children retain a separate region contract in the offline study. Runtime
+  chunking/model remain unchanged pending expert passage labels and parser
+  coverage review. The three held PDFs stayed local and out of user/model flows.
 - **2026-09-30, concept correction:** ADR 0006 superseded the SQL lexical
   retrieval default. Chat now requests locally generated multilingual embeddings,
   obtains Qdrant candidates and rechecks current exact-revision rights in
