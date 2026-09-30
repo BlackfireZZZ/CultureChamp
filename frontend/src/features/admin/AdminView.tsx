@@ -29,8 +29,14 @@ export function AdminView({ csrfToken }: { csrfToken: string }) {
   const [revisionId, setRevisionId] = useState<string | null>(null)
   const [status, setStatus] = useState<NonNullable<AdminFilters["status"]> | "">("")
   const [decision, setDecision] = useState<NonNullable<AdminFilters["decision"]> | "">("")
-  const filters: AdminFilters = { status: status || undefined, decision: decision || undefined, limit: 100 }
-  const sources = useQuery({ queryKey: ["admin", "sources", status, decision], queryFn: ({ signal }) => getAdminSources(filters, signal), retry: false })
+  const [queryDraft, setQueryDraft] = useState("")
+  const [tagDraft, setTagDraft] = useState("")
+  const [query, setQuery] = useState("")
+  const [tagValue, setTagValue] = useState("")
+  const [mediaType, setMediaType] = useState<NonNullable<AdminFilters["media_type"]> | "">("")
+  const [tagKind, setTagKind] = useState<NonNullable<AdminFilters["tag_kind"]> | "">("")
+  const filters: AdminFilters = { status: status || undefined, decision: decision || undefined, q: query || undefined, media_type: mediaType || undefined, tag_kind: tagKind || undefined, tag_value: tagValue || undefined, limit: 100 }
+  const sources = useQuery({ queryKey: ["admin", "sources", status, decision, query, mediaType, tagKind, tagValue], queryFn: ({ signal }) => getAdminSources(filters, signal), retry: false })
   const revision = useQuery({ queryKey: ["admin", "revision", revisionId], queryFn: ({ signal }) => getAdminRevision(revisionId!, signal), enabled: revisionId !== null, retry: false })
   const refresh = async () => client.invalidateQueries({ queryKey: ["admin"] })
   const upload = useMutation({ mutationFn: (form: FormData) => uploadAdminSource(form, csrfToken), onSuccess: async (value) => { setRevisionId(value.revision_id); await refresh() } })
@@ -65,6 +71,25 @@ export function AdminView({ csrfToken }: { csrfToken: string }) {
     revoke.mutate({ id: revisionId, reason: textField(form, "reason") })
   }
 
+  function submitFilters(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    setQuery(queryDraft.trim())
+    setTagValue(tagDraft.trim())
+    setRevisionId(null)
+  }
+
+  function resetFilters() {
+    setStatus("")
+    setDecision("")
+    setQueryDraft("")
+    setTagDraft("")
+    setQuery("")
+    setTagValue("")
+    setMediaType("")
+    setTagKind("")
+    setRevisionId(null)
+  }
+
   return <main className="simple-page materials-page">
     <p className="eyebrow">Администрация · проверка источников</p>
     <h1>Кандидаты и ревизии</h1>
@@ -82,7 +107,15 @@ export function AdminView({ csrfToken }: { csrfToken: string }) {
       {upload.isError && <p role="alert">Не удалось загрузить файл. Проверьте формат, размер и поля.</p>}
       {upload.isSuccess && <p role="status">Кандидат принят. Дождитесь обработки перед решением.</p>}
     </form>
-    <div className="admin-filters"><label>Обработка<select value={status} onChange={(event) => { setStatus(event.target.value as typeof status); setRevisionId(null) }}><option value="">Все статусы</option><option value="candidate">Кандидат</option><option value="processing">Обработка</option><option value="review_pending">Ожидает проверки</option><option value="failed">Ошибка</option></select></label><label>Решение<select value={decision} onChange={(event) => { setDecision(event.target.value as typeof decision); setRevisionId(null) }}><option value="">Все решения</option><option value="approve">Одобрено</option><option value="revoke">Отозвано</option><option value="none">Без решения</option></select></label></div>
+    <form className="admin-filters" onSubmit={submitFilters} aria-label="Поиск в инвентаре">
+      <label>Источник или название<input value={queryDraft} onChange={(event) => setQueryDraft(event.target.value)} maxLength={100} /></label>
+      <label>Формат<select value={mediaType} onChange={(event) => { setMediaType(event.target.value as typeof mediaType); setRevisionId(null) }}><option value="">Все форматы</option><option value="application/pdf">PDF</option><option value="text/csv">CSV</option></select></label>
+      <label>Тип метки<select value={tagKind} onChange={(event) => { setTagKind(event.target.value as typeof tagKind); setRevisionId(null) }}><option value="">Любая метка</option><option value="region">Регион</option><option value="people">Народ</option><option value="period">Период</option><option value="topic">Тема</option><option value="sensitivity">Чувствительность</option></select></label>
+      <label>Значение метки<input value={tagDraft} onChange={(event) => setTagDraft(event.target.value)} maxLength={100} /></label>
+      <label>Обработка<select value={status} onChange={(event) => { setStatus(event.target.value as typeof status); setRevisionId(null) }}><option value="">Все статусы</option><option value="candidate">Кандидат</option><option value="processing">Обработка</option><option value="review_pending">Ожидает проверки</option><option value="failed">Ошибка</option></select></label>
+      <label>Решение<select value={decision} onChange={(event) => { setDecision(event.target.value as typeof decision); setRevisionId(null) }}><option value="">Все решения</option><option value="approve">Одобрено</option><option value="revoke">Отозвано</option><option value="none">Без решения</option></select></label>
+      <div className="admin-filter-actions"><button type="submit">Найти</button><button type="button" onClick={resetFilters}>Сбросить</button></div>
+    </form>
     <p className="result-limit">Показаны первые 100 ревизий по выбранным фильтрам.</p>
     {sources.isPending && <p role="status">Загружаем инвентарь…</p>}
     {sources.isError && <div role="alert"><p>Не удалось загрузить инвентарь.</p><button type="button" onClick={() => void sources.refetch()}>Повторить</button></div>}

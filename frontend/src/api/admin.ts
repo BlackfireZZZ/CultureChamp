@@ -14,6 +14,10 @@ export async function getAdminSources(filters: AdminFilters, signal?: AbortSigna
   const params = new URLSearchParams()
   if (filters.status) params.set("status", filters.status)
   if (filters.decision) params.set("decision", filters.decision)
+  if (filters.q) params.set("q", filters.q)
+  if (filters.media_type) params.set("media_type", filters.media_type)
+  if (filters.tag_kind) params.set("tag_kind", filters.tag_kind)
+  if (filters.tag_value) params.set("tag_value", filters.tag_value)
   if (filters.limit) params.set("limit", String(filters.limit))
   const suffix = params.size ? `?${params.toString()}` : ""
   const response = await fetch(`/api/v1/admin/sources${suffix}`, { credentials: "same-origin", signal })

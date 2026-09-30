@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from app.api.auth import current_admin, current_user
 from app.application.access import Actor
 from app.application.source_management import (
+    AdminInventoryFilters,
     AdminRevisionData,
     ApprovalData,
     MaterialData,
@@ -243,12 +244,21 @@ async def admin_sources(
     service: Annotated[SourceService, Depends(get_source_service)],
     status: Literal["candidate", "processing", "review_pending", "failed"] | None = None,
     decision: Literal["approve", "revoke", "none"] | None = None,
+    q: Annotated[str | None, Query(max_length=100)] = None,
+    media_type: Literal["application/pdf", "text/csv"] | None = None,
+    tag_kind: Literal["region", "people", "period", "topic", "sensitivity"] | None = None,
+    tag_value: Annotated[str | None, Query(max_length=100)] = None,
     limit: Annotated[int, Query(ge=1, le=100)] = 100,
 ) -> list[AdminSourceView]:
     response.headers["Cache-Control"] = "no-store"
     return [
         AdminSourceView(**item.__dict__)
-        for item in await service.admin_list(actor, status=status, decision=decision, limit=limit)
+        for item in await service.admin_list(
+            actor, AdminInventoryFilters(
+                status=status, decision=decision, q=q, media_type=media_type,
+                tag_kind=tag_kind, tag_value=tag_value, limit=limit,
+            )
+        )
     ]
 
 

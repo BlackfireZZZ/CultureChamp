@@ -905,7 +905,11 @@ export interface operations {
             readonly query?: {
                 readonly decision?: ("approve" | "revoke" | "none") | null;
                 readonly limit?: number;
+                readonly media_type?: ("application/pdf" | "text/csv") | null;
+                readonly q?: string | null;
                 readonly status?: ("candidate" | "processing" | "review_pending" | "failed") | null;
+                readonly tag_kind?: ("region" | "people" | "period" | "topic" | "sensitivity") | null;
+                readonly tag_value?: string | null;
             };
             readonly header?: never;
             readonly path?: never;

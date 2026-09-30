@@ -8,6 +8,7 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.application.source_management import (
+    AdminInventoryFilters,
     AdminRevisionData,
     AdminSourceData,
     ApprovalData,
@@ -179,9 +180,7 @@ class SqlSourceGateway:
                 sha256=revision.sha256,
             )
 
-    async def admin_list(
-        self, *, status: str | None, decision: str | None, limit: int
-    ) -> list[AdminSourceData]:
+    async def admin_list(self, filters: AdminInventoryFilters) -> list[AdminSourceData]:
         async with self.factory() as session:
             latest_kind = (
                 select(SourceDecision.kind)
@@ -196,15 +195,37 @@ class SqlSourceGateway:
                 .join(Source, Source.id == SourceRevision.source_id)
                 .join(SourceProcessing, SourceProcessing.revision_id == SourceRevision.id)
             )
-            if status is not None:
-                query = query.where(SourceProcessing.state == status)
-            if decision == "none":
+            if filters.status is not None:
+                query = query.where(SourceProcessing.state == filters.status)
+            if filters.decision == "none":
                 query = query.where(latest_kind.is_(None))
-            elif decision is not None:
-                query = query.where(latest_kind == decision)
+            elif filters.decision is not None:
+                query = query.where(latest_kind == filters.decision)
+            if filters.q and filters.q.strip():
+                term = filters.q.strip()
+                query = query.where(or_(
+                    SourceRevision.title.icontains(term, autoescape=True),
+                    SourceRevision.description.icontains(term, autoescape=True),
+                    SourceRevision.creator.icontains(term, autoescape=True),
+                    Source.origin_url.icontains(term, autoescape=True),
+                ))
+            if filters.media_type:
+                query = query.where(SourceRevision.media_type == filters.media_type)
+            if filters.tag_kind or (filters.tag_value and filters.tag_value.strip()):
+                tag_query = select(SourceTag.id).where(
+                    SourceTag.revision_id == SourceRevision.id
+                )
+                if filters.tag_kind:
+                    tag_query = tag_query.where(SourceTag.kind == filters.tag_kind)
+                if filters.tag_value and filters.tag_value.strip():
+                    tag_query = tag_query.where(
+                        func.lower(SourceTag.value) == filters.tag_value.strip().lower()
+                    )
+                query = query.where(tag_query.exists())
             rows = (
                 await session.execute(
-                    query.order_by(SourceRevision.captured_at.desc()).limit(limit)
+                    query.order_by(SourceRevision.captured_at.desc(), SourceRevision.id.desc())
+                    .limit(filters.limit)
                 )
             ).all()
             result = []

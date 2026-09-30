@@ -44,6 +44,17 @@ class MaterialFilters:
 
 
 @dataclass(frozen=True)
+class AdminInventoryFilters:
+    status: str | None = None
+    decision: str | None = None
+    q: str | None = None
+    media_type: str | None = None
+    tag_kind: str | None = None
+    tag_value: str | None = None
+    limit: int = 100
+
+
+@dataclass(frozen=True)
 class MaterialData:
     revision_id: UUID
     title: str
@@ -121,9 +132,7 @@ class SourceGateway(Protocol):
 
     async def admin_original(self, revision_id: UUID) -> OriginalData: ...
 
-    async def admin_list(
-        self, *, status: str | None, decision: str | None, limit: int
-    ) -> list[AdminSourceData]: ...
+    async def admin_list(self, filters: AdminInventoryFilters) -> list[AdminSourceData]: ...
 
     async def approve(self, revision_id: UUID, reviewer_id: str, data: ApprovalData) -> None: ...
 
@@ -210,15 +219,10 @@ class SourceService:
         return await self.gateway.admin_original(revision_id)
 
     async def admin_list(
-        self,
-        actor: Actor,
-        *,
-        status: str | None = None,
-        decision: str | None = None,
-        limit: int = 100,
+        self, actor: Actor, filters: AdminInventoryFilters | None = None
     ) -> list[AdminSourceData]:
         require_role(actor, Role.ADMIN)
-        return await self.gateway.admin_list(status=status, decision=decision, limit=limit)
+        return await self.gateway.admin_list(filters or AdminInventoryFilters())
 
     async def approve(
         self, actor: Actor, revision_id: UUID, data: ApprovalData

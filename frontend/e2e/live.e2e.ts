@@ -85,6 +85,12 @@ test("live synthetic source flows from admin review to cited chat and revocation
     }, { timeout: 120_000 }).toBe("review_pending")
     await adminPage.reload()
     await adminPage.getByRole("button", { name: "Админка" }).click()
+    const inventorySearch = adminPage.getByRole("form", { name: "Поиск в инвентаре" })
+    await inventorySearch.getByRole("textbox", { name: "Источник или название" }).fill(marker)
+    await inventorySearch.getByRole("combobox", { name: "Формат" }).selectOption("text/csv")
+    await inventorySearch.getByRole("combobox", { name: "Тип метки" }).selectOption("region")
+    await inventorySearch.getByRole("textbox", { name: "Значение метки" }).fill(region)
+    await inventorySearch.getByRole("button", { name: "Найти" }).click()
     await adminPage.getByRole("button", { name: new RegExp(title) }).click()
     const reviewOriginalPath = `/api/v1/admin/revisions/${intake.revision_id}/original`
     await expect(adminPage.getByRole("link", { name: "Открыть оригинал для проверки" })).toHaveAttribute("href", reviewOriginalPath)

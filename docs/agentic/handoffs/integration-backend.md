@@ -660,3 +660,37 @@ suite passed 3 tests, 17 frontend component tests passed, all four mocked
 browser paths passed, and full `make check` passed again with 61 backend and
 20 ML tests plus static, contract and Compose checks. The previous
 admin-original commit passed GitHub CI before this follow-up.
+
+## 2026-09-30 administrator inventory discovery
+
+Objective and actual status: The administrator inventory can now filter
+candidate and decided revisions by source title, description, creator or
+origin URL, media type, exact revision tag kind/value, processing status and
+latest decision. Filtering happens in PostgreSQL before ordering and the
+100-row cap; the frontend sends a bounded search request and can reset it.
+This is catalogue discovery, not the accepted Qdrant chat retrieval path.
+
+Worktree / ownership: The same isolated worktree and
+`agent/integration-backend` branch were clean at `58cf628` before this slice.
+The integration agent owns the application filter contract, SQL, API,
+OpenAPI/client, admin UI, tests, tracker and this handoff. Other authors'
+checkouts were untouched.
+
+Falsifiable check and observed evidence: An unapproved, self-authored PDF
+fixture appears when source, PDF format and exact region tag match. The same
+revision is absent with CSV format, another region or a literal percent query.
+The focused PostgreSQL source API suite passed 3 tests. The frontend component
+suite passed 17 tests, and four mocked Playwright paths passed, including
+keyboard submission of the admin filters. The built Compose browser journey
+found an unapproved synthetic CSV through source/format/region filters, then
+completed approval, chat, citation, original access and withdrawal in 10.2
+seconds using the fake model. Full `make check` passed architecture, 61
+backend, 17 frontend, 20 ML, static, contract and Compose checks. `make smoke`
+passed liveness, readiness and frontend checks. Diff review and CI remain to
+be recorded for this slice.
+
+Risk and next step: The API returns at most 100 newest matches; cursor
+pagination and realistic-corpus query latency remain open. The inventory
+filter is metadata-only and does not publish unpublished text to users.
+Stop the test stacks, review the diff, commit/push and verify CI. U06 remains
+in progress for PDF and error-state browser coverage.

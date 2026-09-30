@@ -282,6 +282,15 @@ def test_admin_upload_review_approval_user_visibility_and_revocation(tmp_path: P
         assert review.json()["segments"][0]["locator"]["kind"] == "page"
         assert review.json()["segments"][0]["locator"]["page"] == 1
         assert "Self authored" in review.json()["segments"][0]["text"]
+        filtered_inventory = admin.get(
+            "/api/v1/admin/sources?q=owned-fixture&media_type=application/pdf"
+            "&tag_kind=region&tag_value=Primorye"
+        )
+        assert revision_id in [item["revision_id"] for item in filtered_inventory.json()]
+        for query in ("media_type=text/csv", "tag_kind=region&tag_value=Other", "q=%25"):
+            assert revision_id not in [
+                item["revision_id"] for item in admin.get(f"/api/v1/admin/sources?{query}").json()
+            ]
         assert user.get("/api/v1/materials").json() == []
         approval = {
             "reason": "Reviewer confirmed this fixture was created for the integration test",

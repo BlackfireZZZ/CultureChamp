@@ -222,14 +222,15 @@ test("admin navigation is visible only for an admin session", async () => {
 
 test("admin inventory and exact revision come from admin API", async () => {
   const source = { revision_id: "rev-3", source_id: "source-3", title: "Кандидат", origin_url: "https://example.org", status: "ready", decision: null }
-  vi.stubGlobal("fetch", vi.fn((input: string) => {
+  const fetchMock = vi.fn((input: string) => {
     if (input === "/api/v1/auth/me") return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ user: { id: "admin", username: "admin", role: "admin" }, csrf_token: "csrf" }) })
     if (input === "/api/v1/admin/sources?limit=100") return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve([source]) })
     if (input === "/api/v1/admin/sources?status=failed&decision=none&limit=100") return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve([]) })
     if (input.startsWith("/api/v1/admin/sources?")) return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve([source]) })
     if (input === "/api/v1/admin/revisions/rev-3") return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ ...source, sha256: "test-hash", creator: null, rights_usage_note: null, media_type: "application/pdf", tags: [{ kind: "region", value: "Приморье" }], segments: [] }) })
     throw new Error("Unexpected request")
-  }))
+  })
+  vi.stubGlobal("fetch", fetchMock)
   renderApp()
   fireEvent.click(await screen.findByRole("button", { name: "Админка" }))
   fireEvent.click(await screen.findByRole("button", { name: /Кандидат/ }))
@@ -238,6 +239,14 @@ test("admin inventory and exact revision come from admin API", async () => {
   expect(screen.getByRole("link", { name: "https://example.org" })).toHaveAttribute("href", "https://example.org/")
   expect(screen.getByText("Не подтверждены")).toBeInTheDocument()
   expect(screen.getByText("region: Приморье")).toBeInTheDocument()
+  const inventorySearch = screen.getByRole("form", { name: "Поиск в инвентаре" })
+  fireEvent.change(within(inventorySearch).getByRole("textbox", { name: "Источник или название" }), { target: { value: "Owned" } })
+  fireEvent.change(within(inventorySearch).getByRole("combobox", { name: "Формат" }), { target: { value: "application/pdf" } })
+  fireEvent.change(within(inventorySearch).getByRole("combobox", { name: "Тип метки" }), { target: { value: "region" } })
+  fireEvent.change(within(inventorySearch).getByRole("textbox", { name: "Значение метки" }), { target: { value: "Приморье" } })
+  fireEvent.click(within(inventorySearch).getByRole("button", { name: "Найти" }))
+  await waitFor(() => expect(fetchMock.mock.calls.some(([path]) => path === "/api/v1/admin/sources?q=Owned&media_type=application%2Fpdf&tag_kind=region&tag_value=%D0%9F%D1%80%D0%B8%D0%BC%D0%BE%D1%80%D1%8C%D0%B5&limit=100")).toBe(true))
+  fireEvent.click(within(inventorySearch).getByRole("button", { name: "Сбросить" }))
   fireEvent.change(screen.getByRole("combobox", { name: "Обработка" }), { target: { value: "failed" } })
   fireEvent.change(screen.getByRole("combobox", { name: "Решение" }), { target: { value: "none" } })
   expect(await screen.findByText("Ревизий не найдено")).toBeInTheDocument()
