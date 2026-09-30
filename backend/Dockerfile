@@ -16,4 +16,4 @@ RUN useradd --create-home --uid 10001 appuser && mkdir -p /workspace/.private &&
 USER appuser
 WORKDIR /workspace/backend
 EXPOSE 8000
-CMD ["/workspace/.venv/bin/uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["/workspace/.venv/bin/uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--no-access-log"]

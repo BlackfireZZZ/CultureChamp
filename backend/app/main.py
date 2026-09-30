@@ -7,6 +7,7 @@ from fastapi.responses import JSONResponse
 from starlette.middleware.body_limit import RequestBodyLimitMiddleware
 from starlette.requests import Request
 
+from app.api.http_telemetry import http_telemetry
 from app.api.routes.chats import router as chats_router
 from app.api.routes.health import router as health_router
 from app.api.routes.identity import admin_account_router, auth_router
@@ -87,6 +88,7 @@ def create_app() -> FastAPI:
     app.include_router(admin_router, prefix="/api/v1")
     app.include_router(materials_router, prefix="/api/v1")
     app.include_router(chats_router, prefix="/api/v1")
+    app.middleware("http")(http_telemetry)
     return app
 
 

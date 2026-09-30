@@ -115,6 +115,16 @@ incur usage absent from the final response; reconcile actual invoices before
 calling these counts cost. Pricing, production log retention, p95 thresholds
 and alert routing remain pending the selected provider and pilot traffic.
 
+The backend starts Uvicorn with `--no-access-log` because its default access
+format includes the client address and raw request line. A replacement
+`http_call` event records only an allowlisted method, matched route template (or
+`unmatched`), response status and elapsed milliseconds. Use those status counts
+for 429/503 rate checks without storing query strings, object IDs or client IPs.
+A built Compose smoke sent a marked query and unknown path; the backend log
+contained 200/404 metadata events and neither marker. This covers routine HTTP
+events; exceptions and infrastructure logs still need a deployment review.
+The CLI behavior follows [Uvicorn's logging settings](https://www.uvicorn.org/settings/).
+
 The procedure follows [PostgreSQL's `pg_dump` and `pg_restore` documentation](https://www.postgresql.org/docs/current/backup-dump.html)
 and [Qdrant snapshot/recovery guidance](https://qdrant.tech/documentation/operations/snapshots/).
 The project uses replay for its small text index; Qdrant snapshots may reduce

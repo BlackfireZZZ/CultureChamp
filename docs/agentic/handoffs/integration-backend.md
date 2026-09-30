@@ -885,3 +885,20 @@ rebuilding the frontend in a separate Compose project, the full live journey
 passed at all four widths (one test, 6.2 s), as did four mocked shell browser
 tests against the built frontend. The fixture is self-authored and the default
 fake provider remained active; this does not establish cultural answer quality.
+
+## 2026-09-30 routine HTTP log privacy
+
+Expected result: a request with an arbitrary URL path or query marker does not
+put those values or the client address into routine backend logs, while status
+and elapsed time remain observable. ADR 0004 and `AGENTS.md` require logs free
+of personal data. The installed Uvicorn default access formatter includes
+`client_addr` and `request_line`; its official CLI documents `--no-access-log`.
+A new focused test first failed because there was no safe replacement event.
+The API now emits `http_call` with allowlisted method, static matched route
+template or `unmatched`, status and monotonic duration; the Docker command
+disables Uvicorn access logs. The focused tests passed (2) and `make check`
+passed architecture, static checks, 63 backend unit tests with 14 service skips,
+19 frontend tests, 20 ML tests, build, API contract and Compose config. A fresh
+built backend/DB/Qdrant Compose project received marked 200 and 404 requests;
+its logs showed only safe metadata lines and no marker or client access line.
+The check does not audit future exception handlers or reverse-proxy logs.
