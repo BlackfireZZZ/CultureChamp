@@ -37,15 +37,24 @@ works even on the provisional set. A map in PDF-02
 showed why figure OCR must stay in a distinct, region-located representation;
 local OCR had recognition errors. Runtime model and chunking remain provisional.
 
+The worker now audits exact segment IDs and revision payloads for one approved
+revision per idle cycle. A missing point invalidates its SQL completion marker,
+causing chat search to return 503 until the worker replays that revision. A live
+PostgreSQL/Qdrant deletion-and-replay test passed. This is eventual detection;
+the [index runbook](../../operations/vector-index.md) records audit latency.
+The locally held 40-row passage packet at `.private/reviews/e5-large-review.csv`
+awaits the user's 0–2 relevance and cultural-context judgments. It is excluded
+from Git and user-facing source flows.
+
 A clean PostgreSQL database upgrade and Alembic check passed. With live
 PostgreSQL and Qdrant, 50 backend tests passed. The complete `make check` passed
-with Node 24: architecture, Ruff, mypy, 41 backend tests plus nine optional
-service skips, 15 frontend tests/lint/build, six ML tests, OpenAPI contract and
+with Node 24: architecture, Ruff, mypy, 50 live-service backend tests,
+15 frontend tests/lint/build, 11 ML tests, OpenAPI contract and
 Compose config. Four mocked Playwright scenarios passed. The rebuilt Compose
 stack reached healthy state and `BASE_URL=http://localhost:18036
 FRONTEND_URL=http://localhost:18081 make smoke` passed. These verify synthetic
 mechanics; an expert-labelled relevance set, rights-cleared real corpus, table
-extractor, live browser journey, index-loss recovery drill and provider contract
+extractor, live browser journey and provider contract
 remain open. The full acceptance state and implementation order live in
 `docs/exec-plans/active/creative-rag-mvp.md`.
 
