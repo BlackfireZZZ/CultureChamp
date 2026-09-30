@@ -1,5 +1,24 @@
 # Corpus/backend integration handoff — 2026-09-30
 
+## Latest extraction and source-boundary check
+
+The retrieval extraction audit compared normalized token content and order for
+all 32 physical pages of the three locally held PDFs. PDF-03 page 1 had 0.9932
+unordered but 0.8549 ordered agreement between `pypdf` and Poppler on the
+`pypdf` side. The rendered page confirms parallel Russian/English front matter;
+page 7 is author/citation metadata. This parser disagreement and non-evidence
+content are gates for passage review, not proof that either parser is correct.
+The numeric report is Git-ignored at `.private/reviews/pdf-extraction-agreement.json`.
+
+The three personally downloaded PDFs were found in the initial public Git
+commit `f67a058`. This branch now removes them from the tracked tree and ignores
+their local paths; the owner's copies remain on disk. Backend tests use
+self-authored PDFs, and a no-source full check passed: 46 backend tests with 13
+service-dependent skips, 15 frontend and 20 ML tests, plus static, build,
+contract and Compose checks. The prior Git history and other remote branches,
+including `main`, still contain the files. Repository-wide history remediation
+requires a separately reviewed coordinated plan and is not claimed here.
+
 ## Latest CSV integration evidence
 
 Objective and status: C06 and C09 gained a synthetic UTF-8 CSV path with exact

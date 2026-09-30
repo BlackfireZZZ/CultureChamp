@@ -5,6 +5,7 @@ from uuid import uuid4
 
 import pytest
 from fastapi.testclient import TestClient
+from pdf_fixture import self_authored_pdf
 
 from app.infrastructure.ingestion.chunking import chunk_text
 from app.infrastructure.ingestion.csv_table import extract_csv_cells
@@ -13,8 +14,6 @@ from app.infrastructure.ingestion.isolated_pdf import extract_pdf_isolated
 from app.infrastructure.ingestion.pdf_text import ExtractionError, extract_pdf_pages
 from app.infrastructure.ingestion.storage import MAX_PDF_BYTES, IntakeError, PrivateOriginalStore
 from app.main import MAX_REQUEST_BYTES, create_app
-
-FIXTURES = Path(__file__).parents[2] / "data" / "retrieval-fixtures" / "raw"
 
 
 def test_long_page_keeps_searchable_tail_with_context_overlap() -> None:
@@ -29,12 +28,12 @@ def test_long_page_keeps_searchable_tail_with_context_overlap() -> None:
 def test_private_store_retains_exact_fixture_and_deduplicates_retry(tmp_path: Path) -> None:
     store = PrivateOriginalStore(tmp_path / "private", public_root=tmp_path / "public")
     source_id = uuid4()
-    fixture = next(FIXTURES.glob("51-88-1-SM.pdf"))
-    with fixture.open("rb") as stream:
+    fixture = self_authored_pdf("Self authored test document")
+    with BytesIO(fixture) as stream:
         first = store.store(
             source_id, stream, filename="article.pdf", claimed_media_type="application/pdf"
         )
-    with fixture.open("rb") as stream:
+    with BytesIO(fixture) as stream:
         second = store.store(
             source_id, stream, filename="article.pdf", claimed_media_type="application/pdf"
         )
@@ -42,7 +41,7 @@ def test_private_store_retains_exact_fixture_and_deduplicates_retry(tmp_path: Pa
     assert first.storage_key == second.storage_key
     assert first.sha256 == second.sha256
     with store.open_original(first.storage_key) as stored:
-        assert stored.read() == fixture.read_bytes()
+        assert stored.read() == fixture
     assert (tmp_path / "private").stat().st_mode & 0o777 == 0o700
 
 
@@ -89,21 +88,14 @@ def test_store_rejects_public_root(tmp_path: Path) -> None:
         PrivateOriginalStore(tmp_path / "public" / "uploads", public_root=tmp_path / "public")
 
 
-@pytest.mark.parametrize("name,pages", [("51-88-1-SM", 15), ("perspektivy", 10), ("problemy", 7)])
-def test_pdf_extraction_preserves_nonempty_physical_pages(name: str, pages: int) -> None:
-    fixture = next(FIXTURES.glob(f"{name}*.pdf"))
-    extracted = extract_pdf_pages(fixture.read_bytes())
+@pytest.mark.parametrize("pages", [1, 3])
+def test_pdf_extraction_preserves_nonempty_physical_pages(pages: int) -> None:
+    fixture = self_authored_pdf(*(f"Synthetic page {number}" for number in range(1, pages + 1)))
+    extracted = extract_pdf_pages(fixture)
     assert len(extracted) == pages
     assert [page.ordinal for page in extracted] == list(range(pages))
     assert [page.locator.page for page in extracted] == list(range(1, pages + 1))
     assert all(page.text for page in extracted)
-
-
-def test_two_column_fixture_stays_in_column_order_on_sampled_page() -> None:
-    fixture = next(FIXTURES.glob("problemy*.pdf"))
-    page_two = extract_pdf_pages(fixture.read_bytes())[1].text
-    assert page_two.index("Для примера") < page_two.index("Неоднократно")
-    assert page_two.index("Неоднократно") < page_two.index("хозяйства, т. е.")
 
 
 @pytest.mark.parametrize("data", [b"not a PDF", b"%PDF-1.4\n%%EOF", b""])
@@ -113,9 +105,8 @@ def test_malformed_pdf_fails_without_partial_pages(data: bytes) -> None:
 
 
 def test_isolated_parser_returns_physical_pages_and_safe_failure() -> None:
-    fixture = next(FIXTURES.glob("51-88-1-SM.pdf"))
-    pages = extract_pdf_isolated(fixture.read_bytes())
-    assert len(pages) == 15
+    pages = extract_pdf_isolated(self_authored_pdf("Self authored page"))
+    assert len(pages) == 1
     assert pages[0].locator.page == 1
     with pytest.raises(ExtractionError):
         extract_pdf_isolated(b"%PDF-1.4\n%%EOF")

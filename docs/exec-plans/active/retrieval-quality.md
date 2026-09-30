@@ -154,6 +154,21 @@ inspection against the source image. Neither parser/OCR mode can be treated as
 ground truth for those details.
 The next gate is expert-confirmed passage-level relevance and locator judgments,
 including a held-out split, before any production chunking or model switch.
+An additional local extraction audit compares `pypdf` content-stream text with
+Poppler's default reading-order text after Unicode normalization, line-end
+dehyphenation and tokenization. It reports both unordered token overlap and
+ordered sequence overlap by physical page, without exporting source passages.
+This measures parser agreement, not transcription accuracy. On PDF-03 page 1,
+the `pypdf`-side unordered overlap is 0.9932 but ordered overlap is 0.8549;
+page 7 has unordered 1.0000 and ordered 0.8972. A visual check of page 1
+shows parallel Russian/English title and abstract blocks; `pypdf` groups the
+language blocks but places page furniture before the title, while Poppler
+interleaves portions of the parallel material. Page 7 is author/citation
+metadata rather than cultural evidence. The other two PDFs have minimum
+`pypdf`-side ordered overlaps of 0.9207 (PDF-01) and 0.9157 (PDF-02), with
+several low-overlap reference pages. These observations require page/segment
+review and non-evidence exclusion before a model/chunk decision. The numeric
+report remains local at `.private/reviews/pdf-extraction-agreement.json`.
 An optional review CSV now exports only to a path outside the repository. The
 local E5-large packet contains five passage candidates for each of eight queries
 (40 rows), with exact source hash, physical page, score, excerpt and blank
