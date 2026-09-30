@@ -17,6 +17,9 @@ RAW = HERE.parents[1] / "data/retrieval-fixtures/raw"
 
 def test_oracle_smoke_reports_slices_and_no_evidence() -> None:
     cases = load_cases(HERE / "qrels.jsonl")
+    for case in cases:
+        if case.language == "ru":
+            assert any("а" <= character.lower() <= "я" for character in case.query)
     run = load_run(HERE / "runs/oracle_smoke.jsonl", cases)
     assert_required_recall(cases, run, 5)
     report = summarize(cases, run, 5)
