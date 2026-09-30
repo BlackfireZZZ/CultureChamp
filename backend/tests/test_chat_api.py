@@ -1,4 +1,5 @@
 import asyncio
+import json
 import os
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -57,7 +58,9 @@ def test_persisted_chat_ownership_retry_citation_revocation_and_purge(tmp_path: 
     asyncio.run(_check_chat(url, tmp_path))
 
 
-async def _seed_source(factory: async_sessionmaker, marker: str) -> tuple[UUID, UUID]:
+async def _seed_source(
+    factory: async_sessionmaker, marker: str, *, provider_transfer: bool = False
+) -> tuple[UUID, UUID]:
     async with factory.begin() as session:
         repo = SourceRepository(session)
         source = await repo.add_source(f"https://example.invalid/synthetic-chat/{marker}")
@@ -82,7 +85,9 @@ async def _seed_source(factory: async_sessionmaker, marker: str) -> tuple[UUID, 
             RevisionDecision(
                 revision.id,
                 DecisionKind.APPROVE,
-                RightsScopes(user_text=True, original_file=False, provider_transfer=False),
+                RightsScopes(
+                    user_text=True, original_file=False, provider_transfer=provider_transfer
+                ),
                 True,
             ),
             reviewer_id="synthetic-test",
@@ -110,7 +115,8 @@ async def _check_chat(url: str, tmp_path: Path) -> None:
         f"chat-b-{uuid4().hex[:12]}",
         f"chat-admin-{uuid4().hex[:12]}",
     ]
-    source_id = revision_id = None
+    seeded_sources: list[tuple[UUID, UUID]] = []
+    chat_id: str | None = None
 
     async def seed_accounts() -> None:
         for name, role in zip(names, (Role.USER, Role.USER, Role.ADMIN), strict=True):
@@ -180,6 +186,7 @@ async def _check_chat(url: str, tmp_path: Path) -> None:
                 == 409
             )
             source_id, revision_id = await _seed_source(factory, marker)
+            seeded_sources.append((source_id, revision_id))
             async with factory() as session:
                 segments = (
                     await session.scalars(
@@ -207,7 +214,73 @@ async def _check_chat(url: str, tmp_path: Path) -> None:
                 assert held_from_provider.json()["evidence_status"] == "insufficient"
                 assert held_from_provider.json()["citations"] == []
                 assert external_calls == []
+
+            transferable_marker = f"transferprobe{uuid4().hex}"
+            transferable_source, transferable_revision = await _seed_source(
+                factory, transferable_marker, provider_transfer=True
+            )
+            seeded_sources.append((transferable_source, transferable_revision))
+            assert await ApprovedTextIndexer(factory, index).index_one() == transferable_revision
+            transfer_calls: list[httpx.Request] = []
+
+            def transfer_handler(request: httpx.Request) -> httpx.Response:
+                transfer_calls.append(request)
+                sent = request.content.decode()
+                wire = json.loads(sent)
+                evidence = json.loads(wire["messages"][-1]["content"])["evidence"]
+                return httpx.Response(
+                    200,
+                    json={
+                        "choices": [{"message": {"content": json.dumps({
+                            "fact": evidence[0]["excerpt"],
+                            "interpretation": "The source describes only this synthetic count.",
+                            "creative": "Make a new labelled concept from this test brief.",
+                            "citations": [evidence[0]["id"]],
+                        })}}],
+                        "usage": {"prompt_tokens": 43, "completion_tokens": 17},
+                    },
+                )
+
+            async with httpx.AsyncClient(transport=httpx.MockTransport(transfer_handler)) as client:
+                app.state.model_provider = HttpModelProvider(
+                    endpoint="https://approved.example/v1/chat/completions",
+                    model="pilot-model", api_key="synthetic-key", policy_approved=True,
+                    client=client,
+                )
+                transferred = owner.post(
+                    f"/api/v1/chats/{chat_id}/messages", headers=owner_headers,
+                    json={"request_id": str(uuid4()), "text": transferable_marker},
+                )
+                assert transferred.status_code == 200, transferred.text
+                assert transferred.json()["evidence_status"] == "grounded"
+                assert transferred.json()["citations"][0]["revision_id"] == str(
+                    transferable_revision
+                )
+                assert len(transfer_calls) == 1
+                sent = transfer_calls[0].content.decode()
+                wire = json.loads(sent)
+                evidence = json.loads(wire["messages"][-1]["content"])["evidence"]
+                assert wire["model"] == "pilot-model"
+                assert transfer_calls[0].headers["authorization"] == "Bearer synthetic-key"
+                assert [item["revision_id"] for item in evidence] == [
+                    str(transferable_revision)
+                ]
+                assert marker not in sent
+                assert names[0] not in sent
+                assert "synthetic-key" not in sent
             del app.state.model_provider
+            transfer_revoke = admin.post(
+                f"/api/v1/admin/revisions/{transferable_revision}/revoke",
+                json={"reason": "Synthetic provider-transfer path completed"},
+                headers=admin_headers,
+            )
+            assert transfer_revoke.status_code == 200, transfer_revoke.text
+            assert (
+                owner.get(f"/api/v1/chats/{chat_id}").json()["turns"][2]["citations"][0][
+                    "available"
+                ]
+                is False
+            )
             broken_id = str(uuid4())
             app.state.model_provider = BrokenProvider()
             broken_payload = {"request_id": broken_id, "text": marker}
@@ -223,7 +296,7 @@ async def _check_chat(url: str, tmp_path: Path) -> None:
             assert recovered.json()["evidence_status"] == "grounded"
             assert recovered.json()["citations"][0]["revision_id"] == str(revision_id)
             assert recovered.json()["citations"][0]["available"] is True
-            assert len(owner.get(f"/api/v1/chats/{chat_id}").json()["turns"]) == 3
+            assert len(owner.get(f"/api/v1/chats/{chat_id}").json()["turns"]) == 4
             revoked = admin.post(
                 f"/api/v1/admin/revisions/{revision_id}/revoke",
                 json={"reason": "Synthetic citation withdrawal check"},
@@ -231,7 +304,7 @@ async def _check_chat(url: str, tmp_path: Path) -> None:
             )
             assert revoked.status_code == 200, revoked.text
             assert (
-                owner.get(f"/api/v1/chats/{chat_id}").json()["turns"][2]["citations"][0][
+                owner.get(f"/api/v1/chats/{chat_id}").json()["turns"][3]["citations"][0][
                     "available"
                 ]
                 is False
@@ -250,7 +323,18 @@ async def _check_chat(url: str, tmp_path: Path) -> None:
             assert await SqlChatStore(factory).purge_expired() >= 1
             assert owner.get(f"/api/v1/chats/{expiring}").status_code == 404
     finally:
-        if revision_id is not None and source_id is not None:
+        if chat_id is not None:
+            async with factory.begin() as session:
+                await session.execute(
+                    delete(ChatConversation).where(ChatConversation.id == UUID(chat_id))
+                )
+        for source_id, revision_id in reversed(seeded_sources):
+            async with factory() as session:
+                segments = (
+                    await session.scalars(
+                        select(SourceSegment).where(SourceSegment.revision_id == revision_id)
+                    )
+                ).all()
             await index.delete([segment.id for segment in segments])
             async with factory.begin() as session:
                 await session.execute(

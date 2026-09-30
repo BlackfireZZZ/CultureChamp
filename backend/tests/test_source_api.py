@@ -8,6 +8,7 @@ import pytest
 from fastapi.testclient import TestClient
 from pypdf import PdfWriter
 from pypdf.generic import DecodedStreamObject, DictionaryObject, NameObject
+from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlalchemy.pool import NullPool
 from xlsx_fixture import self_authored_formula_xlsx, self_authored_xlsx
@@ -18,6 +19,7 @@ from app.application.identity import IdentityService
 from app.application.source_management import MaterialData, SegmentData
 from app.domain.sources import Locator
 from app.infrastructure.db.identity_store import SqlIdentityStore
+from app.infrastructure.db.source_models import SourceVectorIndex
 from app.infrastructure.db.vector_search import SqlGovernedVectorSearch
 from app.infrastructure.ingestion.processing import process_one
 from app.infrastructure.ingestion.storage import PrivateOriginalStore
@@ -266,6 +268,15 @@ def test_xlsx_sheet_locators_survive_approval_and_original_access(tmp_path: Path
         assert failed["status"] == "failed"
         assert failed["segments"] == []
         assert user.get(f"/api/v1/materials/{rejected_id}").status_code == 404
+
+    async def clear_fixture_index() -> None:
+        await index.delete([UUID(part["segment_id"]) for part in review["segments"]])
+        async with factory.begin() as session:
+            await session.execute(
+                delete(SourceVectorIndex).where(SourceVectorIndex.revision_id == revision_id)
+            )
+
+    asyncio.run(clear_fixture_index())
     asyncio.run(engine.dispose())
 
 

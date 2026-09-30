@@ -843,3 +843,31 @@ tests pass (8); a direct run with Uvicorn's production logging configuration
 emitted the expected line. This is a call metric, not a verified provider bill:
 failed attempts can be charged without returning usage. No real provider has
 been configured, so cost and pilot latency targets remain open.
+
+## 2026-09-30 provider-transfer integration check
+
+Expected result: when two approved synthetic revisions differ in
+`provider_transfer`, the external adapter receives only the permitted revision,
+returns a fact grounded in its exact segment, and revocation makes the resulting
+historical citation unavailable. The contract is the current rights decision
+before Qdrant ranking, the recheck after retrieval and the Chat Completions
+adapter. The prior chat integration test covered only the denied path.
+
+The extended PostgreSQL/Qdrant test first exposed an unrelated fixture-order
+assumption: with two equally scored constant vectors, a later fake answer could
+cite either source. The test now revokes the transferable fixture after its
+HTTP check, leaving the original source for the subsequent retry test. It also
+deletes its chat on failure before deleting referenced source segments, so the
+test fixture cleanup does not conceal the primary assertion. A clean database
+migrated to head and the focused test passed. HTTP transport is mocked; the
+chosen provider's actual wire behavior and terms remain unverified.
+
+The first repeated full gate on a reused database exposed a separate fixture
+leak: the XLSX API test left its revoked synthetic revision in the vector
+removal queue. A direct PostgreSQL query identified the `synthetic-xlsx` origin.
+That test now removes its exact vector points and index record after its
+assertions. On a new migrated PostgreSQL/Qdrant project, `make check` passed
+76 backend, 19 frontend and 20 ML tests plus architecture, static checks,
+build, API contract and Compose config. Re-running the entire backend suite
+against the same database passed all 76 tests, confirming the queue-order
+failure is resolved. No real source or external model was used.
