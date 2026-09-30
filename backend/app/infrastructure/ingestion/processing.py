@@ -101,10 +101,13 @@ async def run_worker(factory: async_sessionmaker[AsyncSession], root: Path) -> N
             await SqlModelQuota(factory).purge_old()
             next_purge = monotonic() + 3600
         processed = await process_one(factory, store)
+        audited = None
         try:
             indexed = await indexer.index_one()
             removed = await indexer.remove_revoked_one()
+            if processed is None and indexed is None and removed is None:
+                audited = await indexer.audit_one()
         except VectorUnavailable:
             indexed = removed = None
-        if processed is None and indexed is None and removed is None:
+        if processed is None and indexed is None and removed is None and audited is None:
             await asyncio.sleep(2)

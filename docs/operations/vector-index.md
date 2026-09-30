@@ -30,8 +30,18 @@ weights and verify the model hash before accepting approved content.
 If the Qdrant collection is missing, search returns HTTP 503. The worker detects
 that loss, clears completed-index markers, recreates the collection and replays
 approved revisions. Search stays unavailable while approved revisions lack
-markers. This covers whole-collection loss; it does not detect missing individual
-points inside an otherwise healthy collection.
+markers. During idle cycles the worker also audits one approved, indexed revision
+at a time. It retrieves its exact segment IDs and revision payloads from Qdrant
+without vectors. A missing or mismatched point invalidates that revision's SQL
+completion marker; search returns HTTP 503 until the next worker pass upserts
+the revision again. The audit cursor wraps across revisions and is reset on worker
+restart. Detection time grows with the number of indexed revisions, at roughly
+one revision per two seconds while the worker is idle. Monitor this lag at scale;
+the audit is not an immediate guarantee against partial point loss. Qdrant's
+[retrieve-points API](https://api.qdrant.tech/api-reference/points/get-points)
+supports ID-based verification without transferring vectors, and its
+[idempotent upsert](https://qdrant.tech/documentation/concepts/points/) makes
+replay safe.
 
 For a controlled rebuild, stop the ingestion worker and chat backend first. Back
 up PostgreSQL, private source storage and Qdrant. Restore or create the Qdrant

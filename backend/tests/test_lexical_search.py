@@ -169,6 +169,19 @@ async def _check_search(url: str, vector_url: str | None = None) -> None:
                 revisions["provider"],
             }
             assert await indexer.index_one() is None
+            await index.delete([segment_ids["visible"]])
+            assert revisions["visible"] in {await indexer.audit_one(), await indexer.audit_one()}
+            assert not await index.has_revision_points(
+                revisions["visible"], [segment_ids["visible"]]
+            )
+            with pytest.raises(VectorUnavailable, match="awaiting indexing"):
+                await SqlGovernedVectorSearch(factory, index).search(
+                    marker, limit=5, region=None, people=None, for_provider=False
+                )
+            assert await indexer.index_one() == revisions["visible"]
+            assert await index.has_revision_points(
+                revisions["visible"], [segment_ids["visible"]]
+            )
             # Simulate stale points from a held and a revoked revision.
             await index.upsert(
                 [(segment_ids[name], revisions[name], marker) for name in ("held", "revoked")]

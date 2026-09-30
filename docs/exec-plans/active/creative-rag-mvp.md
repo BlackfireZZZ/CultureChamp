@@ -291,6 +291,12 @@ path, evaluation cases, and data-handling constraints exist.
   collection check passes; recovery of missing individual points still needs a
   separate drill. The complete live-service `make check` passed 49 backend,
   14 frontend and six ML tests.
+- **2026-09-30, individual-point recovery:** an idle worker now audits one
+  approved revision's exact segment IDs and revision payloads at a time. A
+  missing point invalidates its completion marker; governed search fails with
+  HTTP 503 until replay. A live PostgreSQL/Qdrant test deletes an individual
+  point, observes the pending-index failure, and verifies replay. This is
+  eventual detection, so audit cycle latency still needs monitoring at scale.
 - **2026-09-30, locator contract:** material details now carry the complete
   page/section/sheet/table/row/column locator. The previous adapter fabricated
   page 1 for a table-only segment; the API and frontend now preserve a missing

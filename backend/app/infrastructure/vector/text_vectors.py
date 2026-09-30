@@ -170,3 +170,26 @@ class QdrantTextIndex:
                 response.raise_for_status()
             except httpx.HTTPError as exc:
                 raise VectorUnavailable("Vector cleanup unavailable") from exc
+
+    async def has_revision_points(self, revision_id: UUID, segment_ids: Sequence[UUID]) -> bool:
+        if not segment_ids:
+            return True
+        async with httpx.AsyncClient(timeout=15) as client:
+            try:
+                for start in range(0, len(segment_ids), 256):
+                    batch = segment_ids[start:start + 256]
+                    response = await client.post(
+                        f"{self.url}/collections/{self.collection}/points",
+                        json={"ids": [str(item) for item in batch],
+                              "with_payload": True, "with_vector": False},
+                    )
+                    response.raise_for_status()
+                    found = {
+                        UUID(str(point["id"])): point["payload"]["revision_id"]
+                        for point in response.json()["result"]
+                    }
+                    if any(found.get(item) != str(revision_id) for item in batch):
+                        return False
+                return True
+            except (httpx.HTTPError, KeyError, TypeError, ValueError) as exc:
+                raise VectorUnavailable("Vector audit unavailable") from exc
