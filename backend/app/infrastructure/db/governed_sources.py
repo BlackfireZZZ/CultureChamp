@@ -46,6 +46,7 @@ class SqlSourceGateway:
         *,
         origin_url: str,
         title: str,
+        description: str | None,
         creator: str | None,
         rights_note: str | None,
         source_id: UUID | None,
@@ -84,6 +85,7 @@ class SqlSourceGateway:
                 media_type=media_type,
                 storage_key=stored.storage_key,
                 title=title,
+                description=description,
                 creator=creator,
                 rights_note=rights_note,
             )
@@ -124,6 +126,7 @@ class SqlSourceGateway:
         return MaterialData(
             revision_id=revision.id,
             title=revision.title,
+            description=revision.description,
             creator=revision.creator,
             origin_url=source.origin_url,
             rights_usage_note=revision.rights_note,
@@ -317,6 +320,7 @@ class SqlSourceGateway:
                     query = query.where(
                         or_(
                             SourceRevision.title.icontains(term, autoescape=True),
+                            SourceRevision.description.icontains(term, autoescape=True),
                             SourceRevision.creator.icontains(term, autoescape=True),
                             matching_tag,
                         )
@@ -363,6 +367,7 @@ class SqlSourceGateway:
                 MaterialData(
                     revision_id=revision.id,
                     title=revision.title,
+                    description=revision.description,
                     creator=revision.creator,
                     origin_url=origin_url,
                     rights_usage_note=revision.rights_note,

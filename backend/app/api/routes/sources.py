@@ -68,6 +68,7 @@ class TagView(BaseModel):
 class MaterialView(BaseModel):
     revision_id: UUID
     title: str
+    description: str | None = None
     creator: str | None
     origin_url: str
     rights_usage_note: str | None
@@ -120,6 +121,7 @@ def _material_view(material: MaterialData) -> MaterialView:
     return MaterialView(
         revision_id=material.revision_id,
         title=material.title,
+        description=material.description,
         creator=material.creator,
         origin_url=material.origin_url,
         rights_usage_note=material.rights_usage_note,
@@ -176,6 +178,7 @@ async def upload_source(
     file: Annotated[UploadFile, File()],
     origin_url: Annotated[str, Form(min_length=8, max_length=2000)],
     title: Annotated[str, Form(min_length=1, max_length=500)],
+    description: Annotated[str | None, Form(max_length=500)] = None,
     creator: Annotated[str | None, Form()] = None,
     rights_note: Annotated[str | None, Form(max_length=2000)] = None,
     source_id: Annotated[UUID | None, Form()] = None,
@@ -185,6 +188,7 @@ async def upload_source(
         actor,
         origin_url=origin_url,
         title=title,
+        description=description,
         creator=creator,
         rights_note=rights_note,
         source_id=source_id,

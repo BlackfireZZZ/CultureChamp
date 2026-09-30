@@ -314,6 +314,8 @@ export interface components {
             readonly creator: string | null;
             /** Decision */
             readonly decision: string | null;
+            /** Description */
+            readonly description?: string | null;
             /** Error Code */
             readonly error_code: string | null;
             /** Media Type */
@@ -382,6 +384,8 @@ export interface components {
         readonly Body_upload_source_api_v1_admin_sources_post: {
             /** Creator */
             readonly creator?: string | null;
+            /** Description */
+            readonly description?: string | null;
             /** File */
             readonly file: string;
             /** Origin Url */
@@ -569,6 +573,8 @@ export interface components {
         readonly MaterialDetail: {
             /** Creator */
             readonly creator: string | null;
+            /** Description */
+            readonly description?: string | null;
             /** Media Type */
             readonly media_type: string;
             /** Origin Url */
@@ -599,6 +605,8 @@ export interface components {
         readonly MaterialView: {
             /** Creator */
             readonly creator: string | null;
+            /** Description */
+            readonly description?: string | null;
             /** Media Type */
             readonly media_type: string;
             /** Origin Url */

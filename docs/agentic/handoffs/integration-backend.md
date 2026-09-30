@@ -562,6 +562,57 @@ guard was added. The final `make check` passed architecture, Ruff, mypy,
 tests, OpenAPI/client contract and Compose config. The live service paths were
 observed in the browser runs and prior full 61-test database gate.
 
+## 2026-09-30 curator description for approved materials
+
+Objective and actual status: The materials catalogue required a concise
+description. An administrator can capture an optional, 500-character,
+curator-written description at intake; it is bound to the exact source
+revision. Admin detail shows it during review. User list/detail expose it only
+after the same revision is approved, and text search includes it. Existing
+revisions retain a null description. A retry with the same source ID and byte
+hash cannot overwrite the captured description. G04's persisted client and
+browser checks now satisfy its stated acceptance; U04 remains in progress for
+broader format and discovery coverage.
+
+Worktree / branch / base SHA: The isolated integration worktree
+`/mnt/BlackfireZZZ/Hackatons/CultureChamp-integration-backend`, branch
+`agent/integration-backend`, was clean at `a56ac1c` before this slice. The
+primary checkout and other authors' worktrees were untouched. The integration
+agent owns the schema, migration, application/SQL gateway, API contract,
+frontend, tests, ADR extension, tracker and this handoff.
+
+Decision and evidence: `docs/product/USE_CASES.md` asks for a concise material
+description. ADR 0003 treats captured revision metadata as immutable; the
+description follows that rule and is not a model-generated claim. A null field
+keeps pre-existing revisions valid. The list still uses metadata-only reads;
+full segment bodies are fetched only in detail. RFC 9110 describes PUT as
+resource replacement and RFC 5789 PATCH as partial modification, but this
+slice adds no metadata edit endpoint. Correcting captured wording after a
+duplicate retry would require an audited overlay under ADR 0003; that remains
+open rather than silently mutating an approved revision.
+
+Verification and integration: A new nullable-column migration upgraded a
+clean PostgreSQL 17/PostGIS database to head; Alembic check found no drift.
+The focused source API suite passed 3 tests on isolated PostgreSQL/Qdrant,
+including preapproval invisibility, approved description/search and immutable
+duplicate retry. Full `make check` with isolated services passed architecture,
+Ruff, mypy, 61 backend tests, 16 frontend tests/build, 20 ML tests,
+OpenAPI/generated-client checks and Compose config. Four mocked Playwright
+tests passed at canonical widths; one live test was skipped. A separate clean
+Compose stack ran the synthetic CSV browser journey with description upload
+and approved user display; it passed one live test in 35.1 seconds. The model
+was the deterministic fake. `make smoke` passed backend liveness/readiness
+and frontend. All source files were self-authored fixtures.
+
+Risks and next step: The description is a curator assertion, not a verified
+source fact. Admins cannot yet correct tags or description after capture;
+implementing that requires an audited overlay and concurrency policy. Large
+catalogues still need pagination and measured latency. Both isolated stacks
+were stopped after verification; their named volumes remain for repeat checks.
+Review the diff, commit and push, then verify CI. Continue
+independent admin/error and safety checks; source rights, expert review and
+the exact external provider remain outside this technical slice.
+
 Remaining limits: Expert factual review, a real provider, eligible cultural
 rights, image/audio locators and broader UC-07–UC-11 adversarial cases remain
 outside this synthetic citation check.

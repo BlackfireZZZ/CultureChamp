@@ -47,6 +47,17 @@
             ],
             "title": "Decision"
           },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
           "error_code": {
             "anyOf": [
               {
@@ -246,6 +257,18 @@
               }
             ],
             "title": "Creator"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
           },
           "file": {
             "contentMediaType": "application/octet-stream",
@@ -805,6 +828,17 @@
             ],
             "title": "Creator"
           },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
           "media_type": {
             "title": "Media Type",
             "type": "string"
@@ -911,6 +945,17 @@
               }
             ],
             "title": "Creator"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
           },
           "media_type": {
             "title": "Media Type",

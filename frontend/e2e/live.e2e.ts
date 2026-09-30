@@ -13,6 +13,7 @@ test.setTimeout(360_000)
 test("live synthetic source flows from admin review to cited chat and revocation", async ({ browser }) => {
   const marker = `live${Date.now()}`
   const title = `Synthetic live table ${marker}`
+  const description = `Self-authored catalogue summary ${marker}`
   const region = `Synthetic region ${marker}`
   const cell = `item: ${marker}; count: seven`
   const approvedBrief = `${cell} — summarize the source`
@@ -46,6 +47,7 @@ test("live synthetic source flows from admin review to cited chat and revocation
     await upload.getByLabel("Оригинальный файл").setInputFiles({ name: "synthetic.csv", mimeType: "text/csv", buffer: csv })
     await upload.getByLabel("Ссылка на источник").fill(`https://example.invalid/${marker}`)
     await upload.getByLabel("Название").fill(title)
+    await upload.getByLabel("Краткое описание").fill(description)
     await upload.getByLabel("Автор или организация").fill("Self-authored test")
     await upload.getByLabel("Примечание о правах").fill("Self-authored synthetic fixture")
     await upload.getByLabel("Метки, по одной в строке").fill(`region:${region}\ntopic:Synthetic testing`)
@@ -111,6 +113,7 @@ test("live synthetic source flows from admin review to cited chat and revocation
     await filter.getByRole("textbox", { name: "Регион" }).fill(region)
     await filter.getByRole("button", { name: "Найти" }).click()
     await expect(userPage.getByRole("button", { name: new RegExp(title) })).toBeVisible()
+    await expect(userPage.getByText(description)).toBeVisible()
     await filter.getByRole("textbox", { name: "Регион" }).fill("Unrelated region")
     await filter.getByRole("button", { name: "Найти" }).click()
     await expect(userPage.getByRole("heading", { name: "Материалов по запросу не найдено" })).toBeVisible()

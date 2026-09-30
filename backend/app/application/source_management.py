@@ -51,6 +51,7 @@ class MaterialData:
     origin_url: str
     rights_usage_note: str | None
     media_type: str
+    description: str | None = None
     tags: tuple[TagData, ...] = ()
     segments: tuple[SegmentData, ...] = ()
     original_available: bool = False
@@ -106,6 +107,7 @@ class SourceGateway(Protocol):
         *,
         origin_url: str,
         title: str,
+        description: str | None,
         creator: str | None,
         rights_note: str | None,
         source_id: UUID | None,
@@ -144,6 +146,7 @@ class SourceService:
         *,
         origin_url: str,
         title: str,
+        description: str | None,
         creator: str | None,
         rights_note: str | None,
         source_id: UUID | None,
@@ -153,6 +156,10 @@ class SourceService:
         tags: list[str] | None = None,
     ) -> IntakeData:
         require_role(actor, Role.ADMIN)
+        if description is not None:
+            description = description.strip() or None
+            if description is not None and len(description) > 500:
+                raise SourceInputError("Description is too long")
         parsed_tags = []
         if len(tags or []) > 20:
             raise SourceInputError("Too many tags")
@@ -169,6 +176,7 @@ class SourceService:
         return await self.gateway.upload(
             origin_url=origin_url,
             title=title,
+            description=description,
             creator=creator,
             rights_note=rights_note,
             source_id=source_id,

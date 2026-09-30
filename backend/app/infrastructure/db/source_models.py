@@ -47,6 +47,7 @@ class SourceRevision(Base):
     media_type: Mapped[str] = mapped_column(String(100), nullable=False)
     storage_key: Mapped[str] = mapped_column(Text, nullable=False)
     title: Mapped[str] = mapped_column(Text, nullable=False)
+    description: Mapped[str | None] = mapped_column(Text)
     creator: Mapped[str | None] = mapped_column(Text)
     language: Mapped[str | None] = mapped_column(String(35))
     period_note: Mapped[str | None] = mapped_column(Text)

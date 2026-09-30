@@ -215,6 +215,7 @@ def test_admin_upload_review_approval_user_visibility_and_revocation(tmp_path: P
 
         admin_headers, user_headers = login(admin, admin_name), login(user, user_name)
         payload = _self_authored_pdf()
+        description = "Self-authored source for a technical catalogue check"
         form = {"origin_url": "https://example.invalid/owned-fixture", "title": "Owned fixture"}
 
         def send_file(client: TestClient, headers: dict[str, str], data: bytes, **fields: str):
@@ -227,7 +228,10 @@ def test_admin_upload_review_approval_user_visibility_and_revocation(tmp_path: P
 
         assert send_file(user, user_headers, payload).status_code == 403
         assert send_file(admin, admin_headers, b"%PDF-1.4\nnot a file").status_code == 422
-        uploaded = send_file(admin, admin_headers, payload, tags="region:Primorye")
+        uploaded = send_file(
+            admin, admin_headers, payload, tags="region:Primorye",
+            description=description,
+        )
         assert uploaded.status_code == 201, uploaded.text
         source_id = uploaded.json()["source_id"]
         revision_id = uploaded.json()["revision_id"]
@@ -248,7 +252,8 @@ def test_admin_upload_review_approval_user_visibility_and_revocation(tmp_path: P
         )
 
         duplicate = send_file(
-            admin, admin_headers, payload, source_id=source_id, tags="region:Other"
+            admin, admin_headers, payload, source_id=source_id, tags="region:Other",
+            description="A retry must not replace captured metadata",
         )
         assert duplicate.status_code == 201
         assert duplicate.json()["revision_id"] == revision_id
@@ -257,6 +262,7 @@ def test_admin_upload_review_approval_user_visibility_and_revocation(tmp_path: P
         review = admin.get(f"/api/v1/admin/revisions/{revision_id}")
         assert review.status_code == 200
         assert review.json()["status"] == "review_pending"
+        assert review.json()["description"] == description
         assert review.json()["tags"] == [{"kind": "region", "value": "Primorye"}]
         assert review.json()["segments"][0]["locator"]["kind"] == "page"
         assert review.json()["segments"][0]["locator"]["page"] == 1
@@ -300,9 +306,13 @@ def test_admin_upload_review_approval_user_visibility_and_revocation(tmp_path: P
         assert visible_list.headers["cache-control"] == "no-store"
         assert [item["revision_id"] for item in visible_list.json()] == [revision_id]
         assert visible_list.json()[0]["region"] == "Primorye"
+        assert visible_list.json()[0]["description"] == description
         assert visible_list.json()[0]["tags"] == [{"kind": "region", "value": "Primorye"}]
         assert [item["revision_id"] for item in user.get(
             "/api/v1/materials?region=Primorye&q=Owned"
+        ).json()] == [revision_id]
+        assert [item["revision_id"] for item in user.get(
+            "/api/v1/materials?q=technical%20catalogue"
         ).json()] == [revision_id]
         assert user.get("/api/v1/materials?region=Other").json() == []
         assert user.get("/api/v1/materials?q=%25").json() == []

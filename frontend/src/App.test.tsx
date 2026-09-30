@@ -71,7 +71,7 @@ test("materials show no unapproved candidates", async () => {
 })
 
 test("materials search uses approved-only server filters and can be reset", async () => {
-  const material = { revision_id: "rev-filter", title: "Synthetic table", creator: "Author", origin_url: "https://example.invalid/table", rights_usage_note: "Self-authored", region: "Test region", people: null, period: null, media_type: "text/csv", tags: [{ kind: "region", value: "Test region" }] }
+  const material = { revision_id: "rev-filter", title: "Synthetic table", description: "Curator-written synthetic summary", creator: "Author", origin_url: "https://example.invalid/table", rights_usage_note: "Self-authored", region: "Test region", people: null, period: null, media_type: "text/csv", tags: [{ kind: "region", value: "Test region" }] }
   const requests: string[] = []
   vi.stubGlobal("fetch", vi.fn((input: string) => {
     if (input === "/api/v1/auth/me") return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ user: { id: "test-user", username: "tester", role: "user" }, csrf_token: "test-csrf" }) })
@@ -84,6 +84,7 @@ test("materials search uses approved-only server filters and can be reset", asyn
   renderApp()
   fireEvent.click(await screen.findByRole("button", { name: "Материалы" }))
   expect(await screen.findByRole("button", { name: /Synthetic table/ })).toBeInTheDocument()
+  expect(screen.getByText("Curator-written synthetic summary")).toBeInTheDocument()
   const form = screen.getByRole("form", { name: "Поиск материалов" })
   fireEvent.change(within(form).getByRole("textbox", { name: "Регион" }), { target: { value: "Other" } })
   fireEvent.click(within(form).getByRole("button", { name: "Найти" }))

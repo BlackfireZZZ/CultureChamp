@@ -48,6 +48,11 @@ Comparable design inputs:
 2. Revision records include source attribution and contextual metadata as captured
    for that revision. Corrections require a new revision or an audited overlay; no
    routine update path rewrites the revision bytes, hash or extracted segment text.
+   An optional curator-written description is captured with the revision and
+   shown to users only after that exact revision is approved. It is catalogue
+   context, not a verified source fact or an automatically generated summary.
+   A duplicate upload with the same source ID and byte hash retains the first
+   captured description. Editorial corrections still need an audited overlay.
 3. Tags are attached to a revision. A later revision can have different people,
    region, period or sensitivity tags without retroactively changing citations.
 4. A segment has an ID, immutable `revision_id`, ordinal and source locator. A PDF
