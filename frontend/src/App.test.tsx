@@ -61,7 +61,7 @@ test("approved material opens its exact revision and page", async () => {
   vi.stubGlobal("fetch", vi.fn((input: string) => {
     if (input === "/api/v1/auth/me") return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ user: { id: "test-user", username: "tester", role: "user" }, csrf_token: "test-csrf" }) })
     if (input === "/api/v1/materials") return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve([material]) })
-    if (input === "/api/v1/materials/rev-2") return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ ...material, segments: [{ segment_id: "seg-1", locator: { kind: "page", page: 7 }, text: "Проверяемый фрагмент." }] }) })
+    if (input === "/api/v1/materials/rev-2") return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ ...material, original_available: true, segments: [{ segment_id: "seg-1", locator: { kind: "page", page: 7 }, text: "Проверяемый фрагмент." }] }) })
     throw new Error("Unexpected request")
   }))
   renderApp()
@@ -69,7 +69,23 @@ test("approved material opens its exact revision and page", async () => {
   fireEvent.click(screen.getByRole("button", { name: "Материалы" }))
   fireEvent.click(await screen.findByRole("button", { name: /Источник Приморья/ }))
   expect(await screen.findByText("Проверяемый фрагмент.")).toBeInTheDocument()
-  expect(screen.getByRole("link", { name: "Открыть страницу 7 в источнике" })).toHaveAttribute("href", "https://example.org/source.pdf#page=7")
+  expect(screen.getByRole("link", { name: "Открыть страницу 7 в источнике" })).toHaveAttribute("href", "/api/v1/materials/rev-2/original#page=7")
+})
+
+test("a material without original-file rights keeps the locator but offers no PDF link", async () => {
+  const material = { revision_id: "rev-4", title: "Только текст", creator: null, origin_url: "https://example.org/source.pdf", rights_usage_note: "Text only", media_type: "application/pdf" }
+  vi.stubGlobal("fetch", vi.fn((input: string) => {
+    if (input === "/api/v1/auth/me") return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ user: { id: "test-user", username: "tester", role: "user" }, csrf_token: "test-csrf" }) })
+    if (input === "/api/v1/materials") return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve([material]) })
+    if (input === "/api/v1/materials/rev-4") return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ ...material, original_available: false, segments: [{ segment_id: "seg-4", locator: { kind: "page", page: 4 }, text: "Одобренный текст." }] }) })
+    throw new Error("Unexpected request")
+  }))
+  renderApp()
+  fireEvent.click(await screen.findByRole("button", { name: "Материалы" }))
+  fireEvent.click(await screen.findByRole("button", { name: /Только текст/ }))
+  expect(await screen.findByText("Одобренный текст.")).toBeInTheDocument()
+  expect(screen.getByText(/Оригинальный файл недоступен/)).toBeInTheDocument()
+  expect(screen.queryByRole("link", { name: /Открыть страницу/ })).not.toBeInTheDocument()
 })
 
 test("materials error can be retried without showing candidates", async () => {

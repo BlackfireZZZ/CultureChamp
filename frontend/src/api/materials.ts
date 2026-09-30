@@ -19,12 +19,7 @@ export async function getMaterial(revisionId: string, signal?: AbortSignal): Pro
   return readJson<MaterialDetail>(response)
 }
 
-export function pageUrl(originUrl: string | null, page: number): string | null {
-  if (!originUrl || !Number.isSafeInteger(page) || page < 1) return null
-  try {
-    const url = new URL(originUrl)
-    if (url.protocol !== "https:" && url.protocol !== "http:") return null
-    url.hash = `page=${page}`
-    return url.toString()
-  } catch { return null }
+export function approvedPageUrl(revisionId: string, page: number, originalAvailable: boolean): string | null {
+  if (!originalAvailable || !revisionId || !Number.isSafeInteger(page) || page < 1) return null
+  return `/api/v1/materials/${encodeURIComponent(revisionId)}/original#page=${page}`
 }

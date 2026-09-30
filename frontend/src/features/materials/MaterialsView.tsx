@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react"
 
-import { pageUrl } from "../../api/materials"
+import { approvedPageUrl } from "../../api/materials"
 import { useMaterial, useMaterials } from "./useMaterials"
 
 export function MaterialsView({ onBack }: { onBack: () => void }) {
@@ -33,8 +33,9 @@ export function MaterialsView({ onBack }: { onBack: () => void }) {
         {revisionId && detail.isSuccess && <>
           <h2 ref={headingRef} tabIndex={-1}>{detail.data.title}</h2>
           <dl className="material-meta"><dt>Ревизия</dt><dd>{detail.data.revision_id}</dd><dt>Автор</dt><dd>{detail.data.creator || "Не указан"}</dd><dt>Права и условия</dt><dd>{detail.data.rights_usage_note || "Не указаны"}</dd></dl>
+          {!detail.data.original_available && <p>Оригинальный файл недоступен по условиям использования. Проверьте страницу и текст фрагмента ниже.</p>}
           {detail.data.segments.length === 0 ? <p>В этой ревизии нет доступных фрагментов.</p> : <ol className="segment-list">{detail.data.segments.map((segment) => {
-            const sourceUrl = pageUrl(detail.data.origin_url, segment.locator.page)
+            const sourceUrl = approvedPageUrl(detail.data.revision_id, segment.locator.page, detail.data.original_available)
             return <li key={segment.segment_id}><h3>Страница {segment.locator.page}</h3><p>{segment.text}</p>{sourceUrl && <a href={sourceUrl} target="_blank" rel="noopener noreferrer">Открыть страницу {segment.locator.page} в источнике</a>}</li>
           })}</ol>}
         </>}
