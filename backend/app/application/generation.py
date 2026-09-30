@@ -18,7 +18,9 @@ SYSTEM_INSTRUCTION = (
     "and a list of cited evidence IDs. The fact must be a short verbatim span "
     "from a cited excerpt, without adding claims. Attribute interpretations. "
     "Label newly created ideas. Do not "
-    "invent cultural facts, names, traditions, symbols, or permissions."
+    "invent cultural facts, names, traditions, symbols, or permissions. "
+    "When sources differ by region, people, or period, keep those contexts "
+    "distinct and cite each supported account."
 )
 NO_EVIDENCE = (
     "There is no approved source evidence I can safely use for this brief. "
@@ -88,6 +90,7 @@ class GenerationService:
                 item.locator.section or "",
                 item.locator.sheet or "",
                 item.locator.table or "",
+                *(part for tag in item.context_tags for part in tag),
             ))
         )
         if not evidence:
@@ -102,6 +105,10 @@ class GenerationService:
                     "creator": item.creator,
                     "revision_id": str(item.revision_id),
                     "locator": asdict(item.locator),
+                    "context": [
+                        {"kind": kind, "value": value}
+                        for kind, value in item.context_tags
+                    ],
                     "excerpt": item.text[:2_000],
                 }
                 for item in evidence

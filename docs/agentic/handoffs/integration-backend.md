@@ -1,5 +1,48 @@
 # Corpus/backend integration handoff — 2026-09-30
 
+## Revision context in model evidence — 2026-10-01
+
+Objective and actual status: carry curator-entered region, people and period tags
+with each approved source passage sent to the model, so a future answer can keep
+different cultural and historical accounts distinct. The vector search adapter
+fetches tags only for the authorized candidate revision IDs and binds them to
+individual evidence items. Generation sends those tags as structured JSON and
+screens their content for explicit prompt-control patterns.
+
+Worktree / branch / base SHA: the isolated integration checkout at
+`/mnt/BlackfireZZZ/Hackatons/CultureChamp-integration-backend`, branch
+`agent/integration-backend`, clean at `9aa7153` before this slice. Owner of changed
+files: this agent owns the retrieval/generation contract, vector SQL adapter,
+tests, ADR 0007 and tracker update. Changed contracts and files:
+`EvidenceSegment.context_tags` is an optional immutable sequence of
+`(kind, value)` pairs; the model JSON evidence item gains `context`. Existing
+untagged evidence retains an empty context. No public HTTP schema or migration
+changes.
+
+Decisions and supporting evidence: the product concept and UC-08 require region
+and time distinctions; materials already store bounded exact-revision tags.
+W3C PROV-O and a cultural-heritage RAG provenance study are comparable context
+models linked in ADR 0007. This implementation transports existing editorial
+metadata; it neither infers unknown provenance nor establishes model accuracy.
+Verification commands and observed results: two generation tests failed before
+the contract change, then all 16 generation tests passed. On clean isolated
+PostgreSQL/Qdrant, the chat integration test passed with a mocked external
+provider and confirmed only the transfer-permitted revision's region, people
+and period tags on the wire. Ruff and mypy passed. The full repository gate is
+also complete: `make check` passed architecture, Ruff, mypy, 108 backend tests,
+21 frontend tests and build, 20 ML tests, OpenAPI contract and Compose
+configuration.
+
+What remains unverified and why: no selected real provider or expert-reviewed
+conflicting cultural sources are available, so UC-08 answer quality remains open.
+Risks and open questions: tags can be mistaken or incomplete and the explicit
+pattern screen cannot detect every injected instruction. Exact next step:
+provider-specific synthetic validation and qualified comparison of distinct
+accounts after the operator supplies an approved model and sources. Cleanup
+completed or retention reason: the disposable `culturechamp_context` database
+and vector volumes were removed; keep the isolated integration checkout for
+ongoing goal work.
+
 ## UC-09 stale-vector non-disclosure — 2026-10-01
 
 Objective and actual status: verify that an unpublished source's title, original

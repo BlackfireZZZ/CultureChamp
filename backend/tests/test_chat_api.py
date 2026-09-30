@@ -24,6 +24,7 @@ from app.infrastructure.db.source_models import (
     SourceProcessing,
     SourceRevision,
     SourceSegment,
+    SourceTag,
     SourceVectorIndex,
 )
 from app.infrastructure.db.source_repository import SourceRepository
@@ -61,6 +62,7 @@ def test_persisted_chat_ownership_retry_citation_revocation_and_purge(tmp_path: 
 async def _seed_source(
     factory: async_sessionmaker, marker: str, *, provider_transfer: bool = False,
     approve: bool = True,
+    context_tags: tuple[tuple[str, str], ...] = (),
 ) -> tuple[UUID, UUID]:
     async with factory.begin() as session:
         repo = SourceRepository(session)
@@ -81,6 +83,8 @@ async def _seed_source(
             text=f"Synthetic marker {marker} has count seven.",
             locator=Locator(page=1),
         )
+        for kind, value in context_tags:
+            await repo.add_tag(revision.id, kind, value)
         session.add(SourceProcessing(revision_id=revision.id, state="review_pending"))
         if approve:
             await repo.record_decision(
@@ -240,7 +244,10 @@ async def _check_chat(url: str, tmp_path: Path) -> None:
 
             transferable_marker = f"transferprobe{uuid4().hex}"
             transferable_source, transferable_revision = await _seed_source(
-                factory, transferable_marker, provider_transfer=True
+                factory, transferable_marker, provider_transfer=True,
+                context_tags=(("region", "Synthetic north"),
+                              ("people", "Synthetic community"),
+                              ("period", "Synthetic earlier period")),
             )
             seeded_sources.append((transferable_source, transferable_revision))
             assert await ApprovedTextIndexer(factory, index).index_one() == transferable_revision
@@ -287,6 +294,11 @@ async def _check_chat(url: str, tmp_path: Path) -> None:
                 assert transfer_calls[0].headers["authorization"] == "Bearer synthetic-key"
                 assert [item["revision_id"] for item in evidence] == [
                     str(transferable_revision)
+                ]
+                assert evidence[0]["context"] == [
+                    {"kind": "people", "value": "Synthetic community"},
+                    {"kind": "period", "value": "Synthetic earlier period"},
+                    {"kind": "region", "value": "Synthetic north"},
                 ]
                 assert marker not in sent
                 assert names[0] not in sent
@@ -366,6 +378,9 @@ async def _check_chat(url: str, tmp_path: Path) -> None:
                 )
                 await session.execute(
                     delete(SourceSegment).where(SourceSegment.revision_id == revision_id)
+                )
+                await session.execute(
+                    delete(SourceTag).where(SourceTag.revision_id == revision_id)
                 )
                 await session.execute(
                     delete(SourceVectorIndex).where(SourceVectorIndex.revision_id == revision_id)

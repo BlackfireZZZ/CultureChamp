@@ -17,6 +17,7 @@ class EvidenceSegment:
     locator: Locator
     text: str
     score: float
+    context_tags: tuple[tuple[str, str], ...] = ()
 
 
 class SearchPort(Protocol):

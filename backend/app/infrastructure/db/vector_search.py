@@ -1,5 +1,7 @@
 """Vector candidates rechecked against authoritative exact-revision decisions."""
 
+from uuid import UUID
+
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
@@ -135,7 +137,24 @@ class SqlGovernedVectorSearch:
                 )
         async with self.factory() as session:
             rows = (await session.execute(statement)).all()
+            revision_ids = {revision.id for _, revision in rows}
+            tags = (
+                (
+                    await session.scalars(
+                        select(SourceTag)
+                        .where(
+                            SourceTag.revision_id.in_(revision_ids),
+                            SourceTag.kind.in_(("region", "people", "period")),
+                        )
+                        .order_by(SourceTag.kind, SourceTag.value)
+                    )
+                ).all()
+                if revision_ids else []
+            )
         by_id = {segment.id: (segment, revision) for segment, revision in rows}
+        tags_by_revision: dict[UUID, list[tuple[str, str]]] = {}
+        for tag in tags:
+            tags_by_revision.setdefault(tag.revision_id, []).append((tag.kind, tag.value))
         return tuple(
             EvidenceSegment(
                 revision_id=revision.id,
@@ -154,6 +173,7 @@ class SqlGovernedVectorSearch:
                 ),
                 text=segment.text,
                 score=score,
+                context_tags=tuple(tags_by_revision.get(revision.id, ())),
             )
             for segment_id, score in candidates
             if segment_id in by_id
