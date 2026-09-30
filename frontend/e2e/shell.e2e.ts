@@ -59,3 +59,21 @@ test("material selection exposes a precise page with keyboard focus at narrow an
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width)
   }
 })
+
+test("admin can filter inventory with keyboard without exposing it to user navigation", async ({ page }) => {
+  const source = { revision_id: "00000000-0000-4000-8000-000000000004", source_id: "00000000-0000-4000-8000-000000000005", title: "Кандидат", origin_url: "https://example.org", status: "review_pending", decision: null }
+  await page.route("**/api/v1/auth/me", (route) => route.fulfill({ json: { user: { id: "admin", username: "admin", role: "admin" }, csrf_token: "csrf" } }))
+  await page.route("**/api/v1/admin/sources?*", (route) => {
+    const url = new URL(route.request().url())
+    return route.fulfill({ json: url.searchParams.get("status") === "failed" ? [] : [source] })
+  })
+  await page.goto("/")
+  await page.getByRole("button", { name: "Админка" }).click()
+  await expect(page.getByRole("button", { name: /Кандидат/ })).toBeVisible()
+  const status = page.getByRole("combobox", { name: "Обработка" })
+  await status.focus()
+  await status.selectOption("failed")
+  await expect(page.getByText("Ревизий не найдено")).toBeVisible()
+  await page.setViewportSize({ width: 360, height: 800 })
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(360)
+})
