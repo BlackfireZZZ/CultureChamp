@@ -86,3 +86,18 @@ production audit-retention period, read-only review path and tamper resistance
 remain deployment decisions. A clean PostgreSQL upgrade and repeatable API
 test verified user/admin grants, actor attribution, duplicate rejection and
 rollback when the actor foreign key is invalid.
+
+## Daily generation attempts, 2026-10-01
+
+The PostgreSQL quota now writes one `generation_attempts` row for every accepted
+reservation, including a retry of a failed request ID. User and global daily
+limits count these rows in UTC, so a repeated failing request cannot bypass the
+generation ceiling. The reservation still holds the request ID and active lease
+for idempotency and one-active-request enforcement. The existing transaction-level
+advisory lock serializes the count and insert across API processes; PostgreSQL
+releases that lock at transaction end, as described in its
+[advisory lock documentation](https://www.postgresql.org/docs/17/explicit-locking.html#ADVISORY-LOCKS).
+The migration records one historical attempt for each prior reservation because
+past retries cannot be reconstructed. An internal transient retry by the adapter
+can still make two provider HTTP calls within one reserved generation; invoices
+must be reconciled separately from this admission limit.

@@ -6,7 +6,7 @@ from uuid import UUID
 from sqlalchemy import delete, func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from app.infrastructure.db.chat_models import GenerationReservation
+from app.infrastructure.db.chat_models import GenerationAttempt, GenerationReservation
 from app.infrastructure.model.gateway import ModelResult
 
 USER_DAILY_LIMIT = 20
@@ -42,36 +42,38 @@ class SqlModelQuota:
             )
             if active:
                 return False
+            user_count = await session.scalar(
+                select(func.count())
+                .select_from(GenerationAttempt)
+                .where(
+                    GenerationAttempt.subject_id == subject,
+                    GenerationAttempt.created_at >= day_start,
+                )
+            )
+            global_count = await session.scalar(
+                select(func.count())
+                .select_from(GenerationAttempt)
+                .where(GenerationAttempt.created_at >= day_start)
+            )
+            if (user_count or 0) >= USER_DAILY_LIMIT or (global_count or 0) >= GLOBAL_DAILY_LIMIT:
+                return False
             if existing is not None:
                 existing.status = "active"
                 existing.lease_until = now + timedelta(seconds=45)
                 existing.input_tokens = None
                 existing.output_tokens = None
-                return True
-            user_count = await session.scalar(
-                select(func.count())
-                .select_from(GenerationReservation)
-                .where(
-                    GenerationReservation.subject_id == subject,
-                    GenerationReservation.created_at >= day_start,
+            else:
+                session.add(
+                    GenerationReservation(
+                        id=key,
+                        subject_id=subject,
+                        status="active",
+                        created_at=now,
+                        lease_until=now + timedelta(seconds=45),
+                    )
                 )
-            )
-            global_count = await session.scalar(
-                select(func.count())
-                .select_from(GenerationReservation)
-                .where(GenerationReservation.created_at >= day_start)
-            )
-            if (user_count or 0) >= USER_DAILY_LIMIT or (global_count or 0) >= GLOBAL_DAILY_LIMIT:
-                return False
-            session.add(
-                GenerationReservation(
-                    id=key,
-                    subject_id=subject,
-                    status="active",
-                    created_at=now,
-                    lease_until=now + timedelta(seconds=45),
-                )
-            )
+                await session.flush()
+            session.add(GenerationAttempt(reservation_id=key, subject_id=subject, created_at=now))
             return True
 
     async def finish(

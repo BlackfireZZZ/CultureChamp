@@ -5,6 +5,11 @@ citations, quotas and failure handling but does not create useful cultural prose
 The fake provider is available only with `APP_ENV=development`. Any other
 environment rejects it at server startup, and a missing provider during a chat
 request returns HTTP 503 instead of silently selecting the fake provider.
+Each accepted generation attempt consumes a user and global UTC daily quota slot,
+including a retry after a failed request. A provider transport retry may make a
+second HTTP call within the same reserved generation; reconcile provider billing
+against actual usage before setting a spending target.
+
 The provider adapter accepts an operator-selected HTTPS endpoint compatible with
 Chat Completions. No service, model ID, endpoint or key is selected for this pilot.
 

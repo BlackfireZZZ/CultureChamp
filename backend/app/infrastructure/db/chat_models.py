@@ -96,3 +96,18 @@ class GenerationReservation(Base):
     lease_until: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     input_tokens: Mapped[int | None]
     output_tokens: Mapped[int | None]
+
+
+class GenerationAttempt(Base):
+    __tablename__ = "generation_attempts"
+    __table_args__ = (
+        Index("ix_generation_attempts_subject_created", "subject_id", "created_at"),
+        Index("ix_generation_attempts_created", "created_at"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    reservation_id: Mapped[UUID] = mapped_column(
+        ForeignKey("generation_reservations.id", ondelete="CASCADE")
+    )
+    subject_id: Mapped[UUID] = mapped_column(ForeignKey("accounts.id", ondelete="RESTRICT"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)

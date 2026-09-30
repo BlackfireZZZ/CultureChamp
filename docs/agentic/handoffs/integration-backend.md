@@ -1,5 +1,22 @@
 # Corpus/backend integration handoff — 2026-09-30
 
+## Retry quota accounting — 2026-10-01
+
+The previous daily quota counted distinct request IDs; one failed request could
+be retried indefinitely without consuming another slot. A new
+`generation_attempts` table records every accepted reservation under the existing
+transaction advisory lock. The quota counts these rows by UTC day for both user
+and global limits. A live PostgreSQL test first reproduced the unlimited retry,
+then verified rejection at the 20-attempt user ceiling. The migration backfills
+one attempt per existing reservation; historical retries are unknowable.
+Provider-internal transient retries remain up to two HTTP calls per reservation,
+so quota admission is not a substitute for invoice reconciliation.
+The new migration upgraded an empty PostgreSQL database through head;
+`make migration-check` found no drift. With that database and an isolated Qdrant,
+`make check` passed 95 backend, 19 frontend and 20 ML tests, architecture,
+Ruff, mypy, frontend build, OpenAPI and Compose configuration. No real source or
+external provider was used.
+
 ## Development-only fake provider guard — 2026-10-01
 
 The operator has chosen an external OpenAI-compatible provider for the MVP but
