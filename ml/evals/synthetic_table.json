@@ -1,0 +1,10 @@
+{
+  "synthetic": true,
+  "title": "Invented locator fixture; no cultural content",
+  "sheet": "Mechanics",
+  "rows": [
+    {"row": 1, "cells": {"A": "Item", "B": "Count"}},
+    {"row": 2, "cells": {"A": "Sample A", "B": "7"}}
+  ],
+  "target_locator": "synthetic-table:Mechanics!B2"
+}

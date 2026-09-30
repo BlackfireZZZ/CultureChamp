@@ -1,0 +1,20 @@
+{
+  "dataset_id": "primorye-page-provisional-v1",
+  "version": "2026-09-30.1",
+  "label_status": "provisional_agent",
+  "approved_user_corpus": false,
+  "rights": "Unknown reuse and model-transfer rights for all PDFs; evaluation-only hold",
+  "consent": "No community endorsement or consent established",
+  "geography": "Primorye and southern Russian Far East, bounded by each cited passage",
+  "time_range": "Primarily twentieth to early twenty-first century as discussed by candidates",
+  "languages": ["ru"],
+  "formats": ["pdf_page", "synthetic_table_cell"],
+  "leakage_controls": "No training on qrels; freeze expert labels before method comparison; PDF-01 is off-slice distractor; synthetic table excluded from cultural quality metrics",
+  "source_hashes": {
+    "PDF-01": "61b78fe753a6ea347aed7ead60fd3e9d5309d0e1ea4f5150c5c3adc192ad8d85",
+    "PDF-02": "ecadbe5afc98a88ade6715079c89363ee1bbc7b4a7889efd2c89ffb77394cf94",
+    "PDF-03": "5df1eeb1f3a45937b986ade1f41f92a9f56aa4679d0ff9a6371883955f25393b"
+  },
+  "reviewers": [],
+  "missing_fixture": "No rights-cleared real table or spreadsheet"
+}
