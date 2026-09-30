@@ -55,6 +55,10 @@ the user materials list to XLSX, downloads identical original bytes, and opens
 a cited workbook cell from a new chat. Revocation makes the historical citation
 unavailable. Opening a previously viewed source through a citation also checks
 that keyboard focus returns to the cited cell after cached data refreshes.
+The journey also uploads a self-authored two-page text-layer PDF. It checks
+candidate isolation, both physical page locators, an indexed page-two segment,
+a page-two chat citation and original link, byte-identical user access to the
+approved PDF, and denial of the original after revocation.
 The same run checks the admin review, cited chat and source detail for document
 overflow at 360, 768, 1280 and 1440 px; it is a layout check on synthetic
 content, not a target-user usability review.

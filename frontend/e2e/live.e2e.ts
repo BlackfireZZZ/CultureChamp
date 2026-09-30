@@ -343,6 +343,93 @@ test("live synthetic source flows from admin review to cited chat and revocation
     await userPage.reload()
     await userPage.getByRole("button", { name: workbookBrief, exact: true }).click()
     await expect(userPage.getByRole("button", { name: /Источник · таблица North, строка/ })).toBeDisabled()
+
+    const proseTitle = `Synthetic two-page PDF ${marker}`
+    const prose = await readFile(new URL("./fixtures/self-authored-pages.pdf", import.meta.url))
+    await upload.getByLabel("Оригинальный файл").setInputFiles({
+      name: "self-authored-pages.pdf", mimeType: "application/pdf", buffer: prose,
+    })
+    await upload.getByLabel("Ссылка на источник").fill(`https://example.invalid/${marker}/prose`)
+    await upload.getByLabel("Название").fill(proseTitle)
+    await upload.getByLabel("Примечание о правах").fill("Self-authored PDF for technical test")
+    const proseIntakeResponse = adminPage.waitForResponse((response) => response.url().endsWith("/api/v1/admin/sources") && response.request().method() === "POST")
+    await upload.getByRole("button", { name: "Загрузить на проверку" }).click()
+    const proseIntake = (await (await proseIntakeResponse).json()) as { revision_id: string }
+    expect((await userContext.request.get(`/api/v1/materials/${proseIntake.revision_id}`)).status()).toBe(404)
+    await expect.poll(async () => {
+      const response = await adminContext.request.get(`/api/v1/admin/revisions/${proseIntake.revision_id}`)
+      return ((await response.json()) as { status: string }).status
+    }, { timeout: 120_000 }).toBe("review_pending")
+    await adminPage.reload()
+    await adminPage.getByRole("button", { name: "Админка" }).click()
+    const proseSearch = adminPage.getByRole("form", { name: "Поиск в инвентаре" })
+    await proseSearch.getByRole("textbox", { name: "Источник или название" }).fill(proseTitle)
+    await proseSearch.getByRole("button", { name: "Найти" }).click()
+    await adminPage.getByRole("button", { name: new RegExp(proseTitle) }).click()
+    await expect(adminPage.getByText("Synthetic first page blue kites")).toBeVisible()
+    await expect(adminPage.getByText("Synthetic second page copper discs seven")).toBeVisible()
+    const proseReviewOriginal = await adminContext.request.get(`/api/v1/admin/revisions/${proseIntake.revision_id}/original`)
+    expect(proseReviewOriginal.status()).toBe(200)
+    expect(await proseReviewOriginal.body()).toEqual(prose)
+    const proseReview = adminPage.getByRole("form", { name: "Одобрение ревизии" })
+    await proseReview.getByLabel("Основание и ограничения").fill("Self-authored two-page PDF for isolated live test")
+    await proseReview.getByLabel("HTTPS-ссылка на доказательство прав").fill(`https://example.invalid/${marker}/prose/rights`)
+    await proseReview.getByLabel(/Показ текстовых фрагментов/).check()
+    await proseReview.getByLabel(/Чувствительность материала/).check()
+    await proseReview.getByLabel(/Показ оригинального файла/).check()
+    await proseReview.getByRole("button", { name: "Одобрить эту ревизию" }).click()
+    await expect(adminPage.getByRole("form", { name: "Отзыв ревизии" })).toBeVisible()
+    approvedRevisionId = proseIntake.revision_id
+    const proseDetail = await adminContext.request.get(`/api/v1/admin/revisions/${approvedRevisionId}`)
+    const proseSegments = ((await proseDetail.json()) as {
+      segments: { segment_id: string; locator: { page: number }; text: string }[]
+    }).segments
+    expect(proseSegments.map((segment) => [segment.locator.page, segment.text])).toEqual([
+      [1, "Synthetic first page blue kites"],
+      [2, "Synthetic second page copper discs seven"],
+    ])
+    await expect.poll(async () => {
+      const response = await fetch(`${vectorURL}/collections/culture_text_e5_small_v1/points`, {
+        method: "POST", headers: { "content-type": "application/json" },
+        body: JSON.stringify({ ids: [proseSegments[1].segment_id], with_payload: true, with_vector: false }),
+      })
+      if (!response.ok) return null
+      const data = (await response.json()) as { result: { payload: { revision_id: string } }[] }
+      return data.result[0]?.payload.revision_id ?? null
+    }, { timeout: 180_000 }).toBe(approvedRevisionId)
+    const proseBrief = "Synthetic second page copper discs seven"
+    await userPage.getByRole("button", { name: "Новый чат" }).click()
+    await userPage.getByRole("textbox", { name: "Ваш творческий бриф" }).fill(proseBrief)
+    const proseAnswerResponse = userPage.waitForResponse((response) => response.url().includes("/api/v1/chats/") && response.url().endsWith("/messages") && response.request().method() === "POST")
+    await userPage.getByRole("button", { name: "Отправить" }).click()
+    const proseAnswer = (await (await proseAnswerResponse).json()) as {
+      evidence_status: string; citations: { revision_id: string; segment_id: string; page: number }[]
+    }
+    expect(proseAnswer.evidence_status).toBe("grounded")
+    expect(proseAnswer.citations).toEqual([expect.objectContaining({
+      revision_id: approvedRevisionId, segment_id: proseSegments[1].segment_id, page: 2,
+    })])
+    await userPage.getByRole("button", { name: "Источник · страница 2" }).click()
+    await expect(userPage.locator(`#segment-${proseSegments[1].segment_id}`)).toBeFocused()
+    await expect(userPage.getByRole("heading", { name: "Страница 2" })).toBeVisible()
+    await expect(userPage.getByRole("link", { name: "Открыть страницу 2 в источнике" })).toHaveAttribute(
+      "href", `/api/v1/materials/${approvedRevisionId}/original#page=2`,
+    )
+    const proseUserOriginal = await userContext.request.get(`/api/v1/materials/${approvedRevisionId}/original`)
+    expect(proseUserOriginal.status()).toBe(200)
+    expect(await proseUserOriginal.body()).toEqual(prose)
+    const proseRevoke = adminPage.getByRole("form", { name: "Отзыв ревизии" })
+    await proseRevoke.getByLabel("Причина отзыва").fill("Synthetic PDF test completed")
+    await proseRevoke.getByRole("button", { name: "Отозвать эту ревизию" }).click()
+    await expect.poll(async () => {
+      const response = await adminContext.request.get(`/api/v1/admin/revisions/${proseIntake.revision_id}`)
+      return ((await response.json()) as { decision: string }).decision
+    }).toBe("revoke")
+    approvedRevisionId = null
+    expect((await userContext.request.get(`/api/v1/materials/${proseIntake.revision_id}/original`)).status()).toBe(404)
+    await userPage.reload()
+    await userPage.getByRole("button", { name: proseBrief, exact: true }).click()
+    await expect(userPage.getByRole("button", { name: "Источник · страница 2" })).toBeDisabled()
   } finally {
     if (approvedRevisionId && adminCsrfToken) {
       await adminContext.request.post(`/api/v1/admin/revisions/${approvedRevisionId}/revoke`, {

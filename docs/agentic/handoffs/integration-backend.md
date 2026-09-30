@@ -972,3 +972,16 @@ portion checked three coordinates across two sheets, Qdrant indexing, format
 filtering, original-byte equality, citation-to-segment identity and revocation.
 This is mechanical evidence using invented table data; real table semantics
 and cultural review remain open.
+
+## 2026-10-01 live two-page PDF path
+
+Expected result: a self-authored text-layer PDF keeps physical page locators
+through review, Qdrant indexing, chat citation and user original access, then
+loses user access on revocation. Generated a two-page, invented ASCII fixture
+from `backend/tests/pdf_fixture.py` and verified the production extractor returns
+pages 1 and 2 with the matching sentences. The isolated clean Compose browser
+journey passed (1, 22.7 s): candidate detail denied to the user, both pages
+visible in admin review, indexed page-two segment, cited page two with focus,
+`#page=2` original link, exact original bytes available while approved and
+denied after withdrawal. This verifies mechanics only; it does not assess real
+cultural prose, OCR, document layout or model answer quality.
