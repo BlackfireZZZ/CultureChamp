@@ -649,3 +649,14 @@ hash check detects mismatched private bytes. The broader U06 error, format and
 keyboard review and real-source approval are still open. Review the diff,
 commit and push, then verify CI. Stop both isolated test stacks after the
 smoke check; retain their named volumes for repeat checks.
+
+Review follow-up: The new origin link exposed a legacy-data risk because
+intake had accepted arbitrary URL schemes. The application now accepts only
+credential-free HTTP(S) origin URLs, and the admin view renders any existing
+non-HTTP(S) origin as plain text. A forged intake URL returns 422; a legacy
+`javascript:` value has no clickable link in the component check. This fix
+is part of the same U06 integration work. The focused PostgreSQL source API
+suite passed 3 tests, 17 frontend component tests passed, all four mocked
+browser paths passed, and full `make check` passed again with 61 backend and
+20 ML tests plus static, contract and Compose checks. The previous
+admin-original commit passed GitHub CI before this follow-up.

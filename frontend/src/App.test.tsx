@@ -235,12 +235,27 @@ test("admin inventory and exact revision come from admin API", async () => {
   fireEvent.click(await screen.findByRole("button", { name: /Кандидат/ }))
   expect(await screen.findByText("test-hash")).toBeInTheDocument()
   expect(screen.getByRole("link", { name: "Открыть оригинал для проверки" })).toHaveAttribute("href", "/api/v1/admin/revisions/rev-3/original")
-  expect(screen.getByRole("link", { name: "https://example.org" })).toHaveAttribute("href", "https://example.org")
+  expect(screen.getByRole("link", { name: "https://example.org" })).toHaveAttribute("href", "https://example.org/")
   expect(screen.getByText("Не подтверждены")).toBeInTheDocument()
   expect(screen.getByText("region: Приморье")).toBeInTheDocument()
   fireEvent.change(screen.getByRole("combobox", { name: "Обработка" }), { target: { value: "failed" } })
   fireEvent.change(screen.getByRole("combobox", { name: "Решение" }), { target: { value: "none" } })
   expect(await screen.findByText("Ревизий не найдено")).toBeInTheDocument()
+})
+
+test("legacy unsafe source URL is displayed as text in admin review", async () => {
+  const source = { revision_id: "rev-unsafe", source_id: "source-unsafe", title: "Unsafe fixture", origin_url: "javascript:alert(1)", status: "review_pending", decision: null }
+  vi.stubGlobal("fetch", vi.fn((input: string) => {
+    if (input === "/api/v1/auth/me") return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ user: { id: "admin", username: "admin", role: "admin" }, csrf_token: "csrf" }) })
+    if (input === "/api/v1/admin/sources?limit=100") return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve([source]) })
+    if (input === "/api/v1/admin/revisions/rev-unsafe") return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ ...source, sha256: "unsafe-hash", creator: null, rights_usage_note: null, media_type: "text/csv", tags: [], segments: [], error_code: null }) })
+    throw new Error("Unexpected request")
+  }))
+  renderApp()
+  fireEvent.click(await screen.findByRole("button", { name: "Админка" }))
+  fireEvent.click(await screen.findByRole("button", { name: /Unsafe fixture/ }))
+  expect(await screen.findByText("javascript:alert(1)")).toBeInTheDocument()
+  expect(screen.queryByRole("link", { name: "javascript:alert(1)" })).not.toBeInTheDocument()
 })
 
 test("admin review sends explicit rights scopes and can revoke the exact revision", async () => {

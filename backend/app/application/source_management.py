@@ -158,6 +158,19 @@ class SourceService:
         tags: list[str] | None = None,
     ) -> IntakeData:
         require_role(actor, Role.ADMIN)
+        try:
+            origin = urlsplit(origin_url)
+            valid_origin = (
+                origin.scheme in {"http", "https"}
+                and bool(origin.hostname)
+                and origin.username is None
+                and origin.password is None
+                and not any(char.isspace() or ord(char) < 32 for char in origin_url)
+            )
+        except ValueError:
+            valid_origin = False
+        if not valid_origin:
+            raise SourceInputError("HTTP(S) source URL required")
         if description is not None:
             description = description.strip() or None
             if description is not None and len(description) > 500:

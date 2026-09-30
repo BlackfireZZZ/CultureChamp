@@ -101,6 +101,13 @@ def test_csv_upload_to_vector_and_original_access(tmp_path: Path) -> None:
         )
         headers = {"origin": origin, "x-csrf-token": admin_login.json()["csrf_token"]}
         assert user_login.status_code == 200
+        unsafe = admin.post(
+            "/api/v1/admin/sources",
+            headers=headers,
+            data={"origin_url": "javascript:alert(1)", "title": "Unsafe origin"},
+            files={"file": ("unsafe.csv", payload, "text/csv")},
+        )
+        assert unsafe.status_code == 422
         uploaded = admin.post(
             "/api/v1/admin/sources",
             headers=headers,
