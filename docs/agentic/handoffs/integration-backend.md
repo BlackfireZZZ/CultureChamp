@@ -25,10 +25,11 @@ imported the backend package before its functions were called, while the ML job
 installs only ML dependencies. Moving that import into the audit command made
 `make sync-ml ml-check` pass in the isolated ML environment (20 tests). The
 audit remains run under the backend environment, as documented in the format
-matrix. The `dd6b24e` CI Compose job failed, but its logs were not available
-without repository sign-in; the same `make compose-check up smoke down` command
-passed locally on the exact `dd6b24e` tree. The main-branch CI failure remains
-unexplained pending its job log or a rerun.
+matrix. The `dd6b24e` CI Compose job failed because `scripts/smoke.sh` had Git
+mode `100644`; the local checkout's executable mode had concealed that. Commit
+`68ed9b5` corrected the mode on `main`, and the integration branch merged it
+at `1304f65`. The same `make compose-check up smoke down` command had passed
+locally on `dd6b24e`; the new remote CI run is the verification gate.
 
 ## Latest CSV integration evidence
 
