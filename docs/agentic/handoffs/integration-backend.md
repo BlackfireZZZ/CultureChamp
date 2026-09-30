@@ -11,13 +11,24 @@ content are gates for passage review, not proof that either parser is correct.
 The numeric report is Git-ignored at `.private/reviews/pdf-extraction-agreement.json`.
 
 The three personally downloaded PDFs were found in the initial public Git
-commit `f67a058`. This branch now removes them from the tracked tree and ignores
-their local paths; the owner's copies remain on disk. Backend tests use
-self-authored PDFs, and a no-source full check passed: 46 backend tests with 13
-service-dependent skips, 15 frontend and 20 ML tests, plus static, build,
-contract and Compose checks. The prior Git history and other remote branches,
-including `main`, still contain the files. Repository-wide history remediation
-requires a separately reviewed coordinated plan and is not claimed here.
+commit `f67a058`. Commit `dd6b24e` removed them from the tracked `main` tree;
+the integration branch merged that change at `da50603`. Their local paths are
+ignored, and the owner's copies remain on disk. Backend tests use self-authored
+PDFs. A no-source full check passed: 46 backend tests with 13 service-dependent
+skips, 15 frontend and 20 ML tests, plus static, build, contract and Compose
+checks. Prior Git history and other remote branches still contain the files.
+Repository-wide history remediation requires a separately reviewed coordinated
+plan and is not claimed here.
+
+The `da50603` CI run exposed an ML test-collection error: the extraction audit
+imported the backend package before its functions were called, while the ML job
+installs only ML dependencies. Moving that import into the audit command made
+`make sync-ml ml-check` pass in the isolated ML environment (20 tests). The
+audit remains run under the backend environment, as documented in the format
+matrix. The `dd6b24e` CI Compose job failed, but its logs were not available
+without repository sign-in; the same `make compose-check up smoke down` command
+passed locally on the exact `dd6b24e` tree. The main-branch CI failure remains
+unexplained pending its job log or a rerun.
 
 ## Latest CSV integration evidence
 

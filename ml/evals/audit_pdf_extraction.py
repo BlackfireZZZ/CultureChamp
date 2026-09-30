@@ -10,8 +10,6 @@ from collections import Counter
 from difflib import SequenceMatcher
 from pathlib import Path
 
-from app.infrastructure.ingestion.pdf_text import extract_pdf_pages
-
 ROOT = Path(__file__).resolve().parents[2]
 TOKEN = re.compile(r"\w+", re.UNICODE)
 LINE_HYPHEN = re.compile(r"(?<=\w)[\u002d\u2010\u2011]\s*\n\s*(?=\w)")
@@ -56,6 +54,8 @@ def poppler_pages(path: Path) -> list[str]:
 
 
 def audit(manifest_path: Path) -> dict[str, object]:
+    from app.infrastructure.ingestion.pdf_text import extract_pdf_pages
+
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     sources = []
     for source_id, relative_path in manifest["source_files"].items():
