@@ -29,7 +29,7 @@ class ApprovedTextIndexer:
             # creating the collection so approved revisions are replayed.
             async with self.factory.begin() as session:
                 await session.execute(delete(SourceVectorIndex))
-            await self.index.ensure_collection()
+        await self.index.ensure_collection()
         latest_event = (
             select(func.max(SourceDecision.event_id))
             .where(SourceDecision.revision_id == SourceRevision.id)

@@ -1,7 +1,9 @@
 import asyncio
 import os
+from math import sqrt
 from uuid import uuid4
 
+import httpx
 import pytest
 from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
@@ -25,6 +27,7 @@ from app.infrastructure.db.vector_search import SqlGovernedVectorSearch
 from app.infrastructure.vector.indexing import ApprovedTextIndexer
 from app.infrastructure.vector.text_vectors import (
     DIMENSIONS,
+    VECTOR_NAME,
     LocalTextEmbedder,
     QdrantTextIndex,
     VectorUnavailable,
@@ -39,6 +42,15 @@ class ConstantEmbedder:
         return [[1.0] + [0.0] * (DIMENSIONS - 1) for _ in texts]
 
 
+class CrowdingEmbedder(ConstantEmbedder):
+    async def passages(self, texts):
+        return [
+            ([0.9, sqrt(1 - 0.9**2)] if text == "allowed" else [1.0, 0.0])
+            + [0.0] * (DIMENSIONS - 2)
+            for text in texts
+        ]
+
+
 def test_search_terms_are_bounded_and_deterministic() -> None:
     assert search_terms("alpha ALPHA beta! x") == ("alpha", "beta")
     assert len(search_terms(" ".join(f"term{i}" for i in range(100)))) == 24
@@ -51,7 +63,7 @@ def test_lexical_search_filters_current_decision_before_ranking() -> None:
     asyncio.run(_check_search(url))
 
 
-def test_vector_search_rechecks_rights_after_candidate_ranking() -> None:
+def test_vector_search_prefilters_and_rechecks_rights() -> None:
     url = os.getenv("CORPUS_TEST_DATABASE_URL")
     vector_url = os.getenv("CORPUS_TEST_VECTOR_URL")
     if url is None or vector_url is None:
@@ -87,7 +99,7 @@ def test_multilingual_vector_paraphrase_ranks_relevant_passage_first() -> None:
     asyncio.run(check())
 
 
-def test_missing_vector_collection_fails_closed() -> None:
+def test_missing_vector_collection_or_revision_index_fails_closed() -> None:
     vector_url = os.getenv("CORPUS_TEST_VECTOR_URL")
     if vector_url is None:
         pytest.skip("set CORPUS_TEST_VECTOR_URL for live vector integration")
@@ -100,6 +112,51 @@ def test_missing_vector_collection_fails_closed() -> None:
         with pytest.raises(VectorUnavailable, match="missing"):
             await index.query("synthetic probe", 1)
         assert not await index.collection_exists()
+        async with httpx.AsyncClient(timeout=15) as client:
+            response = await client.put(
+                f"{vector_url}/collections/{index.collection}",
+                json={"vectors": {VECTOR_NAME: {
+                    "size": DIMENSIONS, "distance": "Cosine"
+                }}},
+            )
+            response.raise_for_status()
+        try:
+            with pytest.raises(VectorUnavailable, match="revision index is missing"):
+                await index.query("synthetic probe", 1)
+            await index.ensure_collection()
+            assert await index.query("synthetic probe", 1) == ()
+        finally:
+            async with httpx.AsyncClient(timeout=15) as client:
+                response = await client.delete(f"{vector_url}/collections/{index.collection}")
+                response.raise_for_status()
+
+    asyncio.run(check())
+
+
+def test_allowed_revision_is_ranked_before_candidate_limit() -> None:
+    vector_url = os.getenv("CORPUS_TEST_VECTOR_URL")
+    if vector_url is None:
+        pytest.skip("set CORPUS_TEST_VECTOR_URL for live vector integration")
+
+    async def check() -> None:
+        collection = f"prefilter_probe_{uuid4().hex}"
+        index = QdrantTextIndex(vector_url, CrowdingEmbedder(), collection=collection)
+        allowed_revision, allowed_point = uuid4(), uuid4()
+        held_revision = uuid4()
+        held_points = [uuid4() for _ in range(120)]
+        try:
+            await index.upsert(
+                [(allowed_point, allowed_revision, "allowed")]
+                + [(point, held_revision, "held") for point in held_points]
+            )
+            assert allowed_point not in dict(await index.query("synthetic", 100))
+            assert [point for point, _ in await index.query(
+                "synthetic", 1, allowed_revision_ids=[allowed_revision]
+            )] == [allowed_point]
+        finally:
+            async with httpx.AsyncClient(timeout=15) as client:
+                response = await client.delete(f"{vector_url}/collections/{collection}")
+                response.raise_for_status()
 
     asyncio.run(check())
 
@@ -111,6 +168,7 @@ async def _check_search(url: str, vector_url: str | None = None) -> None:
     revisions = {}
     segment_ids = {}
     source_ids = []
+    crowding_ids = []
     try:
         async with factory.begin() as session:
             repo = SourceRepository(session)
@@ -186,6 +244,13 @@ async def _check_search(url: str, vector_url: str | None = None) -> None:
             await index.upsert(
                 [(segment_ids[name], revisions[name], marker) for name in ("held", "revoked")]
             )
+            crowding_ids = [uuid4() for _ in range(120)]
+            await QdrantTextIndex(vector_url, CrowdingEmbedder()).upsert(
+                [(segment_ids[name], revisions[name], "allowed")
+                 for name in ("visible", "provider")]
+                + [(point, revisions["held"], "held") for point in crowding_ids]
+            )
+            assert segment_ids["visible"] not in dict(await index.query(marker, 100))
             search = SqlGovernedVectorSearch(factory, index)
         service = RetrievalService(search)
         user = Actor("synthetic-user", Role.USER)
@@ -218,7 +283,7 @@ async def _check_search(url: str, vector_url: str | None = None) -> None:
             assert await indexer.remove_revoked_one() is None
     finally:
         if vector_url is not None:
-            await index.delete(list(segment_ids.values()))
+            await index.delete(list(segment_ids.values()) + crowding_ids)
         async with factory.begin() as session:
             revision_ids = list(revisions.values())
             for model in (

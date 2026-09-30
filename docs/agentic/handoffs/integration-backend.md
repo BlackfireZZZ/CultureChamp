@@ -42,6 +42,10 @@ revision per idle cycle. A missing point invalidates its SQL completion marker,
 causing chat search to return 503 until the worker replays that revision. A live
 PostgreSQL/Qdrant deletion-and-replay test passed. This is eventual detection;
 the [index runbook](../../operations/vector-index.md) records audit latency.
+Search also obtains the exact approved, scoped revision IDs from PostgreSQL
+before vector ranking and passes them through Qdrant's indexed UUID filter.
+A live 120-held-point crowding test proves the allowed passage survives the
+bounded candidate set; PostgreSQL still rechecks each returned segment.
 The locally held 40-row passage packet at `.private/reviews/e5-large-review.csv`
 awaits the user's 0–2 relevance and cultural-context judgments. It is excluded
 from Git and user-facing source flows. The packet's non-review fields are locked
@@ -50,8 +54,8 @@ offline evaluator rejects altered or incomplete packets and reports only
 top-five judged-pool diagnostics. It cannot establish held-out recall.
 
 A clean PostgreSQL database upgrade and Alembic check passed. With live
-PostgreSQL and Qdrant, 50 backend tests passed. The complete `make check` passed
-with Node 24: architecture, Ruff, mypy, 50 live-service backend tests,
+PostgreSQL and Qdrant, 51 backend tests passed. The complete `make check` passed
+with Node 24: architecture, Ruff, mypy, 51 live-service backend tests,
 15 frontend tests/lint/build, 17 ML tests, OpenAPI contract and
 Compose config. Four mocked Playwright scenarios passed. The rebuilt Compose
 stack reached healthy state and `BASE_URL=http://localhost:18036

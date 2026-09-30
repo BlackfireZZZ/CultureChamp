@@ -297,6 +297,12 @@ path, evaluation cases, and data-handling constraints exist.
   HTTP 503 until replay. A live PostgreSQL/Qdrant test deletes an individual
   point, observes the pending-index failure, and verifies replay. This is
   eventual detection, so audit cycle latency still needs monitoring at scale.
+- **2026-09-30, candidate prefilter:** SQL now selects currently approved,
+  scoped revision IDs before Qdrant ranking; Qdrant filters on an indexed UUID
+  payload and SQL rechecks returned segments after ranking. A live test with
+  120 closer held points proves the allowed passage survives the top-100
+  candidate limit. Allowlist query size and latency still need corpus-scale
+  measurement; it is not silently truncated.
 - **2026-09-30, locator contract:** material details now carry the complete
   page/section/sheet/table/row/column locator. The previous adapter fabricated
   page 1 for a table-only segment; the API and frontend now preserve a missing

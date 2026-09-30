@@ -86,17 +86,31 @@ class QdrantTextIndex:
             try:
                 response = await client.get(f"{self.url}/collections/{self.collection}")
                 if response.status_code == 200:
-                    vectors = response.json()["result"]["config"]["params"]["vectors"]
+                    result = response.json()["result"]
+                    vectors = result["config"]["params"]["vectors"]
                     if vectors.get(VECTOR_NAME, {}).get("size") != DIMENSIONS:
                         raise VectorUnavailable("Vector collection model mismatch")
-                    return
-                if response.status_code != 404:
+                    schema = result["payload_schema"].get("revision_id")
+                    if schema is not None and schema.get("data_type") != "uuid":
+                        raise VectorUnavailable("Vector revision index type mismatch")
+                    if schema is not None:
+                        return
+                    if not create:
+                        raise VectorUnavailable("Vector revision index is missing")
+                else:
+                    if response.status_code != 404:
+                        response.raise_for_status()
+                    if not create:
+                        raise VectorUnavailable("Vector collection is missing")
+                    response = await client.put(
+                        f"{self.url}/collections/{self.collection}",
+                        json={"vectors": {VECTOR_NAME: {"size": DIMENSIONS,
+                                                        "distance": "Cosine"}}},
+                    )
                     response.raise_for_status()
-                if not create:
-                    raise VectorUnavailable("Vector collection is missing")
                 response = await client.put(
-                    f"{self.url}/collections/{self.collection}",
-                    json={"vectors": {VECTOR_NAME: {"size": DIMENSIONS, "distance": "Cosine"}}},
+                    f"{self.url}/collections/{self.collection}/index?wait=true",
+                    json={"field_name": "revision_id", "field_schema": "uuid"},
                 )
                 response.raise_for_status()
             except (httpx.HTTPError, KeyError, TypeError, ValueError) as exc:
@@ -138,17 +152,28 @@ class QdrantTextIndex:
             except httpx.HTTPError as exc:
                 raise VectorUnavailable("Vector indexing unavailable") from exc
 
-    async def query(self, text: str, limit: int) -> tuple[tuple[UUID, float], ...]:
+    async def query(
+        self, text: str, limit: int, *, allowed_revision_ids: Sequence[UUID] | None = None
+    ) -> tuple[tuple[UUID, float], ...]:
+        if allowed_revision_ids is not None and not allowed_revision_ids:
+            return ()
         await self.ensure_collection(create=False)
         vector = await self.embedder.query(text)
         if len(vector) != DIMENSIONS:
             raise VectorUnavailable("Embedding dimension mismatch")
         async with httpx.AsyncClient(timeout=15) as client:
             try:
+                body: dict[str, object] = {
+                    "query": vector, "using": VECTOR_NAME, "limit": limit,
+                    "with_payload": False,
+                }
+                if allowed_revision_ids is not None:
+                    body["filter"] = {"must": [{"key": "revision_id", "match": {
+                        "any": [str(item) for item in allowed_revision_ids]
+                    }}]}
                 response = await client.post(
                     f"{self.url}/collections/{self.collection}/points/query",
-                    json={"query": vector, "using": VECTOR_NAME, "limit": limit,
-                          "with_payload": False},
+                    json=body,
                 )
                 response.raise_for_status()
                 return tuple(

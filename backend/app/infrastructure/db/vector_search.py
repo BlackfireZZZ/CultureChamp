@@ -61,13 +61,46 @@ class SqlGovernedVectorSearch:
         )
         if for_provider:
             pending = pending.where(SourceDecision.provider_transfer.is_(True))
+        eligible = (
+            select(SourceRevision.id)
+            .join(SourceProcessing, SourceProcessing.revision_id == SourceRevision.id)
+            .join(SourceDecision, SourceDecision.revision_id == SourceRevision.id)
+            .join(SourceVectorIndex, SourceVectorIndex.revision_id == SourceRevision.id)
+            .where(
+                SourceProcessing.state == "review_pending",
+                SourceDecision.event_id == latest_event,
+                SourceDecision.kind == "approve",
+                SourceDecision.user_text.is_(True),
+                SourceDecision.sensitivity_cleared.is_(True),
+                SourceVectorIndex.model_id == MODEL_ID,
+            )
+        )
+        if for_provider:
+            eligible = eligible.where(SourceDecision.provider_transfer.is_(True))
+        for kind, value in (("region", region), ("people", people)):
+            if value is not None:
+                eligible = eligible.where(
+                    select(SourceTag.id)
+                    .where(
+                        SourceTag.revision_id == SourceRevision.id,
+                        SourceTag.kind == kind,
+                        SourceTag.value == value,
+                    )
+                    .exists()
+                )
         async with self.factory() as session:
             if await session.scalar(pending) is not None:
                 raise VectorUnavailable("Approved evidence is awaiting indexing")
+            allowed_revision_ids = (await session.scalars(eligible)).all()
+        if not allowed_revision_ids:
+            await self.index.ensure_collection(create=False)
+            return ()
         # A stale or revoked vector point has no authority to expose a source.
         candidates = tuple(
             (segment_id, score)
-            for segment_id, score in await self.index.query(query, max(100, limit * 20))
+            for segment_id, score in await self.index.query(
+                query, max(100, limit * 20), allowed_revision_ids=allowed_revision_ids
+            )
             if score >= MIN_TEXT_COSINE
         )
         if not candidates:

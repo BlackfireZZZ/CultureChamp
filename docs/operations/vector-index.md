@@ -8,6 +8,12 @@ The named vector is
 `text_e5_small_v1` with 384 dimensions. Original files and citation text stay in
 private storage and PostgreSQL, respectively. The vector index contains segment
 UUIDs and revision UUID payloads; PostgreSQL makes every current access decision.
+The collection has a `uuid` payload index on `revision_id`. Search selects
+approved, scoped revision IDs in PostgreSQL and filters Qdrant candidates by
+those IDs before ranking; it rechecks the returned segments in PostgreSQL.
+An existing collection missing the payload index makes search unavailable until
+the worker creates it. The allowlist is never truncated, so query size and
+latency must be measured as the approved corpus grows.
 
 ## Normal indexing
 
