@@ -1,6 +1,7 @@
 """Persistence records for exact source revisions and locators."""
 
 from datetime import datetime
+from typing import cast
 from uuid import UUID, uuid4
 
 from sqlalchemy import (
@@ -11,9 +12,11 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     String,
+    Table,
     Text,
     UniqueConstraint,
     func,
+    literal_column,
 )
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -106,6 +109,16 @@ class SourceSegment(Base):
     row_end: Mapped[int | None]
     column_start: Mapped[int | None]
     column_end: Mapped[int | None]
+
+
+segment_table = cast(Table, SourceSegment.__table__)
+segment_table.append_constraint(
+    Index(
+        "ix_source_segments_search_russian",
+        func.to_tsvector(literal_column("'russian'::regconfig"), segment_table.c.text),
+        postgresql_using="gin",
+    )
+)
 
 
 class SourceDecision(Base):

@@ -9,10 +9,11 @@ online backend or used to populate the user corpus.
 
 Hypothesis: a page-level lexical baseline can retrieve passages needed for three
 Primorye text briefs while returning no cultural evidence for unsupported or
-sensitive requests. The immediate falsifying check is that removing a labelled
-relevant page from a run causes `assert_required_recall` to fail. A real R01 gate
-requires reviewer-confirmed judgements, an actual retrieval run, a rights-cleared
-table fixture, and measured language/format slices.
+sensitive requests. The measured provisional runs falsify the no-evidence part:
+lexical overlap returns candidates for unsupported requests. Removing a labelled
+relevant page from a run also causes `assert_required_recall` to fail. A real R01
+gate still requires reviewer-confirmed judgements and a rights-cleared table
+fixture; language and format slices have been measured provisionally.
 
 ## Inputs and provenance
 
@@ -67,8 +68,13 @@ and grade 1 is contextual; both count for Recall, while nDCG uses graded gains.
 Duplicate returned keys are rejected. Unknown keys count as nonrelevant.
 
 `runs/oracle_smoke.jsonl` is a hand-written harness smoke run, **not** a retrieval
-baseline or quality result. There is no measured lexical baseline yet. Thresholds
-for a production path cannot be fixed
+baseline or quality result. `runs/postgres_simple_provisional.jsonl` and
+`runs/postgres_russian_provisional.jsonl` are actual PostgreSQL lexical runs on
+the same eight provisional cases. The runner loads held PDF text into a temporary
+local table; no source becomes user-visible or reaches a model provider. Their
+recall@5 values are 0.40 and 0.80 respectively, while no-evidence false-positive
+rates are 0.667 and 1.000. See [ADR 0005](../../docs/decisions/0005-postgres-lexical-baseline.md)
+for method and limits. Thresholds for a production path cannot be fixed
 until an expert reviews qrels and a real lexical run is available. The smallest
 mechanical gate requires every provisionally labelled relevant page to occur by
 `k=5` in this oracle run. Its failure case is tested by removing one relevant key.
@@ -78,13 +84,20 @@ systems on the same corpus version; report each slice, latency, and cost.
 
 ## Reproduction
 
+Set `CORPUS_TEST_DATABASE_URL` to a migrated, disposable local PostgreSQL
+database for the real lexical run. The URL below illustrates the isolated
+Compose check used for this measurement.
+
 ```bash
 uv run --package culturechamp-ml --extra dev pytest ml/evals/test_retrieval_eval.py -q
 uv run --package culturechamp-ml --extra dev python ml/evals/retrieval_eval.py ml/evals/qrels.jsonl ml/evals/runs/oracle_smoke.jsonl --k 5 --require-all
+CORPUS_TEST_DATABASE_URL=postgresql+asyncpg://culturechamp:culturechamp_local@localhost:15436/culturechamp_verify3 uv run --package culturechamp-backend --extra dev python ml/evals/run_postgres_lexical.py --config russian --output ml/evals/runs/postgres_russian_provisional.jsonl
+uv run --package culturechamp-ml --extra dev python ml/evals/retrieval_eval.py ml/evals/qrels.jsonl ml/evals/runs/postgres_russian_provisional.jsonl --k 5
 ```
 
-The second command proves the harness mechanics only. R01 remains open while
-there is no real index/run, no expert judgement and no real table fixture.
+The second command proves the harness mechanics only. The later commands need
+a local PostgreSQL service and report provisional retrieval measurements. R01
+remains open without expert judgement and a real table fixture.
 
 ## Research basis and tradeoffs
 

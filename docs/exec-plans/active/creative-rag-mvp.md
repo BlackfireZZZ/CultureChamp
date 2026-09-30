@@ -71,7 +71,7 @@ tasks produce evidence.
 |---|---|---|
 | M0 — Product slice and decisions | One narrow corpus/task slice, source policy, format matrix, identity/provider constraints and evaluable examples are recorded. | in_progress: policy and examples exist; real-source rights, reviewer and provider terms are external dependencies |
 | M1 — Governed corpus | An approved source revision can be ingested, inspected, cited, revoked, and excluded from user retrieval; text and table locations survive extraction. | in_progress: synthetic PDF vertical path verified; table extraction absent |
-| M2 — Measured retrieval | Labelled queries exist; lexical baseline and at least one alternative are compared by source format and language; the selected path meets agreed thresholds. | todo |
+| M2 — Measured retrieval | Labelled queries exist; lexical baseline and at least one alternative are compared by source format and language; the selected path meets agreed thresholds. | in_progress: two PostgreSQL lexical configurations measured on provisional labels; expert labels, table source and thresholds absent |
 | M3 — Grounded chat | A text brief produces a persisted or explicitly temporary text conversation with validated source citations, no-evidence behavior, and bounded model API calls. | todo |
 | M4 — Two-role product UI | User chat, starter guide, source browser/citation view and admin document inventory work at canonical widths and keyboard paths. | in_progress: real auth/materials/admin read path; chat remains local preview |
 | M5 — MVP evidence and operations | End-to-end, security, quality, recovery, cost/latency and user/expert review evidence supports a narrow release decision. | todo |
@@ -143,11 +143,11 @@ gate. Each row is intended as one cohesive review.
 
 | ID | Status · owner · handoff | Depends | Deliverable and owned area | Acceptance and smallest falsifying check |
 |---|---|---|---|---|
-| R01 | todo · integration agent · — | S05, C05, C06 | Gold query-to-source/locator judgements and retrieval harness; `ml/evals/` | Evaluation reports recall@k and ranking metrics by language, format and table/prose slice; a missing relevant source fails a labelled case. |
-| R02 | todo · integration agent · — | C07, R01 | PostgreSQL lexical indexing/search baseline with metadata and approval filters; `backend/app/infrastructure/search/` | Relevant exact names and table values are found; an unapproved revision is absent before ranking; query plan and R01 metrics are recorded. |
+| R01 | in_progress · integration agent · — | S05, C05, C06 | Gold query-to-source/locator judgements and retrieval harness; `ml/evals/` | Evaluation reports recall@k and ranking metrics by language, format and table/prose slice; a missing relevant source fails a labelled case. |
+| R02 | in_progress · integration agent · — | C07, R01 | PostgreSQL lexical indexing/search baseline with metadata and approval filters; `backend/app/infrastructure/db/lexical_search.py` | Relevant exact names and table values are found; an unapproved revision is absent before ranking; query plan and R01 metrics are recorded. |
 | R03 | todo · integration agent · — | R01, R02, S03 | Dense/hybrid retrieval experiment, embedding/provider and index compatibility check; `ml/evals/`, `docs/decisions/` | Compare same gold set with cost/latency and relevant-source recall; test pgvector availability before adopting it. No production index is implied by the experiment. |
 | R04 | todo · integration agent · — | R02, R03 | ADR selecting retrieval, chunking, fusion/reranking and thresholds; `docs/decisions/` | Chosen configuration beats or justifies retaining the lexical baseline on agreed slices; regressions and tradeoffs are explicit. |
-| R05 | todo · integration agent · — | R04, C07 | Application retrieval port/service with filters, bounded context and stable evidence IDs; `backend/app/application/retrieval/` | Same query/approved corpus yields traceable segments; revoked/restricted text never returns; integration tests cover prose and tables. |
+| R05 | in_progress · integration agent · — | R04, C07 | Application retrieval port/service with filters, bounded context and stable evidence IDs; `backend/app/application/retrieval.py` | Same query/approved corpus yields traceable segments; revoked/restricted text never returns; integration tests cover prose and tables. |
 
 ### M3 — Model API and grounded conversation
 
@@ -209,6 +209,19 @@ path, evaluation cases, and data-handling constraints exist.
 
 ## Progress and decisions
 
+- **2026-09-30, retrieval baseline:** a clean PostgreSQL migration added the
+  `russian` GIN expression index. The application retrieval service and SQL
+  adapter apply current exact-revision, rights and sensitivity filters before
+  ranking; tests prove held/revoked exclusion and immediate revocation on a
+  synthetic corpus. A temporary local PostgreSQL evaluation compared `simple`
+  and `russian` against the same eight provisional qrels. Recall@5 was 0.40 and
+  0.80; no-evidence false-positive rates were 0.667 and 1.000. The Russian
+  configuration is a provisional engineering default, not a release threshold.
+  Clean migration and Alembic check passed; a forced-index plan used the GIN
+  index and applied current-decision filtering before sort. A fresh migrated
+  PostgreSQL database and `make check` passed all 40 backend, 12 frontend and
+  six ML tests with no database skips; static, OpenAPI and Compose checks passed.
+  See [ADR 0005](../../decisions/0005-postgres-lexical-baseline.md).
 - **2026-09-30, integration continuation:** reconciled task states to the five
   accepted values and assigned one integration owner. The clean branch at
   `790564e` was retained as the work base. An API request-body ceiling and Caddy
