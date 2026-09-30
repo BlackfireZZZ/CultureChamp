@@ -82,6 +82,10 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - run: make compose-check up smoke down
+      - run: make compose-check
+      - run: make up
+      - run: make smoke
       - if: failure()
         run: docker compose logs --no-color
+      - if: always()
+        run: make down

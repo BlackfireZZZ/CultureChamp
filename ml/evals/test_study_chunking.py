@@ -1,6 +1,12 @@
 import json
 
-from study_chunking import block_token_windows, docling_pages, sentence_token_windows
+from study_chunking import (
+    PictureRegion,
+    block_token_windows,
+    docling_pages,
+    docling_picture_regions,
+    sentence_token_windows,
+)
 
 
 class WordTokenizer:
@@ -50,3 +56,39 @@ def test_docling_body_order_excludes_page_furniture(tmp_path) -> None:
         encoding="utf-8",
     )
     assert docling_pages(path) == {1: ["Left column", "Right column"]}
+
+
+def test_docling_picture_ocr_stays_in_separate_region(tmp_path) -> None:
+    path = tmp_path / "synthetic-picture.json"
+    path.write_text(
+        json.dumps(
+            {
+                "pages": {"1": {}},
+                "body": {"children": [{"$ref": "#/texts/0"}, {"$ref": "#/pictures/0"}]},
+                "texts": [
+                    {"label": "text", "text": "Body", "prov": [{"page_no": 1}]},
+                    {"label": "text", "text": "Map legend", "prov": [{"page_no": 1}]},
+                ],
+                "pictures": [
+                    {
+                        "children": [{"$ref": "#/texts/1"}],
+                        "prov": [
+                            {
+                                "page_no": 1,
+                                "bbox": {
+                                    "l": 10,
+                                    "b": 20,
+                                    "r": 30,
+                                    "t": 40,
+                                    "coord_origin": "BOTTOMLEFT",
+                                },
+                            }
+                        ],
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    assert docling_pages(path) == {1: ["Body"]}
+    assert docling_picture_regions(path) == (PictureRegion(1, (10, 20, 30, 40), ("Map legend",)),)

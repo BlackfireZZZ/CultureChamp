@@ -7,6 +7,7 @@ not be used to assert reading order or paragraph boundaries of a source PDF.
 import json
 import re
 from collections.abc import Sequence
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Protocol
 
@@ -17,6 +18,13 @@ class Encoded(Protocol):
 
 class Tokenizer(Protocol):
     def encode(self, text: str) -> Encoded | list[int]: ...
+
+
+@dataclass(frozen=True)
+class PictureRegion:
+    page: int
+    bbox: tuple[float, float, float, float]
+    texts: tuple[str, ...]
 
 
 _SENTENCE_BOUNDARY = re.compile(r"(?<=[.!?…])\s+(?=[A-ZА-ЯЁ])")
@@ -123,3 +131,31 @@ def docling_pages(path: Path) -> dict[int, list[str]]:
     if not all(pages.values()):
         raise ValueError("Docling produced an empty body page")
     return pages
+
+
+def docling_picture_regions(path: Path) -> tuple[PictureRegion, ...]:
+    """Keep OCR text attached to a figure and its PDF-space region for review."""
+    document = json.loads(path.read_text(encoding="utf-8"))
+    regions: list[PictureRegion] = []
+    for picture in document.get("pictures", []):
+        provenance = picture.get("prov", [])
+        page_numbers = {entry["page_no"] for entry in provenance}
+        if len(page_numbers) != 1 or len(provenance) != 1:
+            raise ValueError("picture needs one source region for this study")
+        bbox = provenance[0]["bbox"]
+        if bbox["coord_origin"] != "BOTTOMLEFT":
+            raise ValueError("unexpected picture coordinate system")
+        children = picture.get("children", [])
+        texts = tuple(
+            document["texts"][int(child["$ref"].removeprefix("#/texts/"))]["text"]
+            for child in children
+            if child["$ref"].startswith("#/texts/")
+        )
+        regions.append(
+            PictureRegion(
+                page=page_numbers.pop(),
+                bbox=(bbox["l"], bbox["b"], bbox["r"], bbox["t"]),
+                texts=texts,
+            )
+        )
+    return tuple(regions)

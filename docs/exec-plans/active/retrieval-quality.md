@@ -24,6 +24,9 @@ memory, and index-size budgets.
 - PDF-03 is two-column and has parallel Russian/English front matter. Its
   `pypdf` extraction has no paragraph breaks; raw newlines are visual lines.
   Sentence or paragraph chunking on that text alone would encode layout errors.
+- PDF-02 contains a map with embedded legend text. Both text-layer parsers omit
+  those visual labels from running prose; local OCR yields partial, erroneous
+  figure children. This requires a separate figure-region review path.
 - The current eight provisional queries include named peoples and Bikin,
   contested historical interpretation, three no-evidence/sensitive cases, and
   one explicitly synthetic table cell. They are too small and were used to tune
@@ -112,11 +115,24 @@ body blocks before right-column blocks and separated page furniture, unlike the
 flat `pypdf` text. This is a one-page parser check, not a corpus-level extraction
 pass. The custom layout-block windows are an ablation inspired by Docling's
 document model; they do not implement or claim to reproduce `HybridChunker`.
-Across all 32 pages, a mechanical word-count comparison of the `pypdf` output
-and Docling body output found Docling-to-`pypdf` ratios of 0.75–0.96 on PDF-02
-and 0.89–0.97 on PDF-01/PDF-03. Page furniture removal and different tokenization
-can explain some of this, but missing source content has not been ruled out.
-The weakest page requires visual and text coverage review before adopting this
-parser or using its output as a ground truth.
+Across all 32 pages, a naive whitespace word-count comparison of the `pypdf`
+output and Docling body output found ratios of 0.75–0.96 on PDF-02 and
+0.89–0.97 on PDF-01/PDF-03. This is **not** a valid content-coverage metric:
+`pypdf` inserts whitespace around punctuation and retains line hyphenation,
+while Docling normalizes them and removes page furniture. Direct inspection of
+PDF-02 physical page 7 showed the same running prose and caption in both
+outputs. A real coverage audit must align normalized character sequences and
+visually sample unmatched regions before claiming loss or gain.
+
+That page also has a map with small labels and a legend inside the figure.
+Neither the `pypdf` text output nor Docling body output with OCR disabled
+contains that figure text. A one-page local Docling EasyOCR run in
+`layout_regions` mode produced four text items attached as children of the
+picture, rather than body text; `full_page` produced six. Visual inspection
+found recognition errors in both, including map-zone labels. The body-only
+ablation intentionally excludes these picture children. Figure regions need a
+separately evaluated OCR/visual representation and region locator, followed by
+inspection against the source image. Neither parser/OCR mode can be treated as
+ground truth for those details.
 The next gate is expert-confirmed passage-level relevance and locator judgments,
 including a held-out split, before any production chunking or model switch.
