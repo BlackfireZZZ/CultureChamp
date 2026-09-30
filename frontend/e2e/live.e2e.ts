@@ -75,6 +75,8 @@ test("live synthetic source flows from admin review to cited chat and revocation
     await userPage.getByLabel("Пароль").fill(userPassword)
     await userPage.getByRole("button", { name: "Войти" }).click()
     await expect(userPage.getByRole("button", { name: "Материалы" })).toBeVisible()
+    const initialMaterials = await userContext.request.get("/api/v1/materials")
+    expect(await initialMaterials.json(), "live check needs an empty approved corpus").toEqual([])
     await userPage.getByRole("button", { name: "Материалы" }).click()
     await expect(userPage.getByText(title)).toHaveCount(0)
     await userPage.getByRole("button", { name: "Вернуться к чату" }).first().click()
@@ -213,6 +215,38 @@ test("live synthetic source flows from admin review to cited chat and revocation
     await expect(userPage.getByText("Источник отозван или недоступен")).toHaveCount(process.env.LIVE_E2E_RESET_VECTOR === "true" ? 2 : 1)
     await userPage.getByRole("button", { name: "Материалы" }).click()
     await expect(userPage.getByText(title)).toHaveCount(0)
+
+    const brokenTitle = `Synthetic broken PDF ${marker}`
+    await upload.getByLabel("Оригинальный файл").setInputFiles({
+      name: "broken.pdf", mimeType: "application/pdf", buffer: Buffer.from("%PDF-1.4\n%%EOF"),
+    })
+    await upload.getByLabel("Ссылка на источник").fill(`https://example.invalid/${marker}/broken`)
+    await upload.getByLabel("Название").fill(brokenTitle)
+    await upload.getByLabel("Примечание о правах").fill("Self-authored malformed fixture")
+    const brokenIntakeResponse = adminPage.waitForResponse((response) => response.url().endsWith("/api/v1/admin/sources") && response.request().method() === "POST")
+    await upload.getByRole("button", { name: "Загрузить на проверку" }).click()
+    const brokenIntake = (await (await brokenIntakeResponse).json()) as { revision_id: string }
+    await expect.poll(async () => {
+      const response = await adminContext.request.get(`/api/v1/admin/revisions/${brokenIntake.revision_id}`)
+      return ((await response.json()) as { status: string }).status
+    }, { timeout: 120_000 }).toBe("failed")
+    await adminPage.reload()
+    await adminPage.getByRole("button", { name: "Админка" }).click()
+    const failedSearch = adminPage.getByRole("form", { name: "Поиск в инвентаре" })
+    await failedSearch.getByRole("textbox", { name: "Источник или название" }).fill(brokenTitle)
+    await failedSearch.getByRole("button", { name: "Найти" }).click()
+    await adminPage.getByRole("button", { name: new RegExp(brokenTitle) }).click()
+    await expect(adminPage.getByText("source_extraction_failed")).toBeVisible()
+    await expect(adminPage.getByRole("form", { name: "Одобрение ревизии" })).toHaveCount(0)
+    expect((await userContext.request.get(`/api/v1/materials/${brokenIntake.revision_id}`)).status()).toBe(404)
+    const retryResponse = adminPage.waitForResponse((response) => response.url().endsWith(`/api/v1/admin/revisions/${brokenIntake.revision_id}/retry`))
+    await adminPage.getByRole("button", { name: "Повторить обработку" }).click()
+    expect(((await (await retryResponse).json()) as { status: string }).status).toBe("candidate")
+    await expect.poll(async () => {
+      const response = await adminContext.request.get(`/api/v1/admin/revisions/${brokenIntake.revision_id}`)
+      return ((await response.json()) as { status: string }).status
+    }, { timeout: 120_000 }).toBe("failed")
+    expect((await userContext.request.get(`/api/v1/materials/${brokenIntake.revision_id}`)).status()).toBe(404)
   } finally {
     if (approvedRevisionId && adminCsrfToken) {
       await adminContext.request.post(`/api/v1/admin/revisions/${approvedRevisionId}/revoke`, {

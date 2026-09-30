@@ -38,9 +38,17 @@ source focus, exact original bytes and withdrawal. With the explicit reset flag,
 it also checks Qdrant collection loss and worker replay. After withdrawal, the
 historical answer stays visible but its citation becomes unavailable. The
 administrator can still inspect the withdrawn original for audit, while the
-user cannot retrieve it through either original route. A random marker and
-cleanup make repeat runs independent. A clean run downloads the embedding
+user cannot retrieve it through either original route. A random marker isolates
+new test records, but the no-evidence step requires an empty approved corpus;
+the test checks this precondition. A clean run downloads the embedding
 model into the private test volume once. The external model remains disabled.
+The same journey uploads a self-authored malformed PDF after the approved-source
+flow. It checks the failed extraction in the administrator view, retry from that
+view, the repeated failure and continued user denial. A previously interrupted
+run can leave approved synthetic sources in its test database and affect the
+no-evidence assertion. For a fresh run, reset only the disposable isolated
+Compose project; if offline, seed its private volume with the pinned model cache
+before starting the worker.
 The same run checks the admin review, cited chat and source detail for document
 overflow at 360, 768, 1280 and 1440 px; it is a layout check on synthetic
 content, not a target-user usability review.

@@ -936,3 +936,22 @@ config. A separate clean PostgreSQL/Qdrant project was migrated and the chat
 service integration test passed (1); its volumes were removed afterward. The
 selected provider still needs a live synthetic contract check before enabling
 real transfers.
+
+## 2026-10-01 malformed source in live administrator journey
+
+Expected result: a parser failure is visible to the administrator, supports an
+explicit retry, and never publishes candidate text or detail to users. Existing
+API tests covered this, but the live UI journey did not. The built-browser
+synthetic flow now uploads an intake-valid, malformed PDF, waits for the worker
+failure, shows its error code and retry action, checks the retry response and
+second failure, and receives 404 from the user materials route both times.
+One attempt was interrupted because a fresh private volume lacked the offline
+embedding model cache; a second run used a stack contaminated by the first
+attempt's approved synthetic source and failed its unrelated no-evidence check.
+After resetting only the disposable test project and seeding the cached model
+before worker startup, the complete live browser journey passed (1, 12.4 s).
+The built server images were reused from earlier local checks during the network
+outage; the newly added test uses the unchanged ingestion and UI code paths.
+The test now also asserts an empty approved corpus before its no-evidence step,
+so an interrupted prior run fails with an explicit setup error. A second clean
+browser run with this precondition passed (1, 13.6 s).
