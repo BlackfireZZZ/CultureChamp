@@ -1,5 +1,44 @@
 # Corpus/backend integration handoff — 2026-09-30
 
+## Synthetic external-provider preflight — 2026-10-01
+
+Objective and actual status: provide an operator command to check a future
+selected OpenAI-compatible endpoint against the actual gateway and grounded
+answer/citation contract without reading any uploaded source. The opt-in command
+uses a fixed self-authored excerpt and invented region label. It prints only
+pass/fail, reported token counts and duration, and refuses to send without
+`--send-synthetic` or with the fake provider selected.
+
+Worktree / branch / base SHA: the isolated integration checkout at
+`/mnt/BlackfireZZZ/Hackatons/CultureChamp-integration-backend`, branch
+`agent/integration-backend`, clean at `d9f2e00` before this slice. Owner of changed
+files: this agent owns the preflight module, focused tests, provider runbook and
+tracker update. Changed contracts and files: no public API or migration changes;
+`backend/app/infrastructure/model/preflight.py` composes existing application
+ports with a fixed synthetic retrieval/citation source.
+
+Decisions and supporting evidence: the existing provider runbook requires a
+synthetic response-contract check before activation; the adapter and generation
+service already enforce the wire and citation format. Reusing them avoids a
+separate weaker parser. Verification commands and observed results: three
+focused preflight tests passed, including synthetic-only payload, rejection of
+an unsupported fact, and no-send/provider-selection gates. The CLI without the
+send flag exited 2 and made no request. Against a clean isolated PostgreSQL and
+Qdrant stack, `make check` passed architecture, Ruff, mypy, 111 backend tests,
+21 frontend tests and build, 20 ML tests, OpenAPI contract and Compose
+configuration. The ordinary Playwright command passed four mocked browser tests
+and skipped its separately configured live browser test.
+
+What remains unverified and why: the operator has not selected a service,
+endpoint, model or key, so no actual provider call or billable usage occurred.
+Risks and open questions: provider-specific behavior, latency, charge and
+retention remain unknown; a transient failure may trigger a second HTTP call.
+Exact next step: after operator selection and terms approval, run the documented
+fixed prompt, then the same-origin chat check with eligible source transfer.
+Cleanup completed or retention reason: no provider process or source data was
+created; the disposable `culturechamp_preflight` database and vector volumes
+were removed. Keep the integration checkout for ongoing goal work.
+
 ## Revision context in model evidence — 2026-10-01
 
 Objective and actual status: carry curator-entered region, people and period tags

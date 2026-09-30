@@ -44,6 +44,25 @@ per-call output-token check. Some otherwise compatible endpoints omit usage;
 validate this response contract with a synthetic request before activation.
 The finish-reason values follow the [official Chat Completion response type](https://github.com/openai/openai-go/blob/main/chatcompletion.go#L2644-L2662).
 
+After selecting a service and approving its terms, set `MODEL_API_ENDPOINT`,
+`MODEL_API_NAME`, `MODEL_API_KEY` and `MODEL_POLICY_APPROVED=true` through the
+operator's private environment. From the repository root, run:
+
+```bash
+MODEL_PROVIDER=openai_compatible uv run --package culturechamp-backend \
+  python -m app.infrastructure.model.preflight --send-synthetic
+```
+
+This opt-in command sends a fixed, self-authored synthetic excerpt and invented
+region tag through the same model gateway and answer/citation validator as chat.
+It reads no source database or uploaded original, and prints only pass/fail,
+reported token counts and elapsed time. It can make a second HTTP call if the
+provider returns a temporary failure. Without `--send-synthetic` it sends
+nothing; fake or incomplete external configuration fails. Passing this check
+proves only the selected endpoint's wire and answer shape for one synthetic
+prompt. The same-origin chat check with separately approved
+`provider_transfer` revisions remains required before user activation.
+
 When the external adapter is active, chat retrieves only revisions whose current
 approval includes `provider_transfer`, in addition to user-text and sensitivity
 clearance. PostgreSQL filters the allowed revision IDs before Qdrant ranking and
