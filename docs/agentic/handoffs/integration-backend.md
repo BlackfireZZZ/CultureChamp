@@ -1,5 +1,41 @@
 # Corpus/backend integration handoff — 2026-09-30
 
+## Partial vector-index availability — 2026-10-01
+
+Objective and actual status: an approved revision waiting for its first index or
+repair no longer makes every chat search unavailable. Search ranks already
+indexed, currently permitted revisions within the same region, people and
+provider-transfer scope. If it finds no permitted passage while a scoped
+revision is pending, it still reports an unavailable state instead of claiming
+that no evidence exists. This changes availability, not the embedding model,
+chunking, similarity gate or user-facing API.
+
+Worktree / branch / base SHA: the isolated integration checkout at
+`/mnt/BlackfireZZZ/Hackatons/CultureChamp-integration-backend`, branch
+`agent/integration-backend`, clean at `d5beae3` before this slice. This agent owns
+the vector search adapter, its PostgreSQL/Qdrant integration test, ADR 0006,
+index runbook and tracker update. The other attached worktrees are untouched.
+
+Hypothesis and smallest falsifying check: with one synthetic revision indexed and
+another approved revision's index marker invalidated, the user and provider
+scopes should retrieve the indexed revision. A query scoped only to the pending
+revision should report unavailable to a user and return no evidence to a
+provider without transfer rights. The existing live vector search test failed
+on the first expectation before the code change and passed afterward. A clean
+PostgreSQL migration and Qdrant stack ran the full `make check`: architecture,
+Ruff, mypy, 111 backend tests, 21 frontend tests and build, 20 ML tests,
+OpenAPI snapshot and Compose config passed with Node 24.19.0. An initial run
+with the host's Node 18.19.1 stopped at Vitest startup; that runtime is below
+the README's Node 24 requirement.
+
+Remaining risk: an answer from an already indexed source can omit a still
+pending, potentially conflicting source. This is a partial-index availability
+policy and does not establish corpus completeness or cultural accuracy. A
+controlled full rebuild must keep chat disabled until every approved revision
+is replayed and the operational readiness checks pass. No real cultural source
+or external provider was used in this check. Keep the integration worktree for
+the remaining MVP gates.
+
 ## Synthetic external-provider preflight — 2026-10-01
 
 Objective and actual status: provide an operator command to check a future

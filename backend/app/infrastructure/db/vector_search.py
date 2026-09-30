@@ -23,6 +23,12 @@ from app.infrastructure.vector.text_vectors import (
 )
 
 
+def _empty_or_pending(has_pending: bool) -> tuple[EvidenceSegment, ...]:
+    if has_pending:
+        raise VectorUnavailable("Approved evidence is awaiting indexing")
+    return ()
+
+
 class SqlGovernedVectorSearch:
     def __init__(
         self, factory: async_sessionmaker[AsyncSession], index: QdrantTextIndex
@@ -81,7 +87,7 @@ class SqlGovernedVectorSearch:
             eligible = eligible.where(SourceDecision.provider_transfer.is_(True))
         for kind, value in (("region", region), ("people", people)):
             if value is not None:
-                eligible = eligible.where(
+                tag_exists = (
                     select(SourceTag.id)
                     .where(
                         SourceTag.revision_id == SourceRevision.id,
@@ -90,12 +96,13 @@ class SqlGovernedVectorSearch:
                     )
                     .exists()
                 )
+                eligible = eligible.where(tag_exists)
+                pending = pending.where(tag_exists)
         async with self.factory() as session:
-            if await session.scalar(pending) is not None:
-                raise VectorUnavailable("Approved evidence is awaiting indexing")
+            has_pending = await session.scalar(pending) is not None
             allowed_revision_ids = (await session.scalars(eligible)).all()
         if not allowed_revision_ids:
-            return ()
+            return _empty_or_pending(has_pending)
         # A stale or revoked vector point has no authority to expose a source.
         candidates = tuple(
             (segment_id, score)
@@ -105,7 +112,7 @@ class SqlGovernedVectorSearch:
             if score >= MIN_TEXT_COSINE
         )
         if not candidates:
-            return ()
+            return _empty_or_pending(has_pending)
         scores = {segment_id: score for segment_id, score in candidates}
         statement = (
             select(SourceSegment, SourceRevision)
@@ -155,7 +162,7 @@ class SqlGovernedVectorSearch:
         tags_by_revision: dict[UUID, list[tuple[str, str]]] = {}
         for tag in tags:
             tags_by_revision.setdefault(tag.revision_id, []).append((tag.kind, tag.value))
-        return tuple(
+        found = tuple(
             EvidenceSegment(
                 revision_id=revision.id,
                 segment_id=segment.id,
@@ -179,3 +186,4 @@ class SqlGovernedVectorSearch:
             if segment_id in by_id
             for segment, revision in (by_id[segment_id],)
         )[:limit]
+        return found if found else _empty_or_pending(has_pending)

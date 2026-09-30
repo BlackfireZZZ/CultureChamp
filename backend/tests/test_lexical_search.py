@@ -237,6 +237,8 @@ async def _check_search(url: str, vector_url: str | None = None) -> None:
                 )
                 segment_ids[name] = segment.id
                 await repo.add_tag(revision.id, "region", "Synthetic region")
+                if name == "visible":
+                    await repo.add_tag(revision.id, "region", "Repair region")
                 session.add(SourceProcessing(revision_id=revision.id, state="review_pending"))
                 if name != "held":
                     await repo.record_decision(
@@ -274,10 +276,22 @@ async def _check_search(url: str, vector_url: str | None = None) -> None:
             assert not await index.has_revision_points(
                 revisions["visible"], [segment_ids["visible"]]
             )
+            during_repair = SqlGovernedVectorSearch(factory, index)
+            assert [item.revision_id for item in await during_repair.search(
+                marker, limit=5, region=None, people=None, for_provider=False
+            )] == [revisions["provider"]]
+            assert [item.revision_id for item in await during_repair.search(
+                marker, limit=5, region=None, people=None, for_provider=True
+            )] == [revisions["provider"]]
             with pytest.raises(VectorUnavailable, match="awaiting indexing"):
-                await SqlGovernedVectorSearch(factory, index).search(
-                    marker, limit=5, region=None, people=None, for_provider=False
+                await during_repair.search(
+                    marker, limit=5, region="Repair region", people=None,
+                    for_provider=False,
                 )
+            assert await during_repair.search(
+                marker, limit=5, region="Repair region", people=None,
+                for_provider=True,
+            ) == ()
             assert await indexer.index_one() == revisions["visible"]
             assert await index.has_revision_points(
                 revisions["visible"], [segment_ids["visible"]]

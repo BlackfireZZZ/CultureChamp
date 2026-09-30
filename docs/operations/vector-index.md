@@ -20,10 +20,11 @@ latency must be measured as the approved corpus grows.
 After an exact revision is approved, the ingestion worker finds revisions without
 a matching `source_vector_indexes` record, embeds their text segments and upserts
 the points. A complete upsert is followed by the database record. Repeating the
-job is safe because point IDs are stable segment IDs. Approval may briefly make
-chat search return HTTP 503 until the worker has indexed the revision. This is an
-explicit unavailable state, not an empty evidence answer. Revocation takes effect
-in PostgreSQL immediately; the worker then removes its points from Qdrant.
+job is safe because point IDs are stable segment IDs. During indexing, chat can
+use other currently permitted, indexed revisions. If a scoped search has no
+permitted result and a matching revision is still pending, it returns HTTP 503
+instead of an empty-evidence answer. Revocation takes effect in PostgreSQL
+immediately; the worker then removes its points from Qdrant.
 
 The model is downloaded locally by FastEmbed on first use. The Compose
 `source_private` volume stores the model cache under
@@ -58,8 +59,10 @@ DELETE FROM source_vector_indexes;
 ```
 
 Start the worker. It replays all currently approved, eligible revisions from
-PostgreSQL. Keep chat unavailable until the marker count matches the approved
-revision count and a synthetic paraphrase, held-source and revocation check pass.
+PostgreSQL. Keep the entire chat endpoint unavailable during a controlled full
+rebuild until the marker count matches the approved revision count and a synthetic
+paraphrase, held-source and revocation check pass. The routine partial-indexing
+behavior above is not a full-rebuild readiness check.
 Do not restore an old Qdrant snapshot as an authority for visibility. A model or
 chunking change needs a new named collection/generation and an evaluation before
 traffic switches; merely changing the dimension on an existing collection is
