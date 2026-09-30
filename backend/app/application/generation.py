@@ -82,7 +82,12 @@ class GenerationService:
         evidence = tuple(
             item for item in retrieved
             if not any(has_explicit_prompt_control(part) for part in (
-                item.text, item.title, item.creator or ""
+                item.text,
+                item.title,
+                item.creator or "",
+                item.locator.section or "",
+                item.locator.sheet or "",
+                item.locator.table or "",
             ))
         )
         if not evidence:

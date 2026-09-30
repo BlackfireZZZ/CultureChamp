@@ -902,3 +902,18 @@ passed architecture, static checks, 63 backend unit tests with 14 service skips,
 built backend/DB/Qdrant Compose project received marked 200 and 404 requests;
 its logs showed only safe metadata lines and no marker or client access line.
 The check does not audit future exception handlers or reverse-proxy logs.
+
+## 2026-09-30 source locator prompt control
+
+Expected result: explicit role or instruction overrides in a retrieved source's
+sheet, section or table label never reach the model prompt. The generation
+payload serializes the full locator, but its evidence screen previously checked
+only passage text, title and creator. Two synthetic tests with a worksheet role
+marker and a section instruction failed first because the model was called;
+the table-label variant was added to cover the same field family.
+Generation now screens all string locator fields before constructing model
+context. All 14 focused generation tests, Ruff and backend mypy pass. Full
+`make check` passed 66 backend unit tests with 14 service skips, 19 frontend
+tests, 20 ML tests, architecture, types, build, contracts and Compose config.
+This closes the tested metadata path; pattern matching is not a general
+injection defense and expert review remains required under G05.
