@@ -78,14 +78,26 @@ class HttpModelProvider:
                     if len(body) > 1_000_000:
                         raise ModelFailure("provider_unavailable")
             payload = json.loads(body)
-            text = payload["choices"][0]["message"]["content"]
+            choice = payload["choices"][0]
+            if choice["finish_reason"] != "stop":
+                raise ValueError("completion did not finish normally")
+            text = choice["message"]["content"]
             usage = payload["usage"]
             if not isinstance(text, str) or not text:
                 raise ValueError("empty model result")
+            input_tokens = usage["prompt_tokens"]
+            output_tokens = usage["completion_tokens"]
+            if (
+                type(input_tokens) is not int
+                or type(output_tokens) is not int
+                or input_tokens < 1
+                or output_tokens < 1
+            ):
+                raise ValueError("invalid reported usage")
             return ModelResult(
                 text=text,
-                input_tokens=int(usage["prompt_tokens"]),
-                output_tokens=int(usage["completion_tokens"]),
+                input_tokens=input_tokens,
+                output_tokens=output_tokens,
             )
         except (httpx.TimeoutException, httpx.RequestError) as exc:
             raise TemporaryModelFailure("provider_unavailable") from exc

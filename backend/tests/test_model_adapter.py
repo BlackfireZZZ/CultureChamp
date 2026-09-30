@@ -212,7 +212,7 @@ async def _http_provider_parses_bounded_response() -> None:
         return httpx.Response(
             200,
             json={
-                "choices": [{"message": {"content": "A proposal"}}],
+                "choices": [{"finish_reason": "stop", "message": {"content": "A proposal"}}],
                 "usage": {"prompt_tokens": 3, "completion_tokens": 2},
             },
         )
@@ -229,6 +229,78 @@ async def _http_provider_parses_bounded_response() -> None:
             ModelRequest("user-1", "Write a brief", "turn-1", provider_transfer_permitted=True)
         )
         assert result == ModelResult("A proposal", 3, 2)
+
+
+@pytest.mark.parametrize("finish_reason", ["length", "content_filter", "tool_calls", None])
+def test_http_provider_rejects_incomplete_or_nontext_completion(
+    finish_reason: str | None,
+) -> None:
+    async def check() -> None:
+        choice: dict[str, object] = {"message": {"content": "A proposal"}}
+        if finish_reason is not None:
+            choice["finish_reason"] = finish_reason
+
+        def handler(_: httpx.Request) -> httpx.Response:
+            return httpx.Response(200, json={
+                "choices": [choice],
+                "usage": {"prompt_tokens": 3, "completion_tokens": 2},
+            })
+
+        async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+            provider = HttpModelProvider(
+                endpoint="https://approved.example/v1/chat/completions",
+                model="pilot-model", api_key="test-key", policy_approved=True, client=client,
+            )
+            quota = RecordingQuota()
+            with pytest.raises(ModelFailure, match="provider_unavailable"):
+                await ModelGateway(provider, quota).generate(ModelRequest(
+                    "user-1", "Write a brief", "turn-1", provider_transfer_permitted=True
+                ))
+            assert quota.finished == [None]
+
+    asyncio.run(check())
+
+
+@pytest.mark.parametrize("bad_count", [-1, 0, 1.5, True, "2"])
+def test_http_provider_rejects_unreliable_usage(bad_count: object) -> None:
+    async def check() -> None:
+        def handler(_: httpx.Request) -> httpx.Response:
+            return httpx.Response(200, json={
+                "choices": [{"finish_reason": "stop", "message": {"content": "A proposal"}}],
+                "usage": {"prompt_tokens": 3, "completion_tokens": bad_count},
+            })
+
+        async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+            provider = HttpModelProvider(
+                endpoint="https://approved.example/v1/chat/completions",
+                model="pilot-model", api_key="test-key", policy_approved=True, client=client,
+            )
+            with pytest.raises(ModelFailure, match="provider_unavailable"):
+                await provider.generate(ModelRequest(
+                    "user-1", "Write a brief", "turn-1", provider_transfer_permitted=True
+                ))
+
+    asyncio.run(check())
+
+
+def test_http_provider_requires_usage_for_enforced_token_ceiling() -> None:
+    async def check() -> None:
+        def handler(_: httpx.Request) -> httpx.Response:
+            return httpx.Response(200, json={
+                "choices": [{"finish_reason": "stop", "message": {"content": "A proposal"}}],
+            })
+
+        async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+            provider = HttpModelProvider(
+                endpoint="https://approved.example/v1/chat/completions",
+                model="pilot-model", api_key="test-key", policy_approved=True, client=client,
+            )
+            with pytest.raises(ModelFailure, match="provider_unavailable"):
+                await provider.generate(ModelRequest(
+                    "user-1", "Write a brief", "turn-1", provider_transfer_permitted=True
+                ))
+
+    asyncio.run(check())
 
 
 def test_http_provider_rejects_oversized_response() -> None:

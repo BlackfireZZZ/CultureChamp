@@ -231,7 +231,7 @@ async def _check_chat(url: str, tmp_path: Path) -> None:
                 return httpx.Response(
                     200,
                     json={
-                        "choices": [{"message": {"content": json.dumps({
+                        "choices": [{"finish_reason": "stop", "message": {"content": json.dumps({
                             "fact": evidence[0]["excerpt"],
                             "interpretation": "The source describes only this synthetic count.",
                             "creative": "Make a new labelled concept from this test brief.",

@@ -917,3 +917,22 @@ context. All 14 focused generation tests, Ruff and backend mypy pass. Full
 tests, 20 ML tests, architecture, types, build, contracts and Compose config.
 This closes the tested metadata path; pattern matching is not a general
 injection defense and expert review remains required under G05.
+
+## 2026-09-30 model completion contract
+
+Expected result: a compatible provider's truncated, filtered or tool-call
+response cannot be stored as a grounded chat answer, and a response without
+reliable token usage cannot bypass the per-call output ceiling. The adapter
+previously read only the first choice's content and coerced usage values with
+`int()`. Eight synthetic HTTPS response cases failed first: unsafe or missing
+finish reasons and negative, fractional, boolean or string token counts were
+accepted. The adapter now requires `finish_reason: "stop"`, nonempty text and
+positive integer input/output usage; missing usage also fails closed. The
+existing PostgreSQL/Qdrant mocked transfer response was updated to include
+the standard finish reason. Focused adapter tests (18), Ruff and mypy pass.
+Full `make check` passed 76 backend unit tests with 14 service skips, 19
+frontend tests, 20 ML tests, architecture, types, build, contracts and Compose
+config. A separate clean PostgreSQL/Qdrant project was migrated and the chat
+service integration test passed (1); its volumes were removed afterward. The
+selected provider still needs a live synthetic contract check before enabling
+real transfers.

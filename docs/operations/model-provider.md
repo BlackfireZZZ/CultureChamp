@@ -21,6 +21,15 @@ requests and time, and returns generic errors without raw provider responses.
 The model key remains in backend process configuration; production should inject
 it from a secret manager rather than a checked-in `.env` file.
 
+The selected endpoint must return a non-streaming Chat Completions choice with
+`finish_reason: "stop"`, text content, and positive integer `usage.prompt_tokens`
+and `usage.completion_tokens`. The adapter rejects `length`, `content_filter`,
+tool/function calls, absent usage and malformed counts with a generic failure.
+This keeps truncated or unmetered completions out of chat and preserves the
+per-call output-token check. Some otherwise compatible endpoints omit usage;
+validate this response contract with a synthetic request before activation.
+The finish-reason values follow the [official Chat Completion response type](https://github.com/openai/openai-go/blob/main/chatcompletion.go#L2644-L2662).
+
 When the external adapter is active, chat retrieves only revisions whose current
 approval includes `provider_transfer`, in addition to user-text and sensitivity
 clearance. PostgreSQL filters the allowed revision IDs before Qdrant ranking and
