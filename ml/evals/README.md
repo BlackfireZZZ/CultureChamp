@@ -65,7 +65,8 @@ and grade 1 is contextual; both count for Recall, while nDCG uses graded gains.
 Duplicate returned keys are rejected. Unknown keys count as nonrelevant.
 
 `runs/oracle_smoke.jsonl` is a hand-written harness smoke run, **not** a retrieval
-baseline or quality result. Thresholds for a production path cannot be fixed
+baseline or quality result. There is no measured lexical baseline yet. Thresholds
+for a production path cannot be fixed
 until an expert reviews qrels and a real lexical run is available. The smallest
 mechanical gate requires every provisionally labelled relevant page to occur by
 `k=5` in this oracle run. Its failure case is tested by removing one relevant key.

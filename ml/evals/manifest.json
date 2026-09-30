@@ -2,6 +2,7 @@
   "dataset_id": "primorye-page-provisional-v1",
   "version": "2026-09-30.1",
   "label_status": "provisional_agent",
+  "origin": "Three user-supplied unchanged PDF originals inventoried under data/retrieval-fixtures/raw; titles/authors/DOIs and hashes are in data/retrieval-fixtures/README.md",
   "approved_user_corpus": false,
   "rights": "Unknown reuse and model-transfer rights for all PDFs; evaluation-only hold",
   "consent": "No community endorsement or consent established",
