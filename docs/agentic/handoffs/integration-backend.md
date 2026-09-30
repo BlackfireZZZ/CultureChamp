@@ -24,8 +24,10 @@ read-only admin inventory APIs; chat remains an explicitly local preview.
   `fc6e3f1abe77e86e810f2ca539f196bbbf0d00e9`. Later frontend/evaluation
   commits were cherry-picked with their originals retained on
   `agent/access-model-ui`. The last backend/OpenAPI contract commit before this
-  handoff is `9266ee6038bcd1c7fe2e977ae247753aa5d7081d`; its generated
-  frontend schema sync was cherry-picked as `5bddcf7`.
+  handoff is `eb65525462ee6ff5ea78ee9f507e8828e0fa4574`; its generated
+  frontend schema and original-link UI were cherry-picked from the access/UI
+  branch. The integration branch retains both merge parents and the content of
+  later cherry-picked commits; their original SHAs remain on the access/UI branch.
 - Managed worktree creation returned “Git is unavailable”; a manual unique
   worktree was created instead. It must be retained for follow-up work. Initial
   primary and both source branch statuses were clean. Final status is recorded
@@ -54,12 +56,18 @@ added the evaluation test to the root `make check` target.
   approve, revoke and failed-processing retry are protected routes.
 - User `GET /api/v1/materials` and `GET /materials/{revision_id}` expose only the
   currently approved, sensitivity-cleared exact revision with `user_text` rights.
-  Candidate, revoked and unknown IDs all return 404. There is no original-file
-  download route; `original_file` and `provider_transfer` remain distinct rights.
+  Candidate, revoked and unknown IDs all return 404. A later additive route,
+  `GET /materials/{revision_id}/original`, returns exact hash-checked PDF bytes
+  only when the latest decision also grants `original_file`; the detail's
+  `original_available` flag guides page links. Revocation denies the original on
+  the next request. `provider_transfer` remains a separate right.
+- Admin inventory has optional processing-state and latest-decision filters plus
+  a bounded limit. Omitted filters preserve the initial inventory response.
 - `contracts/openapi.json` and the frontend generated schema match the above
   transport shapes. ADR 0003 documents durable queue and decision semantics;
   ADR 0004 records the pilot account/session implementation. The task tracker
-  marks only C02/C03 done; incomplete format, rights and API gates remain partial.
+  marks C02/C03/C04/C08/C10 done by their focused acceptance checks; incomplete
+  format, rights and remaining API gates stay partial.
 
 ## Decisions and supporting evidence
 
@@ -85,23 +93,31 @@ added the evaluation test to the root `make check` target.
 - Fresh PostgreSQL database `culturechamp_verify_20260930` on the isolated
   PostGIS 17 Compose service: `DATABASE_URL=postgresql+asyncpg://culturechamp:culturechamp_local@localhost:15435/culturechamp_verify_20260930 uv run --package culturechamp-backend --extra dev alembic -c backend/alembic.ini upgrade head` ran `0001`, source, accounts and processing migrations from empty; `make migration-check` reported “No new upgrade operations detected.” A first offline admin was created there; a second bootstrap was rejected.
 - `CORPUS_TEST_DATABASE_URL=postgresql+asyncpg://culturechamp:culturechamp_local@localhost:15435/culturechamp uv run --package culturechamp-backend --extra dev pytest backend/tests/test_identity_api.py backend/tests/test_source_api.py -q`: three tests passed. They cover real app/DB credentials, Argon2id and hashed cookie storage, rotation, throttle, CSRF, roles, expiry, spoofed input, duplicate upload/tags, failed extraction/retry, unpublished 404, exact approval and immediate revocation.
-- `PATH=/home/blackfire/.nvm/versions/node/v24.19.0/bin:$PATH CORPUS_TEST_DATABASE_URL=postgresql+asyncpg://culturechamp:culturechamp_local@localhost:15435/culturechamp make check`: passed after the final contract sync. Architecture, Ruff, mypy, 35 backend tests, frontend lint/build and 11 tests, ML Ruff/mypy and 6 tests, OpenAPI snapshot/client check, Compose config all passed. One Starlette/httpx deprecation warning remains.
-- `PATH=/home/blackfire/.nvm/versions/node/v24.19.0/bin:$PATH npm run test:e2e` in `frontend/`: three Playwright tests passed at the specified responsive/keyboard paths.
+- The next focused `test_source_api.py` run passed after adding admin filters and
+  an original-file rights test. It covered unpublished/original-denied 404,
+  allowed exact bytes with `nosniff`/`no-store`, and revoked-original 404.
+- `PATH=/home/blackfire/.nvm/versions/node/v24.19.0/bin:$PATH CORPUS_TEST_DATABASE_URL=postgresql+asyncpg://culturechamp:culturechamp_local@localhost:15435/culturechamp make check`: passed after the original-file contract sync. Architecture, Ruff, mypy, 35 backend tests, frontend lint/build and 12 tests, ML Ruff/mypy and 6 tests, OpenAPI snapshot/client check, Compose config all passed. One Starlette/httpx deprecation warning remains.
+- `PATH=/home/blackfire/.nvm/versions/node/v24.19.0/bin:$PATH npm run test:e2e` in `frontend/`: four Playwright tests passed, including the keyboard admin filter and narrow-width path.
 - Isolated live Compose stack (`BACKEND_PORT=18035`, `FRONTEND_PORT=18080`, `POSTGRES_PORT=15435`) built and reached healthy backend, worker and frontend. Direct HTTP checks with an offline admin and a self-authored PDF observed: candidate invisible → worker `review_pending` with page 1 → admin approval → user list/detail visible → user/admin cross-role 403 → revoke → user list empty and detail 404. No supplied PDF was used in this approval.
+- After rebuilding the stack with the additive original-file route, direct HTTP
+  checks observed candidate original 404, worker extraction and reviewed tag,
+  exact approval with `original_file=true`, original bytes matching the upload,
+  `no-store`/`nosniff`, admin filters, then revoked-original 404. The test PDF
+  was again self-authored; supplied fixtures remained held.
 - `git diff --check` and inspection of the final staged diff are required again
   immediately before the handoff commit; report the observed result there.
 
 ## What remains unverified and why
 
-S01/S02/S04 and C01/C04/C05/C07/C08/C09/C10 remain partial as recorded in the
+S01/S02/S04 and C01/C05/C07/C09 remain partial as recorded in the
 tracker. No table file exists, so table extraction, cell locators in user APIs and
 table UI cannot be claimed. No real source has reuse, provider-transfer or
 community-sensitive clearance; the three PDFs remain admin-only candidates.
 Heading extraction and complete multicolumn reading order are unverified. The
-ingress/proxy has no explicit request-body limit before multipart spooling, and
+  ingress/proxy has no explicit request-body limit before multipart spooling, and
 the PDF parser has no hardened process sandbox or CPU/memory ceiling. Admin
-filters, passage-level exclusions, original-file authorization/download and
-audited account role changes are absent. Provider policy remains disabled; real
+  tag-value filters, passage-level exclusions and audited account role changes
+  are absent. Provider policy remains disabled; real
 generation and chat persistence are absent. The live Compose test used an
 example.invalid rights URL only for self-authored synthetic bytes; it is not a
 model for accepting evidence about a third-party source.
@@ -118,9 +134,9 @@ evaluate an IP/account policy with operators before broader availability.
 ## Exact next step
 
 For the next backend slice, add a rights-cleared real table fixture and prove a
-cell-to-original locator through C06 before widening C07/C09. In parallel, add
-admin inventory filters and an original-file endpoint that checks the current
-exact-revision `original_file` scope, then test restricted/guessed/revoked IDs.
+cell-to-original locator through C06 before widening C07/C09. Add a constrained
+parser process and request-body ingress limit before accepting untrusted bulk
+uploads; then test process termination, retry and candidate isolation.
 Keep all three supplied PDFs held until a named reviewer has documented rights,
 sensitivity and extraction fidelity for an exact hash. Re-run `make check`, clean
 migration and live role/revocation checks for any contract or schema change.

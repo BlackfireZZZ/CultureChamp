@@ -104,13 +104,13 @@ gate. Each row is intended as one cohesive review.
 | C01 | partial · corpus/backend · [handoff](../../agentic/handoffs/integration-backend.md) | S02, S04 | ADR and schema for source identity, immutable revisions, metadata, tags, structure, table locators and approval; `docs/decisions/`, `backend/app/domain/` | A citation uniquely resolves to one source revision and page/section/sheet/row/cell; changing metadata never rewrites cited text. |
 | C02 | done · corpus/backend · [handoff](../../agentic/handoffs/integration-backend.md) | S03 | Server-enforced user/admin identity and authorization boundary; `backend/app/application/`, `backend/app/api/` | User requests cannot read admin/unapproved records even with guessed IDs; role tests cover direct API calls and expired credentials. |
 | C03 | done · corpus/backend · [handoff](../../agentic/handoffs/integration-backend.md) | C01 | Alembic tables and repository ports/adapters for sources, revisions, tags and locators; `backend/app/infrastructure/db/` | Clean PostgreSQL upgrade works and repository round-trip preserves the exact revision and locator; migration check and integration test pass. |
-| C04 | partial · corpus/backend · [handoff](../../agentic/handoffs/integration-backend.md) | C02, C03, S04 | Authorized file intake, private storage, type/size validation and immutable content hash; `backend/app/infrastructure/` | Spoofed type, oversized file and duplicate retry are rejected or safely deduplicated; original bytes stay outside public webroot. |
+| C04 | done · corpus/backend · [handoff](../../agentic/handoffs/integration-backend.md) | C02, C03, S04 | Authorized file intake, private storage, type/size validation and immutable content hash; `backend/app/infrastructure/` | Spoofed type, oversized file and duplicate retry are rejected or safely deduplicated; original bytes stay outside public webroot. |
 | C05 | partial · corpus/backend · [handoff](../../agentic/handoffs/integration-backend.md) | C04 | Text extraction adapters with structure and location preservation for approved formats; `backend/app/infrastructure/ingestion/` | Fixtures produce non-empty ordered sections with stable page/heading locators; malformed input fails with a recorded error, not partial publication. |
 | C06 | todo · unassigned · — | C04 | Table extraction adapters retaining sheet/table, row/column, headers and cell meaning; `backend/app/infrastructure/ingestion/` | A queryable table fact maps back to its original sheet/table and cell range; merged/empty cells and encoding errors have fixture checks. |
 | C07 | partial · corpus/backend · [handoff](../../agentic/handoffs/integration-backend.md) | C03, C05, C06, S02 | Background processing, revision lifecycle, review and exact-revision approval/revocation; `backend/app/application/ingestion/` | Retried processing is idempotent; only an approved revision appears in user retrieval, and revocation removes it without destroying provenance. |
-| C08 | partial · corpus/backend + access/UI · [handoff](../../agentic/handoffs/integration-backend.md) | C02, C03, C07 | Admin inventory/detail/filter API and generated OpenAPI client contract; `backend/app/api/`, `contracts/` | Admin sees tags, structure, state and errors; user receives denial for the same unpublished detail; success/error/schema checks pass. |
+| C08 | done · corpus/backend + access/UI · [handoff](../../agentic/handoffs/integration-backend.md) | C02, C03, C07 | Admin inventory/detail/filter API and generated OpenAPI client contract; `backend/app/api/`, `contracts/` | Admin sees tags, structure, state and errors; user receives denial for the same unpublished detail; success/error/schema checks pass. |
 | C09 | partial · corpus/backend + access/UI · [handoff](../../agentic/handoffs/integration-backend.md) | C02, C03, C07 | User materials list/detail and authorized original/locator API; `backend/app/api/materials/`, `contracts/` | User sees approved revisions only; section/page/sheet/row links resolve to the same revision, and forbidden originals cannot be fetched. |
-| C10 | partial · corpus/backend · [handoff](../../agentic/handoffs/integration-backend.md) | C02, C04, C07 | Admin import/status and approval/revocation command API; `backend/app/api/admin/`, `contracts/` | Authorized import reaches a reviewable state; an admin can approve/revoke exact revisions; user and malformed commands are denied. |
+| C10 | done · corpus/backend · [handoff](../../agentic/handoffs/integration-backend.md) | C02, C04, C07 | Admin import/status and approval/revocation command API; `backend/app/api/admin/`, `contracts/` | Authorized import reaches a reviewable state; an admin can approve/revoke exact revisions; user and malformed commands are denied. |
 
 ### M2 — Retrieval and evaluation
 
@@ -189,12 +189,13 @@ path, evaluation cases, and data-handling constraints exist.
   approval, user list/detail, and immediate revocation. Three supplied PDFs remain
   held candidates and were never approved for user answers or provider transfer.
   Clean PostgreSQL migration and `alembic check` passed. Final `make check` passed:
-  35 backend, 11 frontend and 6 ML tests; OpenAPI and Compose config matched.
-  Three Playwright tests and a live Compose HTTP worker/approval/revocation path
+  35 backend, 12 frontend and 6 ML tests; OpenAPI and Compose config matched.
+  Four Playwright tests and live Compose HTTP worker/approval/revocation paths
   also passed. See the [integration handoff](../../agentic/handoffs/integration-backend.md).
 - **Remaining M1 limits:** no rights-cleared real corpus, appointed review authority,
-  table fixture/extractor, parser sandbox, request-body ingress limit, authorized
-  original-file endpoint, admin filtering, or passage-level sensitivity exclusion.
+  table fixture/extractor, parser sandbox, request-body ingress limit, tag-value
+  admin filtering, or passage-level sensitivity exclusion. Exact original-file
+  access and admin state/decision filters are implemented for the PDF slice.
   PDF-03 reading order still needs full review. The live test's synthetic approval
   demonstrates access behavior, not cultural or legal approval of any PDF fixture.
 - **2026-09-30:** Three supplied PDF originals were moved into the

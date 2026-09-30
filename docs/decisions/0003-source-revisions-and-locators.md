@@ -69,6 +69,17 @@ Comparable design inputs:
    same revision and original bytes; an attempt counter fences an expired worker
    from overwriting a newer attempt. The append-only decision stream remains the
    source of truth for visibility; processing state alone never publishes text.
+8. An original-file response checks the latest exact decision for `user_text`,
+   `original_file` and sensitivity clearance and verifies the stored bytes against
+   the captured hash. A denied original has the same 404 as a missing revision.
+   The response uses a server-generated UUID filename, the declared PDF type,
+   `nosniff` and `no-store`; the user detail exposes `original_available` so a
+   page link is offered only when the exact original is authorized. The
+   [HTTP Content-Disposition standard](https://datatracker.ietf.org/doc/html/rfc6266)
+   treats filenames as advisory, and the [Fetch specification's nosniff rule](https://fetch.spec.whatwg.org/#x-content-type-options-header)
+   and [HTTP caching guidance](https://httpwg.org/specs/rfc9111.html#field.cache-control)
+   inform the response headers. These headers are defense in depth; authorization
+   remains the current database decision.
 
 ## Alternatives and tradeoffs
 
