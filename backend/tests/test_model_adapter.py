@@ -3,6 +3,8 @@ import asyncio
 import httpx
 import pytest
 
+from app.core.config import Settings
+from app.infrastructure.model.configuration import configured_provider
 from app.infrastructure.model.gateway import (
     FakeModelProvider,
     ModelFailure,
@@ -53,6 +55,23 @@ class RetryProvider:
 
 def request() -> ModelRequest:
     return ModelRequest("user-1", "Write a brief", "turn-1")
+
+
+def test_external_provider_configuration_fails_closed_and_keeps_key_private() -> None:
+    disabled = Settings(_env_file=None, model_provider="openai_compatible",
+                        model_api_endpoint="https://approved.example/v1/chat/completions",
+                        model_api_name="pilot-model", model_api_key="secret-canary")
+    with pytest.raises(ValueError, match="policy"):
+        configured_provider(disabled)
+    ready = Settings(_env_file=None, model_provider="openai_compatible",
+                     model_api_endpoint="https://approved.example/v1/chat/completions",
+                     model_api_name="pilot-model", model_api_key="secret-canary",
+                     model_policy_approved=True)
+    provider = configured_provider(ready)
+    assert isinstance(provider, HttpModelProvider)
+    assert provider.requires_provider_transfer is True
+    assert "secret-canary" not in repr(ready)
+    assert "secret-canary" not in repr(provider)
 
 
 def test_fake_quota_retry_and_timeout() -> None:

@@ -159,7 +159,7 @@ gate. Each row is intended as one cohesive review.
 
 | ID | Status · owner · handoff | Depends | Deliverable and owned area | Acceptance and smallest falsifying check |
 |---|---|---|---|---|
-| G01 | in_progress · integration agent · — | S03 | Server-side model API adapter with secret isolation, timeout, retry, rate/cost limits and fake provider; `backend/app/infrastructure/model/` | Fake and failure paths pass; external provider activation, measured cost and secret-handling review remain. |
+| G01 | in_progress · integration agent · — | S03 | Server-side model API adapter with secret isolation, timeout, retry, rate/cost limits and fake provider; `backend/app/infrastructure/model/` | Fake and failure paths pass; external provider configuration and provider-transfer filtering are wired; exact service/model, live activation, measured cost and secret-handling review remain. |
 | G02 | in_progress · integration agent · — | R05, G01, S02 | Text orchestration: task prompt, approved evidence context, uncertainty and fact/interpretation/creation framing; `backend/app/application/generation/` | Synthetic fake-model cases pass; expert support review and full vector-backed journey remain. |
 | G03 | in_progress · integration agent · — | G02, C01 | Citation validation and source-location resolution; `backend/app/application/citations/` | Synthetic exact-revision checks pass; mixed format and source withdrawal UI checks remain. |
 | G04 | in_progress · integration agent · — | C02, G03, S03 | Conversation/message model and chat API (list, create, send, continue, delete per retention decision); `backend/app/api/`, `backend/app/infrastructure/db/` | PostgreSQL ownership/retry/citation test passes; client and end-to-end checks remain. |
@@ -202,21 +202,23 @@ same source identity, rights and citation rules as the text slice.
 | F07 | todo | Institutional source submission, review, correction and revocation workflows. | A provider can submit and correct an exact revision; independent reviewers decide visibility and sensitive use; audit and withdrawal propagate to every modality index. |
 | F08 | todo | Production object storage, index generation lifecycle, backups and scale tests. | Restore and full reindex reproduce approved search state; latency, cost and failure targets are measured on representative media collections. |
 
-The next implementation order is R01/R04 passage and extraction evidence →
-R03/R05 replay and authorization verification → Q02 retrieval release gate →
-G05 and external model integration → C06/U04 and end-to-end product work.
-Synthetic UI and source mechanics can continue against the same contracts,
-but cultural answer generation must wait for a credible retrieval gate. F02–F08 are not
-silently discarded after M5; their product ordering follows the concept's
-coverage, creative-domain and institutional-participation axes.
+The owner accepted the current retrieval diagnostics for MVP engineering progress
+and requested no further retrieval experiments. The next work is server-side
+external-model configuration, G05 guardrails, C06/U04 and a live synthetic
+end-to-end journey. Cultural answer release still needs eligible source rights,
+provider terms and support review; provisional page labels do not prove those
+gates. F02–F08 are not silently discarded after M5; their product ordering
+follows the concept's coverage, creative-domain and institutional-participation
+axes.
 
 ## Integration order and parallelism
 
 The synthetic mechanical vertical slice already uses vector retrieval, a fake
-model adapter and a chat/citation path. The next slice must establish extraction
-coverage, passage-level relevance, no-evidence calibration and exact locators
-before enabling cultural claims from an external model. UI contracts may be
-developed against deterministic fixtures while ingestion runs. Frontend and backend
+model adapter and a chat/citation path. The owner stopped further retrieval
+ablations after reviewing the diagnostic results. Unreviewed extraction,
+passage relevance and no-evidence calibration remain known release risks; the
+external adapter can be wired and tested with synthetic content while its real
+provider and source permissions are pending. Frontend and backend
 owners must agree on OpenAPI before working in parallel; no two writing owners edit
 the same contract file. An external model is connected only after the fake-provider
 path, evaluation cases, and data-handling constraints exist.

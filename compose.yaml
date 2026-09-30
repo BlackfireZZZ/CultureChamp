@@ -54,6 +54,11 @@ services:
       SOURCE_STORAGE_ROOT: /workspace/.private/sources
       VECTOR_URL: http://vector:6333
       EMBEDDING_CACHE_ROOT: /workspace/.private/embedding-cache
+      MODEL_PROVIDER: ${MODEL_PROVIDER:-fake}
+      MODEL_API_ENDPOINT: ${MODEL_API_ENDPOINT:-}
+      MODEL_API_NAME: ${MODEL_API_NAME:-}
+      MODEL_API_KEY: ${MODEL_API_KEY:-}
+      MODEL_POLICY_APPROVED: ${MODEL_POLICY_APPROVED:-false}
     volumes:
       - source_private:/workspace/.private
     ports:

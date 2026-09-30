@@ -42,6 +42,7 @@ def get_chat_service(request: Request) -> ChatService:
         ),
         GatewayModelPort(ModelGateway(provider, SqlModelQuota(factory))),
         SqlCitationResolver(factory),
+        external=bool(getattr(provider, "requires_provider_transfer", False)),
     )
     return ChatService(SqlChatStore(factory), generation)
 

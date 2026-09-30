@@ -19,6 +19,7 @@ from app.core.config import settings
 from app.infrastructure.db.identity_store import SqlIdentityStore
 from app.infrastructure.db.session import engine, session_factory
 from app.infrastructure.ingestion.storage import MAX_PDF_BYTES
+from app.infrastructure.model.configuration import configured_provider
 from app.infrastructure.passwords import Argon2PasswordCodec
 from app.infrastructure.vector.text_vectors import VectorUnavailable
 
@@ -38,6 +39,7 @@ def create_app() -> FastAPI:
     app.state.session_store = identity_store
     app.state.identity_service = IdentityService(identity_store, codec, codec.dummy_hash)
     app.state.source_session_factory = session_factory
+    app.state.model_provider = configured_provider(settings)
 
     @app.exception_handler(SourceNotFound)
     async def source_not_found(_: Request, __: SourceNotFound) -> JSONResponse:

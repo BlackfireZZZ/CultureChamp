@@ -48,6 +48,11 @@ download of the configured embedding model into the private Compose volume.
 - `DESIGN.md`: the supplied visual contract for frontend work.
 - `docs/exec-plans/`: planning and technical debt records.
 
+The [model provider runbook](docs/operations/model-provider.md) records the
+backend-only settings for a future OpenAI-compatible text API. The default
+provider is the deterministic fake until an exact service, model and data policy
+are configured.
+
 Feature modules and MVP boundaries should be derived from `docs/product/CONCEPT.md`.
 `DESIGN.md` supplies the visual baseline; its optional map and archive patterns do
 not define the primary workflow. Existing ADRs are retained as engineering decisions,

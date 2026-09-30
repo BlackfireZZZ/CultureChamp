@@ -56,6 +56,8 @@ class FakeModelProvider:
 class GroundedFakeProvider:
     """Deterministic source-echoing provider for a synthetic end-to-end check."""
 
+    requires_provider_transfer = False
+
     async def generate(self, request: ModelRequest) -> ModelResult:
         import json
 

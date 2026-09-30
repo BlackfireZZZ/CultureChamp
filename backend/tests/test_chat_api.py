@@ -4,6 +4,7 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from uuid import UUID, uuid4
 
+import httpx
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import delete, select
@@ -27,6 +28,7 @@ from app.infrastructure.db.source_models import (
 from app.infrastructure.db.source_repository import SourceRepository
 from app.infrastructure.ingestion.storage import PrivateOriginalStore
 from app.infrastructure.model.gateway import ModelFailure, ModelRequest, ModelResult
+from app.infrastructure.model.http import HttpModelProvider
 from app.infrastructure.passwords import Argon2PasswordCodec
 from app.infrastructure.vector.indexing import ApprovedTextIndexer
 from app.infrastructure.vector.text_vectors import DIMENSIONS, QdrantTextIndex
@@ -185,6 +187,27 @@ async def _check_chat(url: str, tmp_path: Path) -> None:
                     )
                 ).all()
             assert await ApprovedTextIndexer(factory, index).index_one() == revision_id
+            external_calls: list[httpx.Request] = []
+
+            def external_handler(request: httpx.Request) -> httpx.Response:
+                external_calls.append(request)
+                return httpx.Response(200, json={})
+
+            async with httpx.AsyncClient(transport=httpx.MockTransport(external_handler)) as client:
+                app.state.model_provider = HttpModelProvider(
+                    endpoint="https://approved.example/v1/chat/completions",
+                    model="pilot-model", api_key="synthetic-key", policy_approved=True,
+                    client=client,
+                )
+                held_from_provider = owner.post(
+                    f"/api/v1/chats/{chat_id}/messages", headers=owner_headers,
+                    json={"request_id": str(uuid4()), "text": marker},
+                )
+                assert held_from_provider.status_code == 200, held_from_provider.text
+                assert held_from_provider.json()["evidence_status"] == "insufficient"
+                assert held_from_provider.json()["citations"] == []
+                assert external_calls == []
+            del app.state.model_provider
             broken_id = str(uuid4())
             app.state.model_provider = BrokenProvider()
             broken_payload = {"request_id": broken_id, "text": marker}
@@ -200,7 +223,7 @@ async def _check_chat(url: str, tmp_path: Path) -> None:
             assert recovered.json()["evidence_status"] == "grounded"
             assert recovered.json()["citations"][0]["revision_id"] == str(revision_id)
             assert recovered.json()["citations"][0]["available"] is True
-            assert len(owner.get(f"/api/v1/chats/{chat_id}").json()["turns"]) == 2
+            assert len(owner.get(f"/api/v1/chats/{chat_id}").json()["turns"]) == 3
             revoked = admin.post(
                 f"/api/v1/admin/revisions/{revision_id}/revoke",
                 json={"reason": "Synthetic citation withdrawal check"},
@@ -208,7 +231,7 @@ async def _check_chat(url: str, tmp_path: Path) -> None:
             )
             assert revoked.status_code == 200, revoked.text
             assert (
-                owner.get(f"/api/v1/chats/{chat_id}").json()["turns"][1]["citations"][0][
+                owner.get(f"/api/v1/chats/{chat_id}").json()["turns"][2]["citations"][0][
                     "available"
                 ]
                 is False

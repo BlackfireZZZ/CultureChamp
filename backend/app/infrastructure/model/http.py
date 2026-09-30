@@ -14,6 +14,8 @@ from app.infrastructure.model.gateway import (
 class HttpModelProvider:
     """OpenAI-compatible wire adapter, disabled until an external data policy is approved."""
 
+    requires_provider_transfer = True
+
     def __init__(
         self,
         *,

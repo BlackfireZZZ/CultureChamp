@@ -5,6 +5,12 @@ at `09c6c893dd9f7bd9d4a966de1eb552d2b5807a5f` in the isolated
 `CultureChamp-integration-backend` worktree; initial `git status --short` was
 clean. The primary checkout remains at `f67a0586f55e4bf3aa5192628d95a0d0cb527096`.
 
+The owner accepted the existing diagnostic results on 2026-09-30 and asked to
+stop further retrieval experiments. The current E5-small runtime remains an MVP
+engineering baseline; no expert or held-out passage evidence has been added by
+that decision. The 40-row optional review packet is retained locally but no
+longer blocks independent model-API and UI integration work.
+
 ## Objective and falsifiable hypothesis
 
 Choose a reproducible retrieval pipeline for Russian academic and heritage PDFs

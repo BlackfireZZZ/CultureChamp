@@ -1,5 +1,31 @@
 # Corpus/backend integration handoff — 2026-09-30
 
+## External model configuration checkpoint
+
+The owner accepted the current retrieval study for MVP engineering progress and
+requested no further retrieval ablations. This does not turn provisional
+page-level labels into expert passage judgments. The existing E5-small text index
+and its provisional threshold remain the runtime configuration; user-facing
+cultural release still needs eligible reviewed sources. The next integration
+slice is the server-side model path and a live synthetic browser journey.
+
+The owner selected an external OpenAI-compatible API but has not supplied its
+service, HTTPS Chat Completions URL, model ID or key. The backend now accepts
+these as operator settings while defaulting to the deterministic fake provider.
+External configuration fails startup unless the policy switch and required
+settings are present. An external adapter sets the generation service's
+`for_provider` search mode so only current `provider_transfer` revisions can be
+ranked and sent. A live PostgreSQL/Qdrant test with a self-authored source lacking
+that right returned insufficient evidence and made zero HTTP provider calls.
+The exact setup boundary is in [the provider runbook](../../operations/model-provider.md).
+
+Verification: `CORPUS_TEST_DATABASE_URL=postgresql+asyncpg://culturechamp:culturechamp_local@localhost:15436/culturechamp CORPUS_TEST_VECTOR_URL=http://localhost:16333 make check`
+with Node 24 passed: 60 backend, 15 frontend and 20 ML tests, architecture,
+Ruff, mypy, build, API contract and Compose config. No real source text or key
+was used in provider tests. An isolated clean Compose build with its own ports
+passed `make compose-check up smoke down`: backend liveness/readiness and frontend
+smoke all passed. Actual provider compatibility and terms remain open.
+
 ## Latest extraction and source-boundary check
 
 The retrieval extraction audit compared normalized token content and order for
