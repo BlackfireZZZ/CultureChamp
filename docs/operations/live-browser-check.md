@@ -49,6 +49,12 @@ run can leave approved synthetic sources in its test database and affect the
 no-evidence assertion. For a fresh run, reset only the disposable isolated
 Compose project; if offline, seed its private volume with the pinned model cache
 before starting the worker.
+It then uploads the self-authored two-sheet XLSX fixture, approves its exact
+revision, checks physical sheet/row/column locators and a Qdrant point, filters
+the user materials list to XLSX, downloads identical original bytes, and opens
+a cited workbook cell from a new chat. Revocation makes the historical citation
+unavailable. Opening a previously viewed source through a citation also checks
+that keyboard focus returns to the cited cell after cached data refreshes.
 The same run checks the admin review, cited chat and source detail for document
 overflow at 360, 768, 1280 and 1440 px; it is a layout check on synthetic
 content, not a target-user usability review.

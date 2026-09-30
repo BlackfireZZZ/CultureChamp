@@ -955,3 +955,20 @@ outage; the newly added test uses the unchanged ingestion and UI code paths.
 The test now also asserts an empty approved corpus before its no-evidence step,
 so an interrupted prior run fails with an explicit setup error. A second clean
 browser run with this precondition passed (1, 13.6 s).
+
+## 2026-10-01 live XLSX and cached citation focus
+
+Expected result: a two-sheet workbook keeps exact physical cell locators through
+review, vector indexing, user materials, chat citation and original download;
+opening a previously viewed source by citation focuses the cited cell. A
+self-authored XLSX fixture was generated from the existing backend fixture
+recipe and inspected with the production extractor. The first built-browser
+run reached a grounded XLSX citation but failed the focus check: the cited row
+was visible and highlighted while keyboard focus was inactive after a cached
+detail refresh. `MaterialsView` now reruns its focus effect when the query's
+`dataUpdatedAt` changes. A rebuilt frontend on a clean, offline-cache-seeded
+Compose project passed the full CSV/PDF/XLSX journey (1, 19.4 s). Its XLSX
+portion checked three coordinates across two sheets, Qdrant indexing, format
+filtering, original-byte equality, citation-to-segment identity and revocation.
+This is mechanical evidence using invented table data; real table semantics
+and cultural review remain open.

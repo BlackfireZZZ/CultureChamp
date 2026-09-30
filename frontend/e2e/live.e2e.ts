@@ -247,6 +247,102 @@ test("live synthetic source flows from admin review to cited chat and revocation
       return ((await response.json()) as { status: string }).status
     }, { timeout: 120_000 }).toBe("failed")
     expect((await userContext.request.get(`/api/v1/materials/${brokenIntake.revision_id}`)).status()).toBe(404)
+
+    const workbookTitle = `Synthetic workbook ${marker}`
+    const workbook = await readFile(new URL("./fixtures/self-authored.xlsx", import.meta.url))
+    await upload.getByLabel("Оригинальный файл").setInputFiles({
+      name: "self-authored.xlsx",
+      mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      buffer: workbook,
+    })
+    await upload.getByLabel("Ссылка на источник").fill(`https://example.invalid/${marker}/workbook`)
+    await upload.getByLabel("Название").fill(workbookTitle)
+    await upload.getByLabel("Примечание о правах").fill("Self-authored workbook for technical test")
+    const workbookIntakeResponse = adminPage.waitForResponse((response) => response.url().endsWith("/api/v1/admin/sources") && response.request().method() === "POST")
+    await upload.getByRole("button", { name: "Загрузить на проверку" }).click()
+    const workbookIntake = (await (await workbookIntakeResponse).json()) as { revision_id: string }
+    await expect.poll(async () => {
+      const response = await adminContext.request.get(`/api/v1/admin/revisions/${workbookIntake.revision_id}`)
+      return ((await response.json()) as { status: string }).status
+    }, { timeout: 120_000 }).toBe("review_pending")
+    await adminPage.reload()
+    await adminPage.getByRole("button", { name: "Админка" }).click()
+    const workbookSearch = adminPage.getByRole("form", { name: "Поиск в инвентаре" })
+    await workbookSearch.getByRole("textbox", { name: "Источник или название" }).fill(workbookTitle)
+    await workbookSearch.getByRole("button", { name: "Найти" }).click()
+    await adminPage.getByRole("button", { name: new RegExp(workbookTitle) }).click()
+    await expect(adminPage.getByText("Item: Example A; Count: 7")).toBeVisible()
+    const workbookReview = adminPage.getByRole("form", { name: "Одобрение ревизии" })
+    await workbookReview.getByLabel("Основание и ограничения").fill("Self-authored workbook for isolated live test")
+    await workbookReview.getByLabel("HTTPS-ссылка на доказательство прав").fill(`https://example.invalid/${marker}/workbook/rights`)
+    await workbookReview.getByLabel(/Показ текстовых фрагментов/).check()
+    await workbookReview.getByLabel(/Чувствительность материала/).check()
+    await workbookReview.getByLabel(/Показ оригинального файла/).check()
+    await workbookReview.getByRole("button", { name: "Одобрить эту ревизию" }).click()
+    await expect(adminPage.getByRole("form", { name: "Отзыв ревизии" })).toBeVisible()
+    approvedRevisionId = workbookIntake.revision_id
+    const workbookDetail = await adminContext.request.get(`/api/v1/admin/revisions/${approvedRevisionId}`)
+    const workbookSegments = ((await workbookDetail.json()) as {
+      segments: { segment_id: string; locator: { sheet: string; row_start: number; column_start: number } }[]
+    }).segments
+    expect(workbookSegments.map((segment) => [segment.locator.sheet, segment.locator.row_start, segment.locator.column_start])).toEqual([
+      ["North", 2, 3], ["North", 3, 2], ["South", 2, 2],
+    ])
+    await expect.poll(async () => {
+      const response = await fetch(`${vectorURL}/collections/culture_text_e5_small_v1/points`, {
+        method: "POST", headers: { "content-type": "application/json" },
+        body: JSON.stringify({ ids: [workbookSegments[1].segment_id], with_payload: true, with_vector: false }),
+      })
+      if (!response.ok) return null
+      const data = (await response.json()) as { result: { payload: { revision_id: string } }[] }
+      return data.result[0]?.payload.revision_id ?? null
+    }, { timeout: 180_000 }).toBe(approvedRevisionId)
+
+    const workbookFilter = userPage.getByRole("form", { name: "Поиск материалов" })
+    await workbookFilter.getByRole("combobox", { name: "Тип документа" }).selectOption("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    await workbookFilter.getByRole("button", { name: "Найти" }).click()
+    await userPage.getByRole("button", { name: new RegExp(workbookTitle) }).click()
+    await expect(userPage.getByRole("heading", { name: "Таблица North, строка 3, столбец 2" })).toBeVisible()
+    await expect(userPage.getByText("Item: Example A; Count: 7")).toBeVisible()
+    const workbookDownloadPromise = userPage.waitForEvent("download")
+    await userPage.getByRole("link", { name: "Скачать исходную книгу XLSX" }).click()
+    const workbookDownload = await workbookDownloadPromise
+    expect(await readFile(await workbookDownload.path())).toEqual(workbook)
+
+    await userPage.getByRole("button", { name: "Вернуться к чату" }).first().click()
+    await userPage.getByRole("button", { name: "Новый чат" }).click()
+    const workbookBrief = "Item: Example A; Count: 7"
+    await userPage.getByRole("textbox", { name: "Ваш творческий бриф" }).fill(workbookBrief)
+    const workbookAnswerResponse = userPage.waitForResponse((response) => response.url().includes("/api/v1/chats/") && response.url().endsWith("/messages") && response.request().method() === "POST")
+    await userPage.getByRole("button", { name: "Отправить" }).click()
+    const workbookAnswer = (await (await workbookAnswerResponse).json()) as {
+      evidence_status: string; citations: { revision_id: string; segment_id: string; sheet: string; row_start: number; column_start: number }[]
+    }
+    expect(workbookAnswer.evidence_status).toBe("grounded")
+    expect(workbookAnswer.citations).toHaveLength(1)
+    expect(workbookAnswer.citations[0].revision_id).toBe(approvedRevisionId)
+    expect(workbookSegments).toContainEqual(expect.objectContaining({
+      segment_id: workbookAnswer.citations[0].segment_id,
+      locator: expect.objectContaining({
+        sheet: workbookAnswer.citations[0].sheet,
+        row_start: workbookAnswer.citations[0].row_start,
+        column_start: workbookAnswer.citations[0].column_start,
+      }),
+    }))
+    await expect(userPage.getByText(/Source-supported:/)).toBeVisible()
+    await userPage.getByRole("button", { name: new RegExp(`Источник · таблица ${workbookAnswer.citations[0].sheet}, строка ${workbookAnswer.citations[0].row_start}`) }).click()
+    await expect(userPage.locator(`#segment-${workbookAnswer.citations[0].segment_id}`)).toBeFocused()
+    const workbookRevoke = adminPage.getByRole("form", { name: "Отзыв ревизии" })
+    await workbookRevoke.getByLabel("Причина отзыва").fill("Synthetic workbook test completed")
+    await workbookRevoke.getByRole("button", { name: "Отозвать эту ревизию" }).click()
+    await expect.poll(async () => {
+      const response = await adminContext.request.get(`/api/v1/admin/revisions/${workbookIntake.revision_id}`)
+      return ((await response.json()) as { decision: string }).decision
+    }).toBe("revoke")
+    approvedRevisionId = null
+    await userPage.reload()
+    await userPage.getByRole("button", { name: workbookBrief, exact: true }).click()
+    await expect(userPage.getByRole("button", { name: /Источник · таблица North, строка/ })).toBeDisabled()
   } finally {
     if (approvedRevisionId && adminCsrfToken) {
       await adminContext.request.post(`/api/v1/admin/revisions/${approvedRevisionId}/revoke`, {

@@ -26,7 +26,7 @@ export function MaterialsView({ onBack, citationTarget = null }: { onBack: () =>
     if (citationTarget?.revision_id === revisionId) {
       document.getElementById(`segment-${citationTarget.segment_id}`)?.focus()
     } else headingRef.current?.focus()
-  }, [detail.isSuccess, revisionId, citationTarget])
+  }, [detail.isSuccess, detail.dataUpdatedAt, revisionId, citationTarget])
 
   function choose(id: string) {
     setRevisionId(id)
