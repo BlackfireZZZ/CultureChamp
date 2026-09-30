@@ -222,3 +222,6 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Personally downloaded cultural sources are local-only.
+data/retrieval-fixtures/raw/*.pdf
