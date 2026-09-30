@@ -274,6 +274,8 @@ export interface components {
             readonly source_id: string;
             /** Status */
             readonly status: string;
+            /** Tags */
+            readonly tags: readonly components["schemas"]["TagView"][];
             /** Title */
             readonly title: string;
         };
@@ -316,6 +318,8 @@ export interface components {
             readonly rights_note?: string | null;
             /** Source Id */
             readonly source_id?: string | null;
+            /** Tags */
+            readonly tags?: readonly string[] | null;
             /** Title */
             readonly title: string;
         };
@@ -462,6 +466,13 @@ export interface components {
             readonly segment_id: string;
             /** Text */
             readonly text: string;
+        };
+        /** TagView */
+        readonly TagView: {
+            /** Kind */
+            readonly kind: string;
+            /** Value */
+            readonly value: string;
         };
         /** ValidationError */
         readonly ValidationError: {
