@@ -1,7 +1,7 @@
 # Creative RAG MVP — master plan and task tracker
 
-Status: **planning** · Base: `d3ff56de561862593c8df8fd8ff382af32cb673c` ·
-Integration owner: **unassigned** · Last updated: 2026-09-30
+Status: **integration in progress** · Base: `f67a0586f55e4bf3aa5192628d95a0d0cb527096` ·
+Integration owner: **corpus/backend agent** · Last updated: 2026-09-30
 
 ## Purpose and observable result
 
@@ -69,16 +69,17 @@ tasks produce evidence.
 
 | Milestone | Gate | Status |
 |---|---|---|
-| M0 — Product slice and decisions | One narrow corpus/task slice, source policy, format matrix, identity/provider constraints and evaluable examples are recorded. | pending |
-| M1 — Governed corpus | An approved source revision can be ingested, inspected, cited, revoked, and excluded from user retrieval; text and table locations survive extraction. | pending |
+| M0 — Product slice and decisions | One narrow corpus/task slice, source policy, format matrix, identity/provider constraints and evaluable examples are recorded. | partial: candidate rights and real table fixture unresolved |
+| M1 — Governed corpus | An approved source revision can be ingested, inspected, cited, revoked, and excluded from user retrieval; text and table locations survive extraction. | partial: synthetic PDF vertical path verified; table extraction absent |
 | M2 — Measured retrieval | Labelled queries exist; lexical baseline and at least one alternative are compared by source format and language; the selected path meets agreed thresholds. | pending |
 | M3 — Grounded chat | A text brief produces a persisted or explicitly temporary text conversation with validated source citations, no-evidence behavior, and bounded model API calls. | pending |
-| M4 — Two-role product UI | User chat, starter guide, source browser/citation view and admin document inventory work at canonical widths and keyboard paths. | pending |
+| M4 — Two-role product UI | User chat, starter guide, source browser/citation view and admin document inventory work at canonical widths and keyboard paths. | partial: real auth/materials/admin read path; chat remains local preview |
 | M5 — MVP evidence and operations | End-to-end, security, quality, recovery, cost/latency and user/expert review evidence supports a narrow release decision. | pending |
 
 ## Task rules
 
-`ready` means the task can start with current inputs; `todo` means it awaits a listed
+`ready` means the task can start with current inputs; `partial` means only the
+specified subset of acceptance evidence is verified; `todo` means it awaits a listed
 dependency or decision; `blocked` requires a specific unresolved external condition.
 All owners are `unassigned` until a person or agent accepts file ownership. A `—`
 handoff means no ownership transfer has occurred; add a link to a handoff record on
@@ -90,26 +91,26 @@ gate. Each row is intended as one cohesive review.
 
 | ID | Status · owner · handoff | Depends | Deliverable and owned area | Acceptance and smallest falsifying check |
 |---|---|---|---|---|
-| S01 | ready · unassigned · — | — | Choose one region/community, 2–3 creative tasks and a bounded initial corpus; `docs/product/` | A written slice maps at least three real briefs to permitted sources and expected output; review against the concept and UC-01–UC-06. |
-| S02 | ready · unassigned · — | — | Define verified/approved, rights, sensitive-source and revocation policy; `docs/product/` | Each fixture source has a reviewer, rights decision and user-visibility rule; challenge with a restricted and a disputed source. |
-| S03 | ready · unassigned · — | — | Decide user identity/guest mode, admin bootstrap, conversation retention, model-provider data handling and budget constraints; `docs/decisions/` | Decision records user/admin access, deletion, provider data flow and who holds keys; threat-review one leaked-token and one cross-role case. |
-| S04 | todo · unassigned · — | S01 | Inventory supplied text/table fixtures and choose supported MVP formats; `docs/product/` | Format matrix records extraction fidelity, locators, unsupported cases and sample rights; inspect at least one prose file and one table. |
-| S05 | todo · unassigned · — | S01, S02, S04 | Build task/query examples and expert review rubric; `ml/evals/` | Cases cover factual support, interpretation, no evidence, conflicting accounts, sensitive content and table lookup; a reviewer can label each without hidden knowledge. |
+| S01 | partial · corpus/backend · [handoff](../../agentic/handoffs/integration-backend.md) | — | Choose one region/community, 2–3 creative tasks and a bounded initial corpus; `docs/product/` | A written slice maps at least three real briefs to permitted sources and expected output; review against the concept and UC-01–UC-06. |
+| S02 | partial · corpus/backend · [handoff](../../agentic/handoffs/integration-backend.md) | — | Define verified/approved, rights, sensitive-source and revocation policy; `docs/product/` | Each fixture source has a reviewer, rights decision and user-visibility rule; challenge with a restricted and a disputed source. |
+| S03 | partial · access/UI + corpus/backend · [handoff](../../agentic/handoffs/integration-backend.md) | — | Decide user identity/guest mode, admin bootstrap, conversation retention, model-provider data handling and budget constraints; `docs/decisions/` | Decision records user/admin access, deletion, provider data flow and who holds keys; threat-review one leaked-token and one cross-role case. |
+| S04 | partial · corpus/backend · [handoff](../../agentic/handoffs/integration-backend.md) | S01 | Inventory supplied text/table fixtures and choose supported MVP formats; `docs/product/` | Format matrix records extraction fidelity, locators, unsupported cases and sample rights; inspect at least one prose file and one table. |
+| S05 | partial · access/UI · [handoff](../../../frontend/HANDOFF.md) | S01, S02, S04 | Build task/query examples and expert review rubric; `ml/evals/` | Cases cover factual support, interpretation, no evidence, conflicting accounts, sensitive content and table lookup; a reviewer can label each without hidden knowledge. |
 
 ### M1 — Corpus contracts and administration
 
 | ID | Status · owner · handoff | Depends | Deliverable and owned area | Acceptance and smallest falsifying check |
 |---|---|---|---|---|
-| C01 | todo · unassigned · — | S02, S04 | ADR and schema for source identity, immutable revisions, metadata, tags, structure, table locators and approval; `docs/decisions/`, `backend/app/domain/` | A citation uniquely resolves to one source revision and page/section/sheet/row/cell; changing metadata never rewrites cited text. |
-| C02 | todo · unassigned · — | S03 | Server-enforced user/admin identity and authorization boundary; `backend/app/application/`, `backend/app/api/` | User requests cannot read admin/unapproved records even with guessed IDs; role tests cover direct API calls and expired credentials. |
-| C03 | todo · unassigned · — | C01 | Alembic tables and repository ports/adapters for sources, revisions, tags and locators; `backend/app/infrastructure/db/` | Clean PostgreSQL upgrade works and repository round-trip preserves the exact revision and locator; migration check and integration test pass. |
-| C04 | todo · unassigned · — | C02, C03, S04 | Authorized file intake, private storage, type/size validation and immutable content hash; `backend/app/infrastructure/` | Spoofed type, oversized file and duplicate retry are rejected or safely deduplicated; original bytes stay outside public webroot. |
-| C05 | todo · unassigned · — | C04 | Text extraction adapters with structure and location preservation for approved formats; `backend/app/infrastructure/ingestion/` | Fixtures produce non-empty ordered sections with stable page/heading locators; malformed input fails with a recorded error, not partial publication. |
+| C01 | partial · corpus/backend · [handoff](../../agentic/handoffs/integration-backend.md) | S02, S04 | ADR and schema for source identity, immutable revisions, metadata, tags, structure, table locators and approval; `docs/decisions/`, `backend/app/domain/` | A citation uniquely resolves to one source revision and page/section/sheet/row/cell; changing metadata never rewrites cited text. |
+| C02 | done · corpus/backend · [handoff](../../agentic/handoffs/integration-backend.md) | S03 | Server-enforced user/admin identity and authorization boundary; `backend/app/application/`, `backend/app/api/` | User requests cannot read admin/unapproved records even with guessed IDs; role tests cover direct API calls and expired credentials. |
+| C03 | done · corpus/backend · [handoff](../../agentic/handoffs/integration-backend.md) | C01 | Alembic tables and repository ports/adapters for sources, revisions, tags and locators; `backend/app/infrastructure/db/` | Clean PostgreSQL upgrade works and repository round-trip preserves the exact revision and locator; migration check and integration test pass. |
+| C04 | partial · corpus/backend · [handoff](../../agentic/handoffs/integration-backend.md) | C02, C03, S04 | Authorized file intake, private storage, type/size validation and immutable content hash; `backend/app/infrastructure/` | Spoofed type, oversized file and duplicate retry are rejected or safely deduplicated; original bytes stay outside public webroot. |
+| C05 | partial · corpus/backend · [handoff](../../agentic/handoffs/integration-backend.md) | C04 | Text extraction adapters with structure and location preservation for approved formats; `backend/app/infrastructure/ingestion/` | Fixtures produce non-empty ordered sections with stable page/heading locators; malformed input fails with a recorded error, not partial publication. |
 | C06 | todo · unassigned · — | C04 | Table extraction adapters retaining sheet/table, row/column, headers and cell meaning; `backend/app/infrastructure/ingestion/` | A queryable table fact maps back to its original sheet/table and cell range; merged/empty cells and encoding errors have fixture checks. |
-| C07 | todo · unassigned · — | C03, C05, C06, S02 | Background processing, revision lifecycle, review and exact-revision approval/revocation; `backend/app/application/ingestion/` | Retried processing is idempotent; only an approved revision appears in user retrieval, and revocation removes it without destroying provenance. |
-| C08 | todo · unassigned · — | C02, C03, C07 | Admin inventory/detail/filter API and generated OpenAPI client contract; `backend/app/api/`, `contracts/` | Admin sees tags, structure, state and errors; user receives denial for the same unpublished detail; success/error/schema checks pass. |
-| C09 | todo · unassigned · — | C02, C03, C07 | User materials list/detail and authorized original/locator API; `backend/app/api/materials/`, `contracts/` | User sees approved revisions only; section/page/sheet/row links resolve to the same revision, and forbidden originals cannot be fetched. |
-| C10 | todo · unassigned · — | C02, C04, C07 | Admin import/status and approval/revocation command API; `backend/app/api/admin/`, `contracts/` | Authorized import reaches a reviewable state; an admin can approve/revoke exact revisions; user and malformed commands are denied. |
+| C07 | partial · corpus/backend · [handoff](../../agentic/handoffs/integration-backend.md) | C03, C05, C06, S02 | Background processing, revision lifecycle, review and exact-revision approval/revocation; `backend/app/application/ingestion/` | Retried processing is idempotent; only an approved revision appears in user retrieval, and revocation removes it without destroying provenance. |
+| C08 | partial · corpus/backend + access/UI · [handoff](../../agentic/handoffs/integration-backend.md) | C02, C03, C07 | Admin inventory/detail/filter API and generated OpenAPI client contract; `backend/app/api/`, `contracts/` | Admin sees tags, structure, state and errors; user receives denial for the same unpublished detail; success/error/schema checks pass. |
+| C09 | partial · corpus/backend + access/UI · [handoff](../../agentic/handoffs/integration-backend.md) | C02, C03, C07 | User materials list/detail and authorized original/locator API; `backend/app/api/materials/`, `contracts/` | User sees approved revisions only; section/page/sheet/row links resolve to the same revision, and forbidden originals cannot be fetched. |
+| C10 | partial · corpus/backend · [handoff](../../agentic/handoffs/integration-backend.md) | C02, C04, C07 | Admin import/status and approval/revocation command API; `backend/app/api/admin/`, `contracts/` | Authorized import reaches a reviewable state; an admin can approve/revoke exact revisions; user and malformed commands are denied. |
 
 ### M2 — Retrieval and evaluation
 
@@ -181,6 +182,21 @@ path, evaluation cases, and data-handling constraints exist.
 
 ## Progress and decisions
 
+- **2026-09-30, integration:** `agent/integration-backend` merged the fixed corpus
+  and access/UI parents, then incorporated the second owner's reviewed frontend and
+  evaluation commits by cherry-pick. The synthetic, self-authored PDF path now
+  supports admin intake, worker extraction with physical page locators, exact
+  approval, user list/detail, and immediate revocation. Three supplied PDFs remain
+  held candidates and were never approved for user answers or provider transfer.
+  Clean PostgreSQL migration and `alembic check` passed. Final `make check` passed:
+  35 backend, 11 frontend and 6 ML tests; OpenAPI and Compose config matched.
+  Three Playwright tests and a live Compose HTTP worker/approval/revocation path
+  also passed. See the [integration handoff](../../agentic/handoffs/integration-backend.md).
+- **Remaining M1 limits:** no rights-cleared real corpus, appointed review authority,
+  table fixture/extractor, parser sandbox, request-body ingress limit, authorized
+  original-file endpoint, admin filtering, or passage-level sensitivity exclusion.
+  PDF-03 reading order still needs full review. The live test's synthetic approval
+  demonstrates access behavior, not cultural or legal approval of any PDF fixture.
 - **2026-09-30:** Three supplied PDF originals were moved into the
   [retrieval fixture inventory](../../../data/retrieval-fixtures/README.md).
   Their page counts and hashes are recorded, and text extraction produced
@@ -190,10 +206,11 @@ path, evaluation cases, and data-handling constraints exist.
   home; starter tasks and in-app guide; secondary materials view; source-linked
   answers; admin structured document inventory; text-only MVP; external model API.
 - **2026-09-30:** Created the use-case guide and tracker. No ingestion, retrieval,
-  model API, role system or product UI task is marked complete.
-- **Open:** first corpus/task slice, model and embedding providers, exact supported
-  formats, identity mode, source approval authority, storage/retention, and quality
-  thresholds. Do not infer decisions from the current scaffold's dependencies.
+  model API, role system or product UI task was complete at that initial checkpoint.
+- **Open:** approval authority and rights for a real source, a table fixture,
+  model and embedding providers, chat retention implementation, broader format
+  support, and quality thresholds. Do not infer permission or product validation
+  from the synthetic integration fixture.
 
 ## Validation and recovery
 
