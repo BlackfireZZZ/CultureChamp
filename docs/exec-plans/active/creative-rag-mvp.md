@@ -376,6 +376,13 @@ path, evaluation cases, and data-handling constraints exist.
   test passed. This is a technical fixture only. C06 and S04 remain open for real
   cultural table comparison and XLSX/merged-cell semantics; no table quality
   threshold is claimed. See ADR 0003 and the format matrix.
+- **2026-09-30, vector batch recovery:** The Qdrant adapter now writes 128
+  points per batch and removes 256 IDs per batch. A 257-point live test forced
+  a second-batch interruption and then verified idempotent replay and complete
+  deletion. On a clean stack with no approved revisions, chat now receives an
+  empty evidence set even before the Qdrant collection exists; approved but
+  unindexed revisions still fail closed. Full checks passed with PostgreSQL
+  and Qdrant (61 backend, 15 frontend, 17 ML tests). See ADR 0006.
 - **2026-09-30:** Product shape accepted from the user: two roles; chat as the user
   home; starter tasks and in-app guide; secondary materials view; source-linked
   answers; admin structured document inventory; text-only MVP; external model API.

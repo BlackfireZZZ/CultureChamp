@@ -26,6 +26,16 @@ provider. Next: obtain the user's passage grades, then evaluate release gates;
 compare an eligible real table against CSV cells and implement XLSX only with a
 merged-cell fixture. The isolated test stack can be removed after verification.
 
+Follow-up vector check: Qdrant's 64–256 point guidance exposed the previous
+single-request limit for large CSV revisions. The adapter now embeds/upserts in
+128-point batches and deletes in 256-point batches. A live 257-point test forced
+a second-batch failure, then verified full replay and removal. A clean-stack
+test also found that an empty approved corpus returned 503 when Qdrant had no
+collection. Search now returns an empty evidence set in that case; it still
+fails closed if any approved revision awaits indexing. The second clean-stack
+`make check` passed 61 backend, 15 frontend and 17 ML tests plus static,
+contract, build and Compose checks.
+
 ## Current integration checkpoint (supersedes older status statements below)
 
 The integration branch now has a Qdrant text vector index with locally generated,

@@ -73,6 +73,13 @@ illustrates the separation of file bytes and vector metadata; the storage API
 choice remains open. A dedicated vector service adds an operational dependency,
 model downloads, synchronization and replay costs. Those costs are preferable
 to coupling all future modality indexes to the transactional schema.
+Qdrant's [bulk upload guidance](https://qdrant.tech/documentation/production-operations/bulk-data-import/)
+recommends starting with 64–256 points per batch. The current adapter uses 128
+for embedding/upsert and 256 for deletion, so a CSV revision with thousands of
+cells does not require one unbounded embedding call or HTTP request. Batches
+write deterministic segment IDs; if a later batch fails, the SQL completion
+marker is not written and a retry replays all batches. A live 257-point check
+interrupted the second batch, then confirmed full recovery and deletion.
 The SQL-derived allowlist adds query payload and latency proportional to the
 approved revision count. Measure this and batch filtered queries or change the
 index representation before a large corpus exceeds Qdrant request limits; never

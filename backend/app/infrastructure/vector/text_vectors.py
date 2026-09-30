@@ -18,6 +18,8 @@ COLLECTION = "culture_text_e5_small_v1"
 VECTOR_NAME = "text_e5_small_v1"
 DIMENSIONS = 384
 MIN_TEXT_COSINE = 0.84  # Provisional internal gate; replace after expert-labelled calibration.
+UPSERT_BATCH_SIZE = 128
+DELETE_BATCH_SIZE = 256
 
 
 class VectorUnavailable(Exception):
@@ -134,21 +136,25 @@ class QdrantTextIndex:
         if not segments:
             return
         await self.ensure_collection()
-        vectors = await self.embedder.passages([text for _, _, text in segments])
-        if len(vectors) != len(segments) or any(len(vector) != DIMENSIONS for vector in vectors):
-            raise VectorUnavailable("Embedding dimension mismatch")
-        points = [
-            {"id": str(segment_id), "vector": {VECTOR_NAME: vector},
-             "payload": {"revision_id": str(revision_id)}}
-            for (segment_id, revision_id, _), vector in zip(segments, vectors, strict=True)
-        ]
         async with httpx.AsyncClient(timeout=30) as client:
             try:
-                response = await client.put(
-                    f"{self.url}/collections/{self.collection}/points?wait=true",
-                    json={"points": points},
-                )
-                response.raise_for_status()
+                for start in range(0, len(segments), UPSERT_BATCH_SIZE):
+                    batch = segments[start:start + UPSERT_BATCH_SIZE]
+                    vectors = await self.embedder.passages([text for _, _, text in batch])
+                    if len(vectors) != len(batch) or any(
+                        len(vector) != DIMENSIONS for vector in vectors
+                    ):
+                        raise VectorUnavailable("Embedding dimension mismatch")
+                    points = [
+                        {"id": str(segment_id), "vector": {VECTOR_NAME: vector},
+                         "payload": {"revision_id": str(revision_id)}}
+                        for (segment_id, revision_id, _), vector in zip(batch, vectors, strict=True)
+                    ]
+                    response = await client.put(
+                        f"{self.url}/collections/{self.collection}/points?wait=true",
+                        json={"points": points},
+                    )
+                    response.raise_for_status()
             except httpx.HTTPError as exc:
                 raise VectorUnavailable("Vector indexing unavailable") from exc
 
@@ -188,11 +194,13 @@ class QdrantTextIndex:
             return
         async with httpx.AsyncClient(timeout=15) as client:
             try:
-                response = await client.post(
-                    f"{self.url}/collections/{self.collection}/points/delete?wait=true",
-                    json={"points": [str(item) for item in segment_ids]},
-                )
-                response.raise_for_status()
+                for start in range(0, len(segment_ids), DELETE_BATCH_SIZE):
+                    batch = segment_ids[start:start + DELETE_BATCH_SIZE]
+                    response = await client.post(
+                        f"{self.url}/collections/{self.collection}/points/delete?wait=true",
+                        json={"points": [str(item) for item in batch]},
+                    )
+                    response.raise_for_status()
             except httpx.HTTPError as exc:
                 raise VectorUnavailable("Vector cleanup unavailable") from exc
 

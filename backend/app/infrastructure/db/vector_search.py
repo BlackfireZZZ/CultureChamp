@@ -93,7 +93,6 @@ class SqlGovernedVectorSearch:
                 raise VectorUnavailable("Approved evidence is awaiting indexing")
             allowed_revision_ids = (await session.scalars(eligible)).all()
         if not allowed_revision_ids:
-            await self.index.ensure_collection(create=False)
             return ()
         # A stale or revoked vector point has no authority to expose a source.
         candidates = tuple(

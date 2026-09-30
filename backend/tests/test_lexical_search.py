@@ -51,6 +51,48 @@ class CrowdingEmbedder(ConstantEmbedder):
         ]
 
 
+def test_vector_index_batches_large_revision_without_losing_points() -> None:
+    vector_url = os.getenv("CORPUS_TEST_VECTOR_URL")
+    if vector_url is None:
+        pytest.skip("set CORPUS_TEST_VECTOR_URL for live vector integration")
+
+    class RecordingEmbedder(ConstantEmbedder):
+        def __init__(self):
+            self.batch_sizes = []
+            self.fail_on_second = True
+
+        async def passages(self, texts):
+            self.batch_sizes.append(len(texts))
+            if self.fail_on_second and len(self.batch_sizes) == 2:
+                raise VectorUnavailable("Synthetic embedding interruption")
+            return await super().passages(texts)
+
+    async def check() -> None:
+        collection = f"batch_probe_{uuid4().hex}"
+        embedder = RecordingEmbedder()
+        index = QdrantTextIndex(vector_url, embedder, collection=collection)
+        revision_id = uuid4()
+        segment_ids = [uuid4() for _ in range(257)]
+        try:
+            with pytest.raises(VectorUnavailable, match="interruption"):
+                await index.upsert([(item, revision_id, "synthetic cell") for item in segment_ids])
+            assert await index.has_revision_points(revision_id, segment_ids[:128])
+            assert not await index.has_revision_points(revision_id, segment_ids)
+            embedder.fail_on_second = False
+            embedder.batch_sizes.clear()
+            await index.upsert([(item, revision_id, "synthetic cell") for item in segment_ids])
+            assert embedder.batch_sizes == [128, 128, 1]
+            assert await index.has_revision_points(revision_id, segment_ids)
+            await index.delete(segment_ids)
+            assert not await index.has_revision_points(revision_id, segment_ids)
+        finally:
+            async with httpx.AsyncClient(timeout=15) as client:
+                response = await client.delete(f"{vector_url}/collections/{collection}")
+                response.raise_for_status()
+
+    asyncio.run(check())
+
+
 def test_search_terms_are_bounded_and_deterministic() -> None:
     assert search_terms("alpha ALPHA beta! x") == ("alpha", "beta")
     assert len(search_terms(" ".join(f"term{i}" for i in range(100)))) == 24
