@@ -122,6 +122,11 @@ yielded Recall@5 1.00, MRR@5 0.74 and nDCG@5 0.766; Docling layout-block
 passage-level judgments. The no-evidence false-positive rate remains 1.00
 without a separately calibrated abstention mechanism. Keep E5-large as a
 candidate, not a production decision.
+The score diagnostic makes this concrete: one unsupported motif question had
+top cosine 0.8262, while a supported editorial question had a relevant top
+score of 0.8165. No single score cutoff separates even these two cases without
+an error. Query-level evidence classification and claim/passage verification
+must be evaluated separately; the E5-small 0.84 cutoff cannot be reused.
 
 Visual inspection of PDF-03 physical page 2 found that Docling placed left-column
 body blocks before right-column blocks and separated page furniture, unlike the

@@ -255,7 +255,10 @@ path, evaluation cases, and data-handling constraints exist.
   and had peak CUDA allocation of 1,137.6 MiB; every raw dense run returned
   candidates for all three no-evidence questions. Eight previously seen,
   agent-labelled page judgments cannot select an embedder, chunker or refusal
-  threshold for release. Local Docling inspection showed better reading order
+  threshold for release. In the E5-large run, a no-evidence question had top
+  cosine 0.8262 while a supported question's relevant result scored 0.8165;
+  one cutoff cannot separate even these cases. Local Docling inspection showed
+  better reading order
   on a two-column article but figure OCR remained partial and erroneous; figure
   children retain a separate region contract in the offline study. Runtime
   chunking/model remain unchanged pending expert passage labels and parser

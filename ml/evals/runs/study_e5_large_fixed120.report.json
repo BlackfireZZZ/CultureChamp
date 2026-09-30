@@ -6,11 +6,11 @@
   "pages": 32,
   "segments": 174,
   "truncated_segments": 0,
-  "load_seconds": 10.18730590299856,
-  "index_seconds": 1.1864167050007381,
-  "mean_query_seconds": 0.015384705999849757,
-  "max_query_seconds": 0.03843535099986184,
-  "peak_rss_kib": 4258532,
+  "load_seconds": 9.991655070998604,
+  "index_seconds": 1.2105157930000132,
+  "mean_query_seconds": 0.017729618124803892,
+  "max_query_seconds": 0.0398691289992712,
+  "peak_rss_kib": 4258340,
   "peak_cuda_allocated_mib": 1137.6,
   "peak_cuda_reserved_mib": 1232.0,
   "metrics": {
@@ -21,6 +21,40 @@
     "mrr_at_k": 1.0,
     "ndcg_at_k": 1.0,
     "no_evidence_false_positive_rate": 1.0
+  },
+  "score_diagnostics": {
+    "S05-01": {
+      "top_score": 0.8388293,
+      "best_relevant_score": 0.8388293
+    },
+    "S05-02": {
+      "top_score": 0.8476852,
+      "best_relevant_score": 0.8476852
+    },
+    "S05-03": {
+      "top_score": 0.87060565,
+      "best_relevant_score": 0.87060565
+    },
+    "S05-04": {
+      "top_score": 0.81653094,
+      "best_relevant_score": 0.81653094
+    },
+    "S05-05": {
+      "top_score": 0.82622445,
+      "best_relevant_score": null
+    },
+    "S05-06": {
+      "top_score": 0.8166646,
+      "best_relevant_score": null
+    },
+    "S05-07": {
+      "top_score": 0.8422185,
+      "best_relevant_score": 0.8422185
+    },
+    "S05-08": {
+      "top_score": 0.7910299,
+      "best_relevant_score": null
+    }
   },
   "label_status": "provisional_agent; same eight cases, no held-out tuning"
 }

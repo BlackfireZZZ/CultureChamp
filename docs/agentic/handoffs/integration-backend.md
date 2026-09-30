@@ -31,7 +31,9 @@ page labels, E5-large FP16 with the existing 120-word windows reached
 Recall@5/MRR@5/nDCG@5 of 1.00 and used about 1.14 GiB peak CUDA allocation;
 larger token windows and layout-block candidates did not reliably improve the
 page metric. This is not passage-level or held-out evidence. Every raw dense
-configuration returned neighbors for unsupported queries. A map in PDF-02
+configuration returned neighbors for unsupported queries. E5-large top scores
+overlap between a supported and unsupported case, so no single cosine cutoff
+works even on the provisional set. A map in PDF-02
 showed why figure OCR must stay in a distinct, region-located representation;
 local OCR had recognition errors. Runtime model and chunking remain provisional.
 

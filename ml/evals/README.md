@@ -101,6 +101,9 @@ hash, indexes one candidate in a temporary Qdrant collection, and deletes that
 collection after querying. `--docling-dir` points to local, uncommitted Docling
 JSON exports of the same PDFs. Run files contain only locator keys and metrics;
 they are diagnostic because the eight qrels are provisional page-level labels.
+Reports also store only per-query similarity scores, making abstention overlap
+visible without exposing source text; they must not be used to tune and validate
+the same threshold.
 `docling_picture_regions` keeps figure OCR children and their PDF-space bounding
 box separate from running prose; a local map-page check found partial, erroneous
 OCR labels, so they are review candidates and are not indexed as verified text.

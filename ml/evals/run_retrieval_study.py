@@ -123,6 +123,7 @@ async def run(
     index_started = perf_counter()
     timings: list[float] = []
     rankings: dict[str, list[str]] = {}
+    score_diagnostics: dict[str, dict[str, float | None]] = {}
     async with httpx.AsyncClient(timeout=90) as client:
         response = await client.put(
             f"{vector_url}/collections/{collection}",
@@ -164,6 +165,15 @@ async def run(
                 rankings[case.query_id] = [
                     key for key, _ in sorted(best_by_page.items(), key=lambda item: -item[1])[:5]
                 ]
+                relevant_scores = [
+                    best_by_page[key]
+                    for key, grade in case.grades.items()
+                    if grade > 0 and key in best_by_page
+                ]
+                score_diagnostics[case.query_id] = {
+                    "top_score": max(best_by_page.values()) if best_by_page else None,
+                    "best_relevant_score": max(relevant_scores) if relevant_scores else None,
+                }
         finally:
             response = await client.delete(f"{vector_url}/collections/{collection}")
             response.raise_for_status()
@@ -208,6 +218,7 @@ async def run(
         "peak_rss_kib": resource.getrusage(resource.RUSAGE_SELF).ru_maxrss,
         **gpu_memory,
         "metrics": summarize(cases, rankings, 5)["overall"],
+        "score_diagnostics": score_diagnostics,
         "label_status": "provisional_agent; same eight cases, no held-out tuning",
     }
     output.with_suffix(".report.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
