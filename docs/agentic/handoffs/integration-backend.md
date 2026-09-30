@@ -44,12 +44,15 @@ PostgreSQL/Qdrant deletion-and-replay test passed. This is eventual detection;
 the [index runbook](../../operations/vector-index.md) records audit latency.
 The locally held 40-row passage packet at `.private/reviews/e5-large-review.csv`
 awaits the user's 0–2 relevance and cultural-context judgments. It is excluded
-from Git and user-facing source flows.
+from Git and user-facing source flows. The packet's non-review fields are locked
+by SHA-256 digests in `ml/evals/review_packet_e5_large_fixed120.json`; the
+offline evaluator rejects altered or incomplete packets and reports only
+top-five judged-pool diagnostics. It cannot establish held-out recall.
 
 A clean PostgreSQL database upgrade and Alembic check passed. With live
 PostgreSQL and Qdrant, 50 backend tests passed. The complete `make check` passed
 with Node 24: architecture, Ruff, mypy, 50 live-service backend tests,
-15 frontend tests/lint/build, 11 ML tests, OpenAPI contract and
+15 frontend tests/lint/build, 17 ML tests, OpenAPI contract and
 Compose config. Four mocked Playwright scenarios passed. The rebuilt Compose
 stack reached healthy state and `BASE_URL=http://localhost:18036
 FRONTEND_URL=http://localhost:18081 make smoke` passed. These verify synthetic

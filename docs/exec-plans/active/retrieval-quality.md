@@ -160,3 +160,23 @@ local E5-large packet contains five passage candidates for each of eight queries
 review fields. This makes the first human passage check concrete, but the packet
 uses the same provisional questions and is not held-out validation. Do not
 commit the CSV or return its held source text to users or providers.
+
+The private packet can be scored after the user fills only
+`relevance_grade_0_1_2` and `notes`:
+
+```bash
+uv run --package culturechamp-ml --extra dev python \
+  ml/evals/evaluate_passage_review.py .private/reviews/e5-large-review.csv
+```
+
+`ml/evals/review_packet_e5_large_fixed120.json` locks the other CSV fields by
+SHA-256 digest without storing excerpts in Git. The evaluator rejects missing
+grades, changed source hashes/locators or changed packet content. Its output
+contains no excerpts and reports the count of questions with a direct candidate,
+plus conditional MRR and nDCG within the judged top-five pool, including
+language/format/topic slices. The direct-candidate count is not recall: candidates
+outside the reviewed pool are unjudged. These questions were
+already used in preliminary comparisons, so the result cannot establish corpus
+recall, a held-out threshold, or model/chunking selection. A second question
+set, written before new tuning and split by source and question family, remains
+required.

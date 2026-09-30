@@ -27,7 +27,7 @@ frontend-check:
 ml-check:
 	uv run --package culturechamp-ml --extra dev ruff check ml
 	uv run --package culturechamp-ml --extra dev mypy ml/src
-	uv run --package culturechamp-ml --extra dev pytest ml/tests ml/evals/test_retrieval_eval.py ml/evals/test_study_chunking.py
+	uv run --package culturechamp-ml --extra dev pytest ml/tests ml/evals/test_retrieval_eval.py ml/evals/test_study_chunking.py ml/evals/test_evaluate_passage_review.py
 
 contract-generate:
 	uv run --package culturechamp-backend --extra dev python scripts/export_openapi.py
