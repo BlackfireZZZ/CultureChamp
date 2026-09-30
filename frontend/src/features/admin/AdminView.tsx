@@ -17,6 +17,7 @@ export function AdminView({ onBack }: { onBack: () => void }) {
     <h1>Кандидаты и ревизии</h1>
     <p>Статус обработки и решение по каждой ревизии приходят с сервера. Одобрение требует проверки прав, точности и чувствительности материала.</p>
     <div className="admin-filters"><label>Обработка<select value={status} onChange={(event) => { setStatus(event.target.value as typeof status); setRevisionId(null) }}><option value="">Все статусы</option><option value="candidate">Кандидат</option><option value="processing">Обработка</option><option value="review_pending">Ожидает проверки</option><option value="failed">Ошибка</option></select></label><label>Решение<select value={decision} onChange={(event) => { setDecision(event.target.value as typeof decision); setRevisionId(null) }}><option value="">Все решения</option><option value="approve">Одобрено</option><option value="revoke">Отозвано</option><option value="none">Без решения</option></select></label></div>
+    <p className="result-limit">Показаны первые 100 ревизий по выбранным фильтрам.</p>
     {sources.isPending && <p role="status">Загружаем инвентарь…</p>}
     {sources.isError && <div role="alert"><p>Не удалось загрузить инвентарь.</p><button type="button" onClick={() => void sources.refetch()}>Повторить</button></div>}
     {sources.isSuccess && sources.data.length === 0 && <div className="empty-panel"><h2>Ревизий не найдено</h2><p>Измените фильтры или проверьте, были ли загружены кандидаты.</p><button type="button" onClick={onBack}>Вернуться к чату</button></div>}
