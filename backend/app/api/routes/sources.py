@@ -49,7 +49,7 @@ class IntakeView(BaseModel):
 
 
 class LocatorView(BaseModel):
-    kind: Literal["page", "table"]
+    kind: Literal["page", "section", "table"]
     page: int | None
     section: str | None
     sheet: str | None
@@ -165,7 +165,11 @@ def _detail_view(material: MaterialData) -> MaterialDetail:
             SegmentView(
                 segment_id=s.segment_id,
                 locator=LocatorView(
-                    kind="table" if s.locator.row_start is not None else "page",
+                    kind=(
+                        "table" if s.locator.row_start is not None
+                        else "page" if s.locator.page is not None
+                        else "section"
+                    ),
                     page=s.locator.page,
                     section=s.locator.section,
                     sheet=s.locator.sheet,
@@ -309,7 +313,7 @@ async def admin_sources(
     decision: Literal["approve", "revoke", "none"] | None = None,
     q: Annotated[str | None, Query(max_length=100)] = None,
     media_type: Literal[
-        "application/pdf", "text/csv",
+        "application/pdf", "text/plain", "text/csv",
         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     ] | None = None,
     tag_kind: Literal["region", "people", "period", "topic", "sensitivity"] | None = None,
@@ -368,7 +372,7 @@ async def materials_list(
     people: Annotated[str | None, Query(max_length=100)] = None,
     period: Annotated[str | None, Query(max_length=100)] = None,
     media_type: Literal[
-        "application/pdf", "text/csv",
+        "application/pdf", "text/plain", "text/csv",
         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     ] | None = None,
 ) -> list[MaterialView]:
@@ -395,6 +399,7 @@ async def material_detail(
     responses={
         200: {"content": {
             "application/pdf": {"schema": {"type": "string", "format": "binary"}},
+            "text/plain": {"schema": {"type": "string", "format": "binary"}},
             "text/csv": {"schema": {"type": "string", "format": "binary"}},
             XLSX_MEDIA_TYPE: {"schema": {"type": "string", "format": "binary"}},
         }}

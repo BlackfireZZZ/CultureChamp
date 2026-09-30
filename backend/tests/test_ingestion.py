@@ -14,9 +14,16 @@ from app.infrastructure.ingestion.chunking import chunk_text
 from app.infrastructure.ingestion.csv_table import extract_csv_cells
 from app.infrastructure.ingestion.isolated_csv import extract_csv_isolated
 from app.infrastructure.ingestion.isolated_pdf import extract_pdf_isolated
+from app.infrastructure.ingestion.isolated_text import extract_text_isolated
 from app.infrastructure.ingestion.isolated_xlsx import extract_xlsx_isolated
 from app.infrastructure.ingestion.pdf_text import ExtractionError, extract_pdf_pages
-from app.infrastructure.ingestion.storage import MAX_PDF_BYTES, IntakeError, PrivateOriginalStore
+from app.infrastructure.ingestion.storage import (
+    MAX_PDF_BYTES,
+    MAX_TEXT_BYTES,
+    IntakeError,
+    PrivateOriginalStore,
+)
+from app.infrastructure.ingestion.text_plain import extract_text_sections
 from app.infrastructure.ingestion.xlsx_table import extract_xlsx_cells
 from app.main import MAX_REQUEST_BYTES, create_app
 
@@ -50,6 +57,32 @@ def test_private_store_retains_exact_fixture_and_deduplicates_retry(tmp_path: Pa
     assert (tmp_path / "private").stat().st_mode & 0o777 == 0o700
 
 
+def test_utf8_text_keeps_original_bytes_and_exact_line_sections(tmp_path: Path) -> None:
+    fixture = b"Synthetic first line\r\nsecond line\r\n\r\nAnother paragraph\r\n"
+    store = PrivateOriginalStore(tmp_path / "private")
+    stored = store.store(
+        uuid4(), BytesIO(fixture), filename="self-authored.txt", claimed_media_type="text/plain"
+    )
+    with store.open_original(stored.storage_key) as original:
+        assert original.read() == fixture
+    sections = extract_text_sections(fixture)
+    assert [(item.text, item.locator.section) for item in sections] == [
+        ("Synthetic first line\nsecond line", "Lines 1–2"),
+        ("Another paragraph", "Line 4"),
+    ]
+    assert extract_text_isolated(fixture) == sections
+
+
+@pytest.mark.parametrize(
+    "bad", [b"", b"\xff", b"one\x00two", b" \n\n ", b"x" * 4001, b"a\n" * 10001]
+)
+def test_invalid_utf8_text_fails_before_review(bad: bytes) -> None:
+    with pytest.raises(ExtractionError):
+        extract_text_sections(bad)
+    with pytest.raises(ExtractionError):
+        extract_text_isolated(bad)
+
+
 @pytest.mark.parametrize(
     ("data", "filename", "media_type"),
     [
@@ -75,6 +108,15 @@ def test_store_rejects_oversized_stream(tmp_path: Path) -> None:
     with pytest.raises(IntakeError, match="size"):
         store.store(
             uuid4(), BytesIO(payload), filename="large.pdf", claimed_media_type="application/pdf"
+        )
+
+
+def test_store_rejects_oversized_text_stream(tmp_path: Path) -> None:
+    store = PrivateOriginalStore(tmp_path / "private")
+    with pytest.raises(IntakeError, match="size"):
+        store.store(
+            uuid4(), BytesIO(b"x" * (MAX_TEXT_BYTES + 1)),
+            filename="large.txt", claimed_media_type="text/plain",
         )
 
 

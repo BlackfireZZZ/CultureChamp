@@ -1,5 +1,27 @@
 # Corpus/backend integration handoff — 2026-09-30
 
+## Synthetic TXT source path — 2026-10-01
+
+The technical corpus now accepts bounded UTF-8 `.txt` originals. A resource-limited
+child extracts paragraph groups with stable one-based line ranges; section-only
+locators have a PostgreSQL check constraint and distinct API/UI presentation.
+A live PostgreSQL/Qdrant test uploaded a self-authored TXT, confirmed candidate
+isolation, inspected the original and line locations, approved the exact revision,
+searched its vector, downloaded the permitted bytes and revoked user access.
+The same live test obtained a grounded chat citation at `Lines 1–2` and confirmed
+that the historical citation became unavailable after revocation. It uses a
+dedicated Qdrant collection to isolate its synthetic fixture.
+The frontend component check opens the cited section with keyboard focus and a
+permitted original link. The source-format matrix and ADR 0003 record the
+supported limits and real-source review risk. No cultural TXT was used.
+An empty PostgreSQL database upgraded through migration `e9278d4a6a1f`, and
+`make migration-check` found no drift. Against isolated PostgreSQL and Qdrant,
+`make check` passed 106 backend, 20 frontend and 20 ML tests plus architecture,
+types, build, API contract and Compose checks. Four mocked Playwright browser
+tests passed; the live browser test needs the full Compose application and was
+not run for this slice. The exact TXT path is covered by the live API test and
+frontend component test.
+
 ## Retry quota accounting — 2026-10-01
 
 The previous daily quota counted distinct request IDs; one failed request could

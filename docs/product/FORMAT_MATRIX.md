@@ -34,7 +34,8 @@ model transmission are unresolved in the [source policy](SOURCE_POLICY.md).
 | Text-layer PDF, single-column prose | PDF-01 and PDF-02 | Nonempty page text; page index survives; heading and footnote semantics incomplete | Implement only with explicit page locator and review flag. |
 | Text-layer PDF, parallel/multicolumn | PDF-03 | Text exists; Poppler layout fails page 2 reading order, while sampled `pypdf` content order is better | Hold from user publication until full reading-order review. |
 | Scanned/image-only PDF | None | No OCR or page-text test | Unsupported; reject or hold for separate OCR decision. |
-| TXT/Markdown/DOCX/HTML | None | No fixture or fidelity test | Unsupported in this slice. |
+| UTF-8 plain TXT | Self-authored synthetic file only | Original CRLF bytes stay intact; extracted paragraphs carry one-based line ranges; strict decoding rejects malformed bytes; governed API, Qdrant and revocation check pass | Technical bounded TXT path is implemented. Real textual fidelity and cultural suitability remain unverified. |
+| Markdown/DOCX/HTML | None | No fixture or fidelity test | Unsupported in this slice. |
 | UTF-8 comma CSV with a header row and first-column row keys | Self-authored synthetic table only | Empty interior cells retain their original one-based column; each nonempty data cell carries its column header and row key; clean-database API, original-file and Qdrant checks pass | Technical CSV path is implemented. Cultural table fidelity and retrieval quality remain unverified until an eligible real fixture is inspected. |
 | XLSX workbook with first-row headers and first-column keys | Self-authored two-sheet workbook only | Exact sheet, row and column survive approval and vector lookup; vertical merged row key is checked; formulas and ambiguous merges fail processing | Technical bounded XLSX profile is implemented. Eligible real workbook fidelity and cultural table meaning remain unverified. |
 | Embedded PDF table | None verified | No table geometry or cell locator test | Unsupported in this slice; C06 remains open. |
@@ -43,7 +44,7 @@ model transmission are unresolved in the [source policy](SOURCE_POLICY.md).
 
 The three PDFs are local-only personal copies at the inventory paths; a clean
 checkout does not contain them. The commands below require those exact files
-and the inventory SHA-256 checks. CI instead uses self-authored synthetic PDFs.
+and the inventory SHA-256 checks. CI instead uses self-authored synthetic sources.
 
 ```bash
 sha256sum data/retrieval-fixtures/raw/*.pdf

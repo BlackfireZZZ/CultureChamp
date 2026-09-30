@@ -712,6 +712,7 @@
           "kind": {
             "enum": [
               "page",
+              "section",
               "table"
             ],
             "title": "Kind",
@@ -1710,6 +1711,7 @@
                 {
                   "enum": [
                     "application/pdf",
+                    "text/plain",
                     "text/csv",
                     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                   ],
@@ -2227,6 +2229,7 @@
                 {
                   "enum": [
                     "application/pdf",
+                    "text/plain",
                     "text/csv",
                     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                   ],
@@ -2346,6 +2349,12 @@
                 }
               },
               "text/csv": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              },
+              "text/plain": {
                 "schema": {
                   "format": "binary",
                   "type": "string"

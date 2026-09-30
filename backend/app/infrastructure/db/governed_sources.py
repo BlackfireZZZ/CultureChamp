@@ -510,6 +510,7 @@ class SqlSourceGateway:
             raise SourceNotFound
         suffix = {
             "application/pdf": ".pdf",
+            "text/plain": ".txt",
             "text/csv": ".csv",
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": ".xlsx",
         }.get(revision.media_type)

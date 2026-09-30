@@ -1,4 +1,5 @@
 import type { ChatCitation, ChatDetail, ChatSummary } from "../../api/chats"
+import { sourceLocationLabel } from "../../api/locators"
 
 export function ChatDialogue({ summary, detail, pending, error, onRetry, onCitation, onDelete, deleting }: {
   summary: ChatSummary
@@ -19,7 +20,7 @@ export function ChatDialogue({ summary, detail, pending, error, onRetry, onCitat
       <article className="message user"><span className="eyebrow">Ваш бриф</span><p>{turn.user_text}</p></article>
       {turn.assistant_text && <article className="message assistant"><span className="eyebrow">Ответ</span><p>{turn.assistant_text}</p>
         {turn.citations.length > 0 && <ul className="chat-citations">{turn.citations.map((citation) => <li key={citation.segment_id}>
-          <button type="button" disabled={!citation.available} onClick={() => onCitation(citation)}>{citation.row_start === null ? `Источник · страница ${citation.page ?? "—"}` : `Источник · таблица ${citation.sheet || citation.table || ""}, строка ${citation.row_start}`}</button>
+          <button type="button" disabled={!citation.available} onClick={() => onCitation(citation)}>{`Источник · ${sourceLocationLabel(citation, true)}`}</button>
           {!citation.available && <span> Источник отозван или недоступен</span>}
         </li>)}</ul>}
       </article>}

@@ -29,6 +29,8 @@ class Locator:
     def __post_init__(self) -> None:
         if self.page is not None and self.page < 1:
             raise ValueError("page must be one-based")
+        if self.section is not None and not self.section.strip():
+            raise ValueError("section cannot be blank")
         for start, end in (
             (self.row_start, self.row_end),
             (self.column_start, self.column_end),
@@ -42,8 +44,8 @@ class Locator:
             raise ValueError("table locator needs row and column ranges")
         if has_table_range and not (self.sheet or self.table):
             raise ValueError("table locator needs sheet or table")
-        if self.page is None and not has_table_range:
-            raise ValueError("locator needs a physical page or table range")
+        if self.page is None and self.section is None and not has_table_range:
+            raise ValueError("locator needs a page, section or table range")
 
 
 @dataclass(frozen=True, slots=True)

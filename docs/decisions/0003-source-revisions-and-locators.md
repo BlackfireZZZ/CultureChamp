@@ -1,6 +1,6 @@
 # ADR 0003: Source revisions, decisions and locators
 
-Status: Implemented for PDF page text and synthetic CSV/XLSX cells in the pilot; real table fidelity and approval authority remain open.
+Status: Implemented for PDF page text, bounded UTF-8 TXT, and synthetic CSV/XLSX cells in the pilot; real-source fidelity and approval authority remain open.
 Date: 2026-09-30
 
 ## Context and evidence
@@ -102,6 +102,26 @@ Comparable design inputs:
    the worker and candidate remain available for retry. This is process and
    resource isolation, not a hardened syscall or network sandbox. Untrusted bulk
    intake remains a separate deployment gate.
+
+## Plain-text section locators (2026-10-01)
+
+The private store accepts a `.txt` file declared as `text/plain` up to 2 MiB.
+Strict UTF-8 decoding, a bounded line count and length, and paragraph grouping
+run in a resource-limited child. Blank lines separate sections; a long group is
+split at a line boundary. Each section is identified by the immutable revision,
+segment ID and one-based physical line range in the `section` locator. Retrieval
+uses the existing text windowing within that section. The original bytes are
+unchanged and available only under the exact revision's original-file right.
+The API distinguishes `section` from PDF `page` and table locators without
+inventing a page number. A revoked section becomes unavailable immediately.
+
+This extends the locator check in PostgreSQL through a new migration. The
+[text/plain fragment RFC](https://www.rfc-editor.org/rfc/rfc5147.html) describes
+line ranges for immutable text resources; our displayed ranges are one-based
+and are resolved in the authorized material inspector. Browser support for RFC
+fragments is not assumed. TXT has no inferred heading or cultural semantics;
+the curator must compare extracted text and line ranges with an eligible real
+source before release. Markdown, DOCX and HTML remain separate format decisions.
 
 ## CSV table extension (2026-09-30)
 

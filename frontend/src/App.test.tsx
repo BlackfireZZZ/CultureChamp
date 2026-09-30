@@ -147,6 +147,26 @@ test("a material without original-file rights keeps the locator but offers no PD
   expect(screen.queryByRole("link", { name: /Открыть страницу/ })).not.toBeInTheDocument()
 })
 
+test("a TXT citation opens its exact line section and original download", async () => {
+  const revisionId = "rev-text"
+  const segmentId = "seg-text"
+  const material = { revision_id: revisionId, title: "Synthetic text", creator: null, origin_url: "https://example.invalid/text", rights_usage_note: "Self-authored", media_type: "text/plain", tags: [] }
+  vi.stubGlobal("fetch", vi.fn((input: string) => {
+    if (input === "/api/v1/auth/me") return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ user: { id: "test-user", username: "tester", role: "user" }, csrf_token: "test-csrf" }) })
+    if (input === "/api/v1/chats") return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve([{ id: "chat-text", title: "Synthetic brief", updated_at: "2026-10-01T00:00:00Z" }]) })
+    if (input === "/api/v1/chats/chat-text") return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ id: "chat-text", title: "Synthetic brief", updated_at: "2026-10-01T00:00:00Z", turns: [{ request_id: "turn-text", ordinal: 0, user_text: "Brief", assistant_text: "Source-supported: Synthetic fact", evidence_status: "grounded", status: "complete", citations: [{ revision_id: revisionId, segment_id: segmentId, page: null, section: "Lines 1–2", sheet: null, table: null, row_start: null, row_end: null, column_start: null, column_end: null, available: true }] }] }) })
+    if (input === "/api/v1/materials") return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve([material]) })
+    if (input === `/api/v1/materials/${revisionId}`) return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ ...material, original_available: true, segments: [{ segment_id: segmentId, locator: { kind: "section", page: null, section: "Lines 1–2", row_start: null }, text: "Synthetic fact" }] }) })
+    throw new Error("Unexpected request")
+  }))
+  renderApp()
+  fireEvent.click(await screen.findByRole("button", { name: "Synthetic brief" }))
+  fireEvent.click(await screen.findByRole("button", { name: "Источник · строки 1–2" }))
+  expect(await screen.findByRole("heading", { name: "Строки 1–2" })).toBeInTheDocument()
+  expect(screen.getByRole("link", { name: "Скачать исходный текст TXT" })).toHaveAttribute("href", `/api/v1/materials/${revisionId}/original`)
+  expect(document.getElementById(`segment-${segmentId}`)).toHaveFocus()
+})
+
 test.each([
   ["text/csv", "Скачать исходную таблицу CSV"],
   ["application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "Скачать исходную книгу XLSX"],

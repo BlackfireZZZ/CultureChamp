@@ -66,6 +66,112 @@ def test_table_locator_is_not_rewritten_as_pdf_page() -> None:
     assert (locator.sheet, locator.row_start, locator.column_start) == ("Synthetic", 3, 2)
 
 
+def test_txt_section_survives_approval_vector_search_and_original_access(tmp_path: Path) -> None:
+    url = os.getenv("CORPUS_TEST_DATABASE_URL")
+    vector_url = os.getenv("CORPUS_TEST_VECTOR_URL")
+    if url is None or vector_url is None:
+        pytest.skip("set CORPUS_TEST_DATABASE_URL and CORPUS_TEST_VECTOR_URL")
+    engine = create_async_engine(url, poolclass=NullPool)
+    factory = async_sessionmaker(engine, expire_on_commit=False)
+    identity_store = SqlIdentityStore(factory)
+    codec = Argon2PasswordCodec()
+    app = create_app()
+    app.state.session_store = identity_store
+    app.state.identity_service = IdentityService(identity_store, codec, codec.dummy_hash)
+    app.state.source_session_factory = factory
+    store = PrivateOriginalStore(tmp_path / "private")
+    app.state.source_store = store
+    names = (f"admin-{uuid4().hex[:12]}", f"user-{uuid4().hex[:12]}")
+
+    async def seed() -> None:
+        await identity_store.create_account(names[0], await codec.hash(PASSWORD), Role.ADMIN)
+        await identity_store.create_account(names[1], await codec.hash(PASSWORD), Role.USER)
+
+    asyncio.run(seed())
+    marker = f"selfauthored{uuid4().hex}"
+    payload = f"Synthetic first line\r\n{marker} means seven.\r\n\r\nAnother section.\r\n".encode()
+    origin = "http://testserver"
+    index = QdrantTextIndex(
+        vector_url, ConstantEmbedder(), collection=f"synthetic_txt_{uuid4().hex}"
+    )
+    app.state.vector_index = index
+    with TestClient(app, base_url=origin) as admin, TestClient(app, base_url=origin) as user:
+        admin_login = admin.post(
+            "/api/v1/auth/login", json={"username": names[0], "password": PASSWORD},
+            headers={"origin": origin},
+        )
+        assert admin_login.status_code == 200
+        user_login = user.post(
+            "/api/v1/auth/login", json={"username": names[1], "password": PASSWORD},
+            headers={"origin": origin},
+        )
+        assert user_login.status_code == 200
+        headers = {"origin": origin, "x-csrf-token": admin_login.json()["csrf_token"]}
+        user_headers = {"origin": origin, "x-csrf-token": user_login.json()["csrf_token"]}
+        uploaded = admin.post(
+            "/api/v1/admin/sources", headers=headers,
+            data={"origin_url": f"https://example.invalid/{marker}", "title": "Synthetic TXT"},
+            files={"file": ("fixture.txt", payload, "text/plain")},
+        )
+        assert uploaded.status_code == 201, uploaded.text
+        revision_id = UUID(uploaded.json()["revision_id"])
+        assert user.get(f"/api/v1/materials/{revision_id}").status_code == 404
+        assert asyncio.run(process_one(factory, store)) == revision_id
+        review = admin.get(f"/api/v1/admin/revisions/{revision_id}").json()
+        assert review["status"] == "review_pending"
+        assert [item["locator"]["section"] for item in review["segments"]] == [
+            "Lines 1–2", "Line 4"
+        ]
+        assert all(
+            item["locator"]["kind"] == "section" and item["locator"]["page"] is None
+            for item in review["segments"]
+        )
+        assert admin.get(f"/api/v1/admin/revisions/{revision_id}/original").content == payload
+        assert admin.post(
+            f"/api/v1/admin/revisions/{revision_id}/approve", headers=headers,
+            json={
+                "reason": "Self-authored text for technical verification",
+                "evidence_url": f"https://example.invalid/{marker}/rights",
+                "user_text": True, "original_file": True, "provider_transfer": False,
+                "sensitivity_cleared": True,
+            },
+        ).status_code == 200
+        assert asyncio.run(ApprovedTextIndexer(factory, index).index_one()) == revision_id
+        found = asyncio.run(SqlGovernedVectorSearch(factory, index).search(
+            marker, limit=5, region=None, people=None, for_provider=False
+        ))
+        assert any(item.revision_id == revision_id and item.locator.section == "Lines 1–2"
+                   for item in found)
+        detail = user.get(f"/api/v1/materials/{revision_id}")
+        assert detail.status_code == 200
+        assert detail.json()["segments"][0]["locator"]["kind"] == "section"
+        original = user.get(f"/api/v1/materials/{revision_id}/original")
+        assert original.content == payload
+        assert original.headers["content-type"].startswith("text/plain")
+        created = user.post("/api/v1/chats", headers=user_headers)
+        assert created.status_code == 201, created.text
+        chat_id = created.json()["id"]
+        sent = user.post(
+            f"/api/v1/chats/{chat_id}/messages", headers=user_headers,
+            json={"request_id": str(uuid4()), "text": marker},
+        )
+        assert sent.status_code == 200, sent.text
+        assert sent.json()["evidence_status"] == "grounded"
+        assert sent.json()["citations"][0]["section"] == "Lines 1–2"
+        assert sent.json()["citations"][0]["page"] is None
+        assert admin.post(
+            f"/api/v1/admin/revisions/{revision_id}/revoke", headers=headers,
+            json={"reason": "Synthetic text check complete"},
+        ).status_code == 200
+        assert user.get(f"/api/v1/chats/{chat_id}").json()["turns"][0]["citations"][0][
+            "available"
+        ] is False
+        assert user.get(f"/api/v1/materials/{revision_id}").status_code == 404
+        assert user.get(f"/api/v1/materials/{revision_id}/original").status_code == 404
+        assert asyncio.run(ApprovedTextIndexer(factory, index).remove_revoked_one()) == revision_id
+    asyncio.run(engine.dispose())
+
+
 def test_csv_upload_to_vector_and_original_access(tmp_path: Path) -> None:
     url = os.getenv("CORPUS_TEST_DATABASE_URL")
     vector_url = os.getenv("CORPUS_TEST_VECTOR_URL")

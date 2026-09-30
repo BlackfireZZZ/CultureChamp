@@ -17,11 +17,12 @@ def test_citation_preserves_exact_revision_and_physical_page() -> None:
     "locator",
     [
         Locator(page=1),
+        Locator(section="Lines 2–4"),
         Locator(sheet="Data", row_start=2, row_end=4, column_start=1, column_end=3),
     ],
 )
-def test_locator_accepts_exact_page_or_table_range(locator: Locator) -> None:
-    assert locator.page is not None or locator.row_start is not None
+def test_locator_accepts_exact_page_section_or_table_range(locator: Locator) -> None:
+    assert locator.page is not None or locator.section is not None or locator.row_start is not None
 
 
 @pytest.mark.parametrize(
@@ -29,6 +30,7 @@ def test_locator_accepts_exact_page_or_table_range(locator: Locator) -> None:
     [
         {},
         {"page": 0},
+        {"section": "  "},
         {"sheet": "Data", "row_start": 3, "row_end": 2, "column_start": 1, "column_end": 1},
         {"row_start": 1, "row_end": 1, "column_start": 1, "column_end": 1},
     ],

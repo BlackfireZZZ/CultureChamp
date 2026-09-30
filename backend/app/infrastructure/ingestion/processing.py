@@ -16,9 +16,11 @@ from app.infrastructure.ingestion.chunking import chunk_text
 from app.infrastructure.ingestion.csv_table import ExtractedCell
 from app.infrastructure.ingestion.isolated_csv import extract_csv_isolated
 from app.infrastructure.ingestion.isolated_pdf import extract_pdf_isolated
+from app.infrastructure.ingestion.isolated_text import extract_text_isolated
 from app.infrastructure.ingestion.isolated_xlsx import extract_xlsx_isolated
 from app.infrastructure.ingestion.pdf_text import ExtractionError
 from app.infrastructure.ingestion.storage import PrivateOriginalStore
+from app.infrastructure.ingestion.text_plain import ExtractedTextSection
 from app.infrastructure.vector.indexing import ApprovedTextIndexer
 from app.infrastructure.vector.text_vectors import (
     LocalTextEmbedder,
@@ -59,16 +61,24 @@ async def process_one(
             with store.open_original(revision.storage_key) as stream:
                 data = stream.read()
             cells: tuple[ExtractedCell, ...]
+            text_sections: tuple[ExtractedTextSection, ...]
             if revision.media_type == "application/pdf":
                 pages = extract_pdf_isolated(data)
+                text_sections = ()
+                cells = ()
+            elif revision.media_type == "text/plain":
+                pages = ()
+                text_sections = extract_text_isolated(data)
                 cells = ()
             elif revision.media_type == "text/csv":
                 pages = ()
+                text_sections = ()
                 cells = extract_csv_isolated(data)
             elif revision.media_type == (
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             ):
                 pages = ()
+                text_sections = ()
                 cells = extract_xlsx_isolated(data)
             else:
                 raise ExtractionError("unsupported source media type")
@@ -95,6 +105,18 @@ async def process_one(
                         kind="prose",
                         text=excerpt,
                         page=page.locator.page,
+                    )
+                )
+                ordinal += 1
+        for section in text_sections:
+            for excerpt in chunk_text(section.text):
+                session.add(
+                    SourceSegment(
+                        revision_id=revision_id,
+                        ordinal=ordinal,
+                        kind="prose",
+                        text=excerpt,
+                        section=section.locator.section,
                     )
                 )
                 ordinal += 1

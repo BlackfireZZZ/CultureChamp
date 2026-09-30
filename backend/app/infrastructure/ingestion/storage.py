@@ -1,4 +1,4 @@
-"""Bounded private storage for candidate PDF and table originals."""
+"""Bounded private storage for candidate text, PDF and table originals."""
 
 import hashlib
 import os
@@ -11,6 +11,7 @@ from uuid import UUID
 MAX_PDF_BYTES = 10 * 1024 * 1024
 MAX_CSV_BYTES = 2 * 1024 * 1024
 MAX_XLSX_BYTES = 2 * 1024 * 1024
+MAX_TEXT_BYTES = 2 * 1024 * 1024
 CHUNK_SIZE = 64 * 1024
 
 
@@ -49,6 +50,7 @@ class PrivateOriginalStore:
         suffix = Path(filename).suffix.lower()
         media_types = {
             ".pdf": "application/pdf",
+            ".txt": "text/plain",
             ".csv": "text/csv",
             ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         }
@@ -69,6 +71,7 @@ class PrivateOriginalStore:
                     total += len(chunk)
                     limit = {
                         ".pdf": MAX_PDF_BYTES,
+                        ".txt": MAX_TEXT_BYTES,
                         ".csv": MAX_CSV_BYTES,
                         ".xlsx": MAX_XLSX_BYTES,
                     }[suffix]
@@ -105,7 +108,7 @@ class PrivateOriginalStore:
 
     def open_original(self, storage_key: str) -> BinaryIO:
         parts = Path(storage_key).parts
-        if len(parts) != 2 or Path(parts[1]).suffix not in {".pdf", ".csv", ".xlsx"}:
+        if len(parts) != 2 or Path(parts[1]).suffix not in {".pdf", ".txt", ".csv", ".xlsx"}:
             raise IntakeError("invalid storage key")
         try:
             UUID(parts[0])

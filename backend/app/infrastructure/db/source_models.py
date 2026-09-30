@@ -114,7 +114,11 @@ class SourceSegment(Base):
             "AND column_end IS NOT NULL AND (sheet IS NOT NULL OR table_name IS NOT NULL))",
             name="table_range_complete",
         ),
-        CheckConstraint("page IS NOT NULL OR row_start IS NOT NULL", name="has_locator"),
+        CheckConstraint(
+            "page IS NOT NULL OR (section IS NOT NULL AND btrim(section) <> '') "
+            "OR row_start IS NOT NULL",
+            name="has_locator",
+        ),
         Index("ix_source_segments_revision_page", "revision_id", "page"),
     )
 
