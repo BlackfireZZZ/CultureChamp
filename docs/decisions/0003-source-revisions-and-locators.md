@@ -1,6 +1,6 @@
 # ADR 0003: Source revisions, decisions and locators
 
-Status: Implemented for PDF page text and synthetic UTF-8 CSV cells in the pilot; real table fidelity and approval authority remain open.
+Status: Implemented for PDF page text and synthetic CSV/XLSX cells in the pilot; real table fidelity and approval authority remain open.
 Date: 2026-09-30
 
 ## Context and evidence
@@ -157,6 +157,38 @@ supports committing the projection and event atomically. This audit records
 who changed catalogue context, but it does not by itself validate the cultural
 accuracy of a tag or description. Source rights and sensitivity decisions still
 require the appointed reviewer under S02.
+
+## XLSX table extension (2026-09-30)
+
+An exact workbook needs a sheet name as well as row and column to resolve a
+table citation. We accept a bounded `.xlsx` OOXML ZIP and retain the original
+bytes privately. Each visible worksheet has a unique nonempty header in row 1
+and a first-column row key. Each nonempty data cell becomes one segment at its
+one-based physical sheet, row and column. Empty cells keep their positions.
+A vertical merge in column A starting below the header propagates its anchor
+row key to the covered rows; other merged ranges are held as ambiguous. Formulas,
+error cells, hidden sheets/rows/columns and chart sheets are held for review
+rather than silently converting cached or invisible values into cultural facts.
+
+The intake cap is 2 MiB. Before loading, the parser checks at most 200 ZIP
+members and 20 MiB declared uncompressed bytes, and rejects encrypted,
+external-link, macro, chart, drawing, media and pivot parts, along with duplicate
+ZIP member names. Parsing runs in a separate CPU/memory/time-limited
+process; the parent validates its bounded JSON output. The supported profile has
+at most eight sheets, 2,000 rows, 50 columns and 10,000 nonempty data cells.
+The same exact-revision approval, rights, original-file and revocation rules
+apply as to CSV. No schema migration is needed because the locator already has a
+sheet field. This is a technical format profile, not a claim that arbitrary
+spreadsheets or real cultural tables are semantically correct.
+
+The [openpyxl workbook guide](https://openpyxl.readthedocs.io/en/stable/tutorial.html)
+documents sheet and cell access and notes that cached formula values and chart
+features differ by load mode. Its [merged-cell behavior](https://openpyxl.readthedocs.io/en/stable/_modules/openpyxl/worksheet/worksheet.html)
+keeps the value at the top-left anchor. Python's
+[ZIP documentation](https://docs.python.org/3/library/zipfile.html#decompression-pitfalls)
+warns that archives can exhaust resources. Those are the reasons for explicit
+formula/merge decisions and a preflight ZIP expansion cap. A representative
+eligible workbook and domain review are still needed to broaden this profile.
 
 ## Alternatives and tradeoffs
 

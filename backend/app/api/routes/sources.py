@@ -29,6 +29,7 @@ from app.infrastructure.ingestion.storage import PrivateOriginalStore
 
 admin_router = APIRouter(prefix="/admin", tags=["admin-sources"])
 materials_router = APIRouter(prefix="/materials", tags=["materials"])
+XLSX_MEDIA_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 
 
 def get_source_service(request: Request) -> SourceService:
@@ -307,7 +308,10 @@ async def admin_sources(
     status: Literal["candidate", "processing", "review_pending", "failed"] | None = None,
     decision: Literal["approve", "revoke", "none"] | None = None,
     q: Annotated[str | None, Query(max_length=100)] = None,
-    media_type: Literal["application/pdf", "text/csv"] | None = None,
+    media_type: Literal[
+        "application/pdf", "text/csv",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    ] | None = None,
     tag_kind: Literal["region", "people", "period", "topic", "sensitivity"] | None = None,
     tag_value: Annotated[str | None, Query(max_length=100)] = None,
     limit: Annotated[int, Query(ge=1, le=100)] = 100,
@@ -363,7 +367,10 @@ async def materials_list(
     region: Annotated[str | None, Query(max_length=100)] = None,
     people: Annotated[str | None, Query(max_length=100)] = None,
     period: Annotated[str | None, Query(max_length=100)] = None,
-    media_type: Literal["application/pdf", "text/csv"] | None = None,
+    media_type: Literal[
+        "application/pdf", "text/csv",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    ] | None = None,
 ) -> list[MaterialView]:
     response.headers["Cache-Control"] = "no-store"
     filters = MaterialFilters(q=q, region=region, people=people, period=period,
@@ -389,6 +396,7 @@ async def material_detail(
         200: {"content": {
             "application/pdf": {"schema": {"type": "string", "format": "binary"}},
             "text/csv": {"schema": {"type": "string", "format": "binary"}},
+            XLSX_MEDIA_TYPE: {"schema": {"type": "string", "format": "binary"}},
         }}
     },
 )

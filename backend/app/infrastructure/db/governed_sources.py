@@ -508,5 +508,11 @@ class SqlSourceGateway:
             raise SourceNotFound from exc
         if hashlib.sha256(content).hexdigest() != revision.sha256:
             raise SourceNotFound
-        suffix = ".pdf" if revision.media_type == "application/pdf" else ".csv"
+        suffix = {
+            "application/pdf": ".pdf",
+            "text/csv": ".csv",
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": ".xlsx",
+        }.get(revision.media_type)
+        if suffix is None:
+            raise SourceNotFound
         return OriginalData(content, f"source-{revision.id}{suffix}", revision.media_type)

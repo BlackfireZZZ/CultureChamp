@@ -8,7 +8,7 @@ export type MaterialFilters = {
   region?: string
   people?: string
   period?: string
-  media_type?: "application/pdf" | "text/csv"
+  media_type?: "application/pdf" | "text/csv" | "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 }
 
 async function readJson<T>(response: Response): Promise<T> {

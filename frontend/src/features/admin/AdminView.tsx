@@ -113,8 +113,8 @@ export function AdminView({ csrfToken }: { csrfToken: string }) {
     <h1>Кандидаты и ревизии</h1>
     <p>Загружайте кандидаты, проверяйте извлечение и права точной ревизии. Только явное одобрение делает материал доступным пользователям.</p>
     <form className="admin-form" onSubmit={submitUpload} aria-label="Загрузка кандидата">
-      <h2>Загрузить PDF или CSV</h2>
-      <label>Оригинальный файл<input type="file" name="file" accept="application/pdf,.pdf,text/csv,.csv" required /></label>
+      <h2>Загрузить PDF, CSV или XLSX</h2>
+      <label>Оригинальный файл<input type="file" name="file" accept="application/pdf,.pdf,text/csv,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,.xlsx" required /></label>
       <label>Ссылка на источник<input name="origin_url" type="url" required /></label>
       <label>Название<input name="title" required maxLength={500} /></label>
       <label>Краткое описание<textarea name="description" rows={2} maxLength={500} /></label>
@@ -127,7 +127,7 @@ export function AdminView({ csrfToken }: { csrfToken: string }) {
     </form>
     <form className="admin-filters" onSubmit={submitFilters} aria-label="Поиск в инвентаре">
       <label>Источник или название<input value={queryDraft} onChange={(event) => setQueryDraft(event.target.value)} maxLength={100} /></label>
-      <label>Формат<select value={mediaType} onChange={(event) => { setMediaType(event.target.value as typeof mediaType); setRevisionId(null) }}><option value="">Все форматы</option><option value="application/pdf">PDF</option><option value="text/csv">CSV</option></select></label>
+      <label>Формат<select value={mediaType} onChange={(event) => { setMediaType(event.target.value as typeof mediaType); setRevisionId(null) }}><option value="">Все форматы</option><option value="application/pdf">PDF</option><option value="text/csv">CSV</option><option value="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">XLSX</option></select></label>
       <label>Тип метки<select value={tagKind} onChange={(event) => { setTagKind(event.target.value as typeof tagKind); setRevisionId(null) }}><option value="">Любая метка</option><option value="region">Регион</option><option value="people">Народ</option><option value="period">Период</option><option value="topic">Тема</option><option value="sensitivity">Чувствительность</option></select></label>
       <label>Значение метки<input value={tagDraft} onChange={(event) => setTagDraft(event.target.value)} maxLength={100} /></label>
       <label>Обработка<select value={status} onChange={(event) => { setStatus(event.target.value as typeof status); setRevisionId(null) }}><option value="">Все статусы</option><option value="candidate">Кандидат</option><option value="processing">Обработка</option><option value="review_pending">Ожидает проверки</option><option value="failed">Ошибка</option></select></label>

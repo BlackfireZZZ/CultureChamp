@@ -1,4 +1,4 @@
-"""Bounded private storage for candidate PDF and CSV originals."""
+"""Bounded private storage for candidate PDF and table originals."""
 
 import hashlib
 import os
@@ -10,6 +10,7 @@ from uuid import UUID
 
 MAX_PDF_BYTES = 10 * 1024 * 1024
 MAX_CSV_BYTES = 2 * 1024 * 1024
+MAX_XLSX_BYTES = 2 * 1024 * 1024
 CHUNK_SIZE = 64 * 1024
 
 
@@ -46,7 +47,11 @@ class PrivateOriginalStore:
         if Path(filename).name != filename:
             raise IntakeError("invalid filename")
         suffix = Path(filename).suffix.lower()
-        media_types = {".pdf": "application/pdf", ".csv": "text/csv"}
+        media_types = {
+            ".pdf": "application/pdf",
+            ".csv": "text/csv",
+            ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        }
         if suffix not in media_types or claimed_media_type != media_types[suffix]:
             raise IntakeError("unsupported filename or claimed media type")
 
@@ -62,7 +67,12 @@ class PrivateOriginalStore:
                 tail = bytearray()
                 while chunk := stream.read(CHUNK_SIZE):
                     total += len(chunk)
-                    if total > (MAX_PDF_BYTES if suffix == ".pdf" else MAX_CSV_BYTES):
+                    limit = {
+                        ".pdf": MAX_PDF_BYTES,
+                        ".csv": MAX_CSV_BYTES,
+                        ".xlsx": MAX_XLSX_BYTES,
+                    }[suffix]
+                    if total > limit:
                         raise IntakeError("original exceeds size limit")
                     if len(header) < 8:
                         header.extend(chunk[: 8 - len(header)])
@@ -73,6 +83,8 @@ class PrivateOriginalStore:
                     not header.startswith(b"%PDF-") or b"%%EOF" not in tail
                 ):
                     raise IntakeError("PDF signature or trailer is invalid")
+                if suffix == ".xlsx" and not header.startswith(b"PK\x03\x04"):
+                    raise IntakeError("XLSX ZIP signature is invalid")
                 if total == 0:
                     raise IntakeError("empty original")
                 temp.flush()
@@ -93,7 +105,7 @@ class PrivateOriginalStore:
 
     def open_original(self, storage_key: str) -> BinaryIO:
         parts = Path(storage_key).parts
-        if len(parts) != 2 or Path(parts[1]).suffix not in {".pdf", ".csv"}:
+        if len(parts) != 2 or Path(parts[1]).suffix not in {".pdf", ".csv", ".xlsx"}:
             raise IntakeError("invalid storage key")
         try:
             UUID(parts[0])

@@ -1036,7 +1036,7 @@ export interface operations {
             readonly query?: {
                 readonly decision?: ("approve" | "revoke" | "none") | null;
                 readonly limit?: number;
-                readonly media_type?: ("application/pdf" | "text/csv") | null;
+                readonly media_type?: ("application/pdf" | "text/csv" | "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet") | null;
                 readonly q?: string | null;
                 readonly status?: ("candidate" | "processing" | "review_pending" | "failed") | null;
                 readonly tag_kind?: ("region" | "people" | "period" | "topic" | "sensitivity") | null;
@@ -1354,7 +1354,7 @@ export interface operations {
     readonly materials_list_api_v1_materials_get: {
         readonly parameters: {
             readonly query?: {
-                readonly media_type?: ("application/pdf" | "text/csv") | null;
+                readonly media_type?: ("application/pdf" | "text/csv" | "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet") | null;
                 readonly people?: string | null;
                 readonly period?: string | null;
                 readonly q?: string | null;
@@ -1435,6 +1435,7 @@ export interface operations {
                 };
                 content: {
                     readonly "application/pdf": string;
+                    readonly "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": string;
                     readonly "text/csv": string;
                 };
             };

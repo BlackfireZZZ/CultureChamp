@@ -36,7 +36,8 @@ model transmission are unresolved in the [source policy](SOURCE_POLICY.md).
 | Scanned/image-only PDF | None | No OCR or page-text test | Unsupported; reject or hold for separate OCR decision. |
 | TXT/Markdown/DOCX/HTML | None | No fixture or fidelity test | Unsupported in this slice. |
 | UTF-8 comma CSV with a header row and first-column row keys | Self-authored synthetic table only | Empty interior cells retain their original one-based column; each nonempty data cell carries its column header and row key; clean-database API, original-file and Qdrant checks pass | Technical CSV path is implemented. Cultural table fidelity and retrieval quality remain unverified until an eligible real fixture is inspected. |
-| XLSX or embedded PDF table | None verified | No merged-cell, formula, sheet or embedded-table locator test | Unsupported in this slice; C06 remains open. |
+| XLSX workbook with first-row headers and first-column keys | Self-authored two-sheet workbook only | Exact sheet, row and column survive approval and vector lookup; vertical merged row key is checked; formulas and ambiguous merges fail processing | Technical bounded XLSX profile is implemented. Eligible real workbook fidelity and cultural table meaning remain unverified. |
+| Embedded PDF table | None verified | No table geometry or cell locator test | Unsupported in this slice; C06 remains open. |
 
 ## Reproduction
 
@@ -55,8 +56,11 @@ Repeat `pdfinfo` and `pdftotext` for the other two inventory paths. For PDF-03,
 compare page 2's left and right columns with extracted lines before designing a
 paragraph locator. For CSV, compare the exact record/column in an eligible real
 table with its extracted segment, including quoted newlines, empty cells and
-headers. XLSX needs a separate merged-cell and sheet-locator fixture; none is
-supplied. The CSV adapter follows [RFC 4180](https://datatracker.ietf.org/doc/html/rfc4180)
+headers. The self-authored XLSX fixture covers two sheet names, an interior empty
+cell, a vertical merged row key and an exact original download. For a real
+eligible workbook, compare each cited cell and its header and key against the
+rendered original; formula and other merged-cell cases need a new explicit
+policy. The CSV adapter follows [RFC 4180](https://datatracker.ietf.org/doc/html/rfc4180)
 for commas, quotes and records and Python's [CSV parser](https://docs.python.org/3/library/csv.html)
 in strict mode. It deliberately requires UTF-8 and a nonempty unique header row
 with a first-column key; delimiter or header inference would make cell meaning

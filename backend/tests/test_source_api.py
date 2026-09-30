@@ -10,6 +10,7 @@ from pypdf import PdfWriter
 from pypdf.generic import DecodedStreamObject, DictionaryObject, NameObject
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlalchemy.pool import NullPool
+from xlsx_fixture import self_authored_formula_xlsx, self_authored_xlsx
 
 from app.api.routes.sources import _detail_view
 from app.application.access import Role
@@ -168,6 +169,103 @@ def test_csv_upload_to_vector_and_original_access(tmp_path: Path) -> None:
             "Пробный объект число", limit=5, region=None, people=None, for_provider=False
         )) == ()
         assert asyncio.run(ApprovedTextIndexer(factory, index).remove_revoked_one()) == revision_id
+    asyncio.run(engine.dispose())
+
+
+def test_xlsx_sheet_locators_survive_approval_and_original_access(tmp_path: Path) -> None:
+    url = os.getenv("CORPUS_TEST_DATABASE_URL")
+    vector_url = os.getenv("CORPUS_TEST_VECTOR_URL")
+    if url is None or vector_url is None:
+        pytest.skip("set PostgreSQL and vector integration URLs")
+    engine = create_async_engine(url, poolclass=NullPool)
+    factory = async_sessionmaker(engine, expire_on_commit=False)
+    identity_store = SqlIdentityStore(factory)
+    codec = Argon2PasswordCodec()
+    app = create_app()
+    app.state.session_store = identity_store
+    app.state.identity_service = IdentityService(identity_store, codec, codec.dummy_hash)
+    app.state.source_session_factory = factory
+    store = PrivateOriginalStore(tmp_path / "private")
+    app.state.source_store = store
+    admin_name, user_name = f"admin-{uuid4().hex[:12]}", f"user-{uuid4().hex[:12]}"
+
+    async def seed() -> None:
+        await identity_store.create_account(admin_name, await codec.hash(PASSWORD), Role.ADMIN)
+        await identity_store.create_account(user_name, await codec.hash(PASSWORD), Role.USER)
+
+    asyncio.run(seed())
+    origin = "http://testserver"
+    payload = self_authored_xlsx()
+    mime = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    index = QdrantTextIndex(vector_url, ConstantEmbedder())
+    with TestClient(app, base_url=origin) as admin, TestClient(app, base_url=origin) as user:
+        admin_login = admin.post(
+            "/api/v1/auth/login", json={"username": admin_name, "password": PASSWORD},
+            headers={"origin": origin},
+        )
+        user_login = user.post(
+            "/api/v1/auth/login", json={"username": user_name, "password": PASSWORD},
+            headers={"origin": origin},
+        )
+        assert user_login.status_code == 200
+        headers = {"origin": origin, "x-csrf-token": admin_login.json()["csrf_token"]}
+        uploaded = admin.post(
+            "/api/v1/admin/sources", headers=headers,
+            data={"origin_url": "https://example.invalid/synthetic-xlsx",
+                  "title": "Self-authored XLSX"},
+            files={"file": ("table.xlsx", payload, mime)},
+        )
+        assert uploaded.status_code == 201, uploaded.text
+        revision_id = UUID(uploaded.json()["revision_id"])
+        assert asyncio.run(process_one(factory, store)) == revision_id
+        review = admin.get(f"/api/v1/admin/revisions/{revision_id}").json()
+        assert review["status"] == "review_pending"
+        assert [(part["locator"]["sheet"], part["locator"]["row_start"],
+                 part["locator"]["column_start"]) for part in review["segments"]] == [
+            ("North", 2, 3), ("North", 3, 2), ("South", 2, 2),
+        ]
+        assert user.get(f"/api/v1/materials/{revision_id}").status_code == 404
+        approved = admin.post(
+            f"/api/v1/admin/revisions/{revision_id}/approve", headers=headers,
+            json={"reason": "Self-authored workbook for technical verification",
+                  "evidence_url": "https://example.invalid/synthetic-xlsx/rights",
+                  "user_text": True, "original_file": True, "provider_transfer": False,
+                  "sensitivity_cleared": True},
+        )
+        assert approved.status_code == 200, approved.text
+        assert asyncio.run(ApprovedTextIndexer(factory, index).index_one()) == revision_id
+        found = asyncio.run(SqlGovernedVectorSearch(factory, index).search(
+            "Example A Count", limit=5, region=None, people=None, for_provider=False
+        ))
+        assert any(item.revision_id == revision_id and item.locator.sheet == "North"
+                   and item.locator.row_start == 3 and item.locator.column_start == 2
+                   for item in found)
+        assert [part["segment_id"] for part in user.get(
+            f"/api/v1/materials/{revision_id}"
+        ).json()["segments"]] == [part["segment_id"] for part in review["segments"]]
+        original = user.get(f"/api/v1/materials/{revision_id}/original")
+        assert original.content == payload
+        assert original.headers["content-type"].startswith(mime)
+        assert original.headers["content-disposition"].endswith('.xlsx"')
+        assert admin.post(
+            f"/api/v1/admin/revisions/{revision_id}/revoke", headers=headers,
+            json={"reason": "Synthetic workbook check complete"},
+        ).status_code == 200
+        assert user.get(f"/api/v1/materials/{revision_id}").status_code == 404
+        assert user.get(f"/api/v1/materials/{revision_id}/original").status_code == 404
+        rejected = admin.post(
+            "/api/v1/admin/sources", headers=headers,
+            data={"origin_url": "https://example.invalid/synthetic-formula",
+                  "title": "Self-authored formula workbook"},
+            files={"file": ("formula.xlsx", self_authored_formula_xlsx(), mime)},
+        )
+        assert rejected.status_code == 201
+        rejected_id = UUID(rejected.json()["revision_id"])
+        assert asyncio.run(process_one(factory, store)) == rejected_id
+        failed = admin.get(f"/api/v1/admin/revisions/{rejected_id}").json()
+        assert failed["status"] == "failed"
+        assert failed["segments"] == []
+        assert user.get(f"/api/v1/materials/{rejected_id}").status_code == 404
     asyncio.run(engine.dispose())
 
 

@@ -1710,7 +1710,8 @@
                 {
                   "enum": [
                     "application/pdf",
-                    "text/csv"
+                    "text/csv",
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                   ],
                   "type": "string"
                 },
@@ -2226,7 +2227,8 @@
                 {
                   "enum": [
                     "application/pdf",
-                    "text/csv"
+                    "text/csv",
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                   ],
                   "type": "string"
                 },
@@ -2332,6 +2334,12 @@
           "200": {
             "content": {
               "application/pdf": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              },
+              "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": {
                 "schema": {
                   "format": "binary",
                   "type": "string"

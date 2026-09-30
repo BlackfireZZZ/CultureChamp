@@ -147,8 +147,11 @@ test("a material without original-file rights keeps the locator but offers no PD
   expect(screen.queryByRole("link", { name: /Открыть страницу/ })).not.toBeInTheDocument()
 })
 
-test("a table cell keeps its sheet locator without inventing a PDF page", async () => {
-  const material = { revision_id: "rev-table", title: "Synthetic table", creator: null, origin_url: "https://example.invalid/table", rights_usage_note: "Synthetic", media_type: "text/csv", tags: [] }
+test.each([
+  ["text/csv", "Скачать исходную таблицу CSV"],
+  ["application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "Скачать исходную книгу XLSX"],
+])("a %s cell keeps its sheet locator and exact original link", async (mediaType, originalLabel) => {
+  const material = { revision_id: "rev-table", title: "Synthetic table", creator: null, origin_url: "https://example.invalid/table", rights_usage_note: "Synthetic", media_type: mediaType, tags: [] }
   vi.stubGlobal("fetch", vi.fn((input: string) => {
     if (input === "/api/v1/auth/me") return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ user: { id: "test-user", username: "tester", role: "user" }, csrf_token: "test-csrf" }) })
     if (input === "/api/v1/materials") return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve([material]) })
@@ -159,7 +162,7 @@ test("a table cell keeps its sheet locator without inventing a PDF page", async 
   fireEvent.click(await screen.findByRole("button", { name: "Материалы" }))
   fireEvent.click(await screen.findByRole("button", { name: /Synthetic table/ }))
   expect(await screen.findByRole("heading", { name: "Таблица Synthetic, строка 3, столбец 2" })).toBeInTheDocument()
-  expect(screen.getByRole("link", { name: "Скачать исходную таблицу CSV" })).toHaveAttribute("href", "/api/v1/materials/rev-table/original")
+  expect(screen.getByRole("link", { name: originalLabel })).toHaveAttribute("href", "/api/v1/materials/rev-table/original")
   expect(screen.queryByRole("link", { name: /Открыть страницу/ })).not.toBeInTheDocument()
 })
 

@@ -732,3 +732,43 @@ and event atomically. Only description and tags are editable in this pilot.
 Postapproval corrections, expert validation of cultural context, and real-source
 rights remain open. Review the diff, stop isolated stacks, commit/push and
 verify CI.
+
+## 2026-09-30 bounded XLSX table path
+
+Objective and actual status: A self-authored XLSX workbook with two sheets,
+an interior empty cell and a vertical merged row key retains exact sheet/row/
+column locators from private intake through parser, PostgreSQL, Qdrant,
+materials API and original-file download. Formula and ambiguous merged-cell
+workbooks fail processing without publishing partial segments. Eligible real
+workbooks, embedded PDF tables and cultural table semantics remain unverified.
+
+Worktree / branch / base SHA: The isolated integration worktree on
+`agent/integration-backend` was clean at `9f30327` before this slice. The
+integration agent owns backend extraction and dependencies, frontend material
+controls, OpenAPI contract, tests and format/ADR/tracker documentation. Other
+worktrees remain untouched. The falsifying check was a data cell whose original
+sheet/row/column or merged row label changed after approval, or a formula
+appearing in user material.
+
+Decision and comparable evidence: ADR 0003 records the strict workbook profile.
+The official openpyxl guide explains formula load modes and merged anchor
+behavior; Python ZIP documentation identifies decompression resource risk.
+The parser preflights ZIP size and parts, then uses the existing resource-limited
+child process. Unsupported rich workbook constructs fail closed. A first full
+gate on a shared test database failed in an existing queue-order assertion
+because earlier revoked fixtures were still present. A separate clean
+PostgreSQL/Qdrant project upgraded to head and passed the 66-backend,
+19-frontend and 20-ML full gate, static checks and generated API contract.
+The focused XLSX API test also passed with preserved locators and exact bytes;
+the formula fixture records failure with zero published segments. Four mocked
+browser paths passed. A separate fresh built Compose stack passed liveness,
+readiness and frontend smoke, then the full synthetic CSV browser journey in
+33.4 seconds. The browser run checks the deployed runtime and prior path;
+the XLSX-specific path is covered by the PostgreSQL/Qdrant API test. A direct
+HTTP upload to the built worker also reached `review_pending`, retained the
+three exact sheet/row/column coordinates and returned matching original bytes.
+CI remains to be checked after the commit.
+
+What remains: Inspect the final diff for secrets and contract drift, run the
+Compose browser journey is complete; stop isolated stacks, commit/push and
+verify CI.

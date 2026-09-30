@@ -6,6 +6,14 @@ import type { MaterialFilters } from "../../api/materials"
 import type { ChatCitation } from "../../api/chats"
 import { useMaterial, useMaterials } from "./useMaterials"
 
+const xlsxMediaType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+const formatLabel = (mediaType: string) => {
+  if (mediaType === "application/pdf") return "PDF"
+  if (mediaType === "text/csv") return "CSV"
+  if (mediaType === xlsxMediaType) return "XLSX"
+  return mediaType
+}
+
 export function MaterialsView({ onBack, citationTarget = null }: { onBack: () => void; citationTarget?: ChatCitation | null }) {
   const [revisionId, setRevisionId] = useState<string | null>(citationTarget?.revision_id ?? null)
   const [filters, setFilters] = useState<MaterialFilters>({})
@@ -35,7 +43,7 @@ export function MaterialsView({ onBack, citationTarget = null }: { onBack: () =>
     setFilters({
       q: value("q"), region: value("region"), people: value("people"),
       period: value("period"),
-      media_type: mediaType === "application/pdf" || mediaType === "text/csv" ? mediaType : undefined,
+      media_type: mediaType === "application/pdf" || mediaType === "text/csv" || mediaType === xlsxMediaType ? mediaType : undefined,
     })
     setRevisionId(null)
   }
@@ -52,14 +60,14 @@ export function MaterialsView({ onBack, citationTarget = null }: { onBack: () =>
       <label>Регион<input name="region" maxLength={100} /></label>
       <label>Народ<input name="people" maxLength={100} /></label>
       <label>Период<input name="period" maxLength={100} /></label>
-      <label>Тип документа<select name="media_type"><option value="">Все типы</option><option value="application/pdf">PDF</option><option value="text/csv">CSV</option></select></label>
+      <label>Тип документа<select name="media_type"><option value="">Все типы</option><option value="application/pdf">PDF</option><option value="text/csv">CSV</option><option value={xlsxMediaType}>XLSX</option></select></label>
       <div className="material-filter-actions"><button type="submit">Найти</button><button type="reset" onClick={() => { setFilters({}); setRevisionId(null) }}>Сбросить</button></div>
     </form>
     {list.isPending && <p role="status">Загружаем материалы…</p>}
     {list.isError && <div role="alert"><p>Не удалось загрузить материалы.</p><button type="button" onClick={() => void list.refetch()}>Повторить</button></div>}
     {list.isSuccess && list.data.length === 0 && <div className="empty-panel"><h2>{hasFilters ? "Материалов по запросу не найдено" : "Одобренных материалов пока нет"}</h2><p>{hasFilters ? "Уточните поиск или сбросьте фильтры." : "Кандидатные источники не показываются до проверки прав, контекста и точной ревизии."}</p><button type="button" onClick={onBack}>Вернуться к чату</button></div>}
     {list.isSuccess && list.data.length > 0 && <div className="materials-layout">
-      <section aria-label="Список одобренных материалов"><h2>Одобренные ревизии</h2><ul className="material-list">{list.data.map((item) => <li key={item.revision_id}><button type="button" aria-current={revisionId === item.revision_id ? "true" : undefined} onClick={() => choose(item.revision_id)}><strong>{item.title}</strong>{item.description && <span>{item.description}</span>}<span>{item.creator || "Автор не указан"} · {item.media_type === "application/pdf" ? "PDF" : "CSV"}</span><span>{item.tags.map((tag) => tag.value).join(" · ") || "Без меток"}</span></button></li>)}</ul></section>
+      <section aria-label="Список одобренных материалов"><h2>Одобренные ревизии</h2><ul className="material-list">{list.data.map((item) => <li key={item.revision_id}><button type="button" aria-current={revisionId === item.revision_id ? "true" : undefined} onClick={() => choose(item.revision_id)}><strong>{item.title}</strong>{item.description && <span>{item.description}</span>}<span>{item.creator || "Автор не указан"} · {formatLabel(item.media_type)}</span><span>{item.tags.map((tag) => tag.value).join(" · ") || "Без меток"}</span></button></li>)}</ul></section>
       <section aria-label="Точный источник" className="material-detail">
         {!revisionId && <p>Выберите материал, чтобы увидеть точную ревизию и фрагменты.</p>}
         {revisionId && detail.isPending && <p role="status">Загружаем источник…</p>}
@@ -67,9 +75,10 @@ export function MaterialsView({ onBack, citationTarget = null }: { onBack: () =>
         {revisionId && detail.isSuccess && <>
           <h2 ref={headingRef} tabIndex={-1}>{detail.data.title}</h2>
           {detail.data.description && <p>{detail.data.description}</p>}
-          <dl className="material-meta"><dt>Ревизия</dt><dd>{detail.data.revision_id}</dd><dt>Автор</dt><dd>{detail.data.creator || "Не указан"}</dd><dt>Тип</dt><dd>{detail.data.media_type === "application/pdf" ? "PDF" : "CSV"}</dd><dt>Метки</dt><dd>{detail.data.tags.map((tag) => `${tag.kind}: ${tag.value}`).join(" · ") || "Не указаны"}</dd><dt>Права и условия</dt><dd>{detail.data.rights_usage_note || "Не указаны"}</dd></dl>
+          <dl className="material-meta"><dt>Ревизия</dt><dd>{detail.data.revision_id}</dd><dt>Автор</dt><dd>{detail.data.creator || "Не указан"}</dd><dt>Тип</dt><dd>{formatLabel(detail.data.media_type)}</dd><dt>Метки</dt><dd>{detail.data.tags.map((tag) => `${tag.kind}: ${tag.value}`).join(" · ") || "Не указаны"}</dd><dt>Права и условия</dt><dd>{detail.data.rights_usage_note || "Не указаны"}</dd></dl>
           {!detail.data.original_available && <p>Оригинальный файл недоступен по условиям использования. Проверьте страницу и текст фрагмента ниже.</p>}
           {detail.data.original_available && detail.data.media_type === "text/csv" && <a href={`/api/v1/materials/${encodeURIComponent(detail.data.revision_id)}/original`}>Скачать исходную таблицу CSV</a>}
+          {detail.data.original_available && detail.data.media_type === xlsxMediaType && <a href={`/api/v1/materials/${encodeURIComponent(detail.data.revision_id)}/original`}>Скачать исходную книгу XLSX</a>}
           {detail.data.segments.length === 0 ? <p>В этой ревизии нет доступных фрагментов.</p> : <ol className="segment-list">{detail.data.segments.map((segment) => {
             const page = segment.locator.page
             const sourceUrl = page === null ? null : approvedPageUrl(detail.data.revision_id, page, detail.data.original_available)

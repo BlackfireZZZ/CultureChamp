@@ -2,17 +2,22 @@ from io import BytesIO
 from pathlib import Path
 from subprocess import TimeoutExpired
 from uuid import uuid4
+from zipfile import ZIP_DEFLATED, ZipFile
 
 import pytest
 from fastapi.testclient import TestClient
+from openpyxl import Workbook
 from pdf_fixture import self_authored_pdf
+from xlsx_fixture import self_authored_xlsx
 
 from app.infrastructure.ingestion.chunking import chunk_text
 from app.infrastructure.ingestion.csv_table import extract_csv_cells
 from app.infrastructure.ingestion.isolated_csv import extract_csv_isolated
 from app.infrastructure.ingestion.isolated_pdf import extract_pdf_isolated
+from app.infrastructure.ingestion.isolated_xlsx import extract_xlsx_isolated
 from app.infrastructure.ingestion.pdf_text import ExtractionError, extract_pdf_pages
 from app.infrastructure.ingestion.storage import MAX_PDF_BYTES, IntakeError, PrivateOriginalStore
+from app.infrastructure.ingestion.xlsx_table import extract_xlsx_cells
 from app.main import MAX_REQUEST_BYTES, create_app
 
 
@@ -168,3 +173,57 @@ def test_csv_private_store_rejects_wrong_claimed_type(tmp_path: Path) -> None:
             uuid4(), BytesIO(b"key,value\na,7"),
             filename="a.csv", claimed_media_type="application/pdf"
         )
+
+
+def test_xlsx_preserves_sheet_cell_and_merged_row_key(tmp_path: Path) -> None:
+    payload = self_authored_xlsx()
+    cells = extract_xlsx_cells(payload)
+    assert [(cell.locator.sheet, cell.locator.row_start, cell.locator.column_start)
+            for cell in cells] == [("North", 2, 3), ("North", 3, 2), ("South", 2, 2)]
+    assert cells[1].text == "Item: Example A; Count: 7"
+    assert all(cell.locator.page is None for cell in cells)
+    assert extract_xlsx_isolated(payload) == cells
+    store = PrivateOriginalStore(tmp_path / "private")
+    saved = store.store(
+        uuid4(), BytesIO(payload), filename="table.xlsx",
+        claimed_media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
+    with store.open_original(saved.storage_key) as stream:
+        assert stream.read() == payload
+
+
+def test_xlsx_rejects_formula_and_ambiguous_merge() -> None:
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet.append(["Item", "Count"])
+    sheet.append(["Example", "=2+2"])
+    output = BytesIO()
+    workbook.save(output)
+    with pytest.raises(ExtractionError, match="formula"):
+        extract_xlsx_cells(output.getvalue())
+    sheet["B2"] = 4
+    sheet.merge_cells("A1:B1")
+    output = BytesIO()
+    workbook.save(output)
+    with pytest.raises(ExtractionError, match="merged"):
+        extract_xlsx_cells(output.getvalue())
+
+
+def test_xlsx_rejects_spoofed_zip_at_intake(tmp_path: Path) -> None:
+    store = PrivateOriginalStore(tmp_path / "private")
+    with pytest.raises(IntakeError, match="signature"):
+        store.store(
+            uuid4(), BytesIO(b"not an XLSX"), filename="table.xlsx",
+            claimed_media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+    with pytest.raises(ExtractionError):
+        extract_xlsx_cells(b"PK\x03\x04broken")
+
+
+def test_xlsx_rejects_archive_expansion_before_workbook_load() -> None:
+    output = BytesIO()
+    with ZipFile(output, "w", compression=ZIP_DEFLATED) as archive:
+        archive.writestr("xl/worksheets/sheet1.xml", b" " * (21 * 1024 * 1024))
+    assert len(output.getvalue()) < 2 * 1024 * 1024
+    with pytest.raises(ExtractionError, match="archive exceeds limits"):
+        extract_xlsx_cells(output.getvalue())
