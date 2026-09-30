@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test"
 
 test("responsive preview, starter keyboard path and theme", async ({ page }) => {
+  await page.route("**/api/v1/auth/me", (route) => route.fulfill({ json: { user: { id: "test-user", username: "tester", role: "user" }, csrf_token: "test-csrf" } }))
   await page.emulateMedia({ colorScheme: "light" })
   await page.goto("/")
   await expect(page.getByRole("heading", { name: "Идея с культурным контекстом" })).toBeVisible()
@@ -25,4 +26,17 @@ test("responsive preview, starter keyboard path and theme", async ({ page }) => 
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark")
   await page.reload()
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark")
+})
+
+test("login is keyboard accessible and does not show protected views before authentication", async ({ page }) => {
+  await page.route("**/api/v1/auth/me", (route) => route.fulfill({ status: 401 }))
+  await page.route("**/api/v1/auth/login", (route) => route.fulfill({ json: { user: { id: "test-user", username: "tester", role: "user" }, csrf_token: "test-csrf" } }))
+  await page.goto("/")
+  await expect(page.getByRole("heading", { name: "Войти в мастерскую" })).toBeVisible()
+  await expect(page.getByRole("button", { name: "Материалы" })).toHaveCount(0)
+  await page.getByRole("textbox", { name: "Имя пользователя" }).fill("tester")
+  await page.getByLabel("Пароль").fill("example")
+  await page.getByLabel("Пароль").press("Enter")
+  await expect(page.getByRole("heading", { name: "Идея с культурным контекстом" })).toBeVisible()
+  await expect(page.getByRole("button", { name: "Админка" })).toHaveCount(0)
 })

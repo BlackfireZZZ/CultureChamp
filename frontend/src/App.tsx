@@ -4,12 +4,16 @@ import type { FormEvent, KeyboardEvent } from "react"
 
 import { createDemoReply, getApprovedMaterialsPreview, getDemoChats } from "./api/demo"
 import type { DemoChat } from "./api/demo"
+import { ApiError } from "./api/auth"
+import { LoginScreen } from "./features/auth/LoginScreen"
+import { useAuth } from "./features/auth/useAuth"
 import { StarterGuide } from "./features/onboarding/StarterGuide"
 import { starters } from "./features/onboarding/starters"
 
 type View = "chat" | "materials" | "admin"
 
 export function App() {
+  const auth = useAuth()
   const chats = useQuery({ queryKey: ["demo-chats"], queryFn: getDemoChats, staleTime: Infinity })
   const materials = useQuery({ queryKey: ["demo-materials"], queryFn: getApprovedMaterialsPreview, staleTime: Infinity })
   const [view, setView] = useState<View>("chat")
@@ -90,16 +94,27 @@ export function App() {
     }
   }
 
+  if (auth.session.isPending) return <div className="app-shell"><main className="login-page"><p role="status">Проверяем сессию…</p></main></div>
+  if (auth.session.isError && !(auth.session.error instanceof ApiError && auth.session.error.status === 401)) {
+    return <div className="app-shell"><main className="login-page"><p role="alert">Не удалось проверить сессию.</p><button type="button" onClick={() => void auth.session.refetch()}>Повторить</button></main></div>
+  }
+  if (!auth.session.data) {
+    return <div className="app-shell"><header className="site-header"><span className="wordmark">CultureChamp</span><button className="theme-toggle" type="button" onClick={toggleTheme}>{theme === "dark" ? "Светлая тема" : "Тёмная тема"}</button></header><LoginScreen onSubmit={(username, password) => auth.signIn.mutate({ username, password })} pending={auth.signIn.isPending} error={auth.signIn.error} /></div>
+  }
+  const activeSession = auth.session.data
+
   return <div className="app-shell">
     <header className="site-header">
       <span className="wordmark">CultureChamp</span>
       <nav aria-label="Основная навигация">
         <button aria-current={view === "chat" ? "page" : undefined} type="button" onClick={() => setView("chat")}>Чат</button>
         <button aria-current={view === "materials" ? "page" : undefined} type="button" onClick={() => setView("materials")}>Материалы</button>
-        <button aria-current={view === "admin" ? "page" : undefined} type="button" onClick={() => setView("admin")}>Админка</button>
+        {activeSession.user.role === "admin" && <button aria-current={view === "admin" ? "page" : undefined} type="button" onClick={() => setView("admin")}>Админка</button>}
       </nav>
       <button className="theme-toggle" type="button" onClick={toggleTheme}>{theme === "dark" ? "Светлая тема" : "Тёмная тема"}</button>
+      <button className="signout" type="button" onClick={() => auth.signOut.mutate(activeSession.csrf_token)} disabled={auth.signOut.isPending}>Выйти</button>
     </header>
+    {auth.signOut.isError && <p className="auth-error" role="alert">Не удалось выйти. Повторите попытку.</p>}
     <div className="preview-banner" role="status">Предпросмотр интерфейса · чаты не сохраняются · источники ещё не одобрены</div>
     {view === "chat" && <main className="workspace">
       <aside ref={listRef} className={`chat-rail ${listOpen ? "open" : ""}`} aria-label="Список чатов" onKeyDown={onListKeyDown}>

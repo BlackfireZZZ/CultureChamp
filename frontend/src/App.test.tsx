@@ -9,10 +9,19 @@ function renderApp() {
   render(<QueryClientProvider client={new QueryClient()}><App /></QueryClientProvider>)
 }
 
-afterEach(() => { cleanup(); vi.restoreAllMocks() })
+function mockSession(role: "user" | "admin" = "user") {
+  vi.stubGlobal("fetch", vi.fn((input: string) => {
+    if (input !== "/api/v1/auth/me") throw new Error("Unexpected request")
+    return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ user: { id: "test-user", username: "tester", role }, csrf_token: "test-csrf" }) })
+  }))
+}
 
-test("each starter fills an editable composer without sending", () => {
+afterEach(() => { cleanup(); vi.restoreAllMocks(); vi.unstubAllGlobals() })
+
+test("each starter fills an editable composer without sending", async () => {
+  mockSession()
   renderApp()
+  await screen.findByRole("heading", { name: "Идея с культурным контекстом" })
   for (let index = 1; index <= 6; index += 1) {
     const id = `UC-0${index}`
     fireEvent.click(screen.getByRole("button", { name: new RegExp(id) }))
@@ -25,7 +34,9 @@ test("each starter fills an editable composer without sending", () => {
 })
 
 test("guide is reachable before a chat; demo send is labelled and not persisted", async () => {
+  mockSession()
   renderApp()
+  await screen.findByRole("heading", { name: "Идея с культурным контекстом" })
   fireEvent.click(screen.getByRole("button", { name: "Что можно сделать?" }))
   expect(screen.getByRole("dialog", { name: "Что можно сделать?" })).toBeInTheDocument()
   fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: /UC-06/ }))
@@ -36,18 +47,48 @@ test("guide is reachable before a chat; demo send is labelled and not persisted"
 })
 
 test("materials show no unapproved candidates", async () => {
+  mockSession()
   renderApp()
+  await screen.findByRole("heading", { name: "Идея с культурным контекстом" })
   fireEvent.click(screen.getByRole("button", { name: "Материалы" }))
   expect(await screen.findByText("Одобренных материалов пока нет")).toBeInTheDocument()
   expect(screen.queryByText(/PDF-02/)).not.toBeInTheDocument()
 })
 
 test("a failed demo send keeps the editable brief", async () => {
+  mockSession()
   vi.spyOn(demo, "createDemoReply").mockRejectedValueOnce(new Error("provider secret must stay hidden"))
   renderApp()
+  await screen.findByRole("heading", { name: "Идея с культурным контекстом" })
   fireEvent.change(screen.getByRole("textbox", { name: "Ваш творческий бриф" }), { target: { value: "Мой бриф" } })
   fireEvent.click(screen.getByRole("button", { name: "Отправить" }))
   expect(await screen.findByRole("alert")).toHaveTextContent("Текст сохранён")
   expect(screen.getByRole<HTMLTextAreaElement>("textbox", { name: "Ваш творческий бриф" }).value).toBe("Мой бриф")
   expect(screen.queryByText("provider secret must stay hidden")).not.toBeInTheDocument()
+})
+
+test("unauthenticated visitors see login and no protected navigation", async () => {
+  vi.stubGlobal("fetch", vi.fn(() => Promise.resolve({ ok: false, status: 401 })))
+  renderApp()
+  expect(await screen.findByRole("heading", { name: "Войти в мастерскую" })).toBeInTheDocument()
+  expect(screen.queryByRole("button", { name: "Материалы" })).not.toBeInTheDocument()
+})
+
+test("session failure has a retry path and never reveals protected content", async () => {
+  const fetchMock = vi.fn()
+    .mockResolvedValueOnce({ ok: false, status: 503 })
+    .mockResolvedValueOnce({ ok: true, status: 200, json: () => Promise.resolve({ user: { id: "test-user", username: "tester", role: "user" }, csrf_token: "test-csrf" }) })
+  vi.stubGlobal("fetch", fetchMock)
+  renderApp()
+  expect(await screen.findByRole("alert")).toHaveTextContent("Не удалось проверить сессию")
+  expect(screen.queryByRole("button", { name: "Материалы" })).not.toBeInTheDocument()
+  fireEvent.click(screen.getByRole("button", { name: "Повторить" }))
+  expect(await screen.findByRole("heading", { name: "Идея с культурным контекстом" })).toBeInTheDocument()
+  expect(fetchMock).toHaveBeenCalledTimes(2)
+})
+
+test("admin navigation is visible only for an admin session", async () => {
+  mockSession("admin")
+  renderApp()
+  expect(await screen.findByRole("button", { name: "Админка" })).toBeInTheDocument()
 })
