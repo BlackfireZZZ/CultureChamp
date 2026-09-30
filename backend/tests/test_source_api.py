@@ -136,6 +136,23 @@ def test_admin_upload_review_approval_user_visibility_and_revocation(tmp_path: P
             "sensitivity_cleared": True,
         }
         assert (
+            user.post(
+                f"/api/v1/admin/revisions/{revision_id}/approve",
+                json=approval,
+                headers=user_headers,
+            ).status_code
+            == 403
+        )
+        assert (
+            admin.post(
+                f"/api/v1/admin/revisions/{revision_id}/approve",
+                json={**approval, "evidence_url": "file:///untrusted/rights"},
+                headers=admin_headers,
+            ).status_code
+            == 422
+        )
+        assert admin.get(f"/api/v1/admin/revisions/{revision_id}").json()["decision"] is None
+        assert (
             admin.post(f"/api/v1/admin/revisions/{revision_id}/approve", json=approval).status_code
             == 403
         )
@@ -144,14 +161,16 @@ def test_admin_upload_review_approval_user_visibility_and_revocation(tmp_path: P
         )
         assert approved.status_code == 200, approved.text
         assert approved.json()["decision"] == "approve"
-        assert [item["revision_id"] for item in user.get("/api/v1/materials").json()] == [
-            revision_id
-        ]
+        visible_list = user.get("/api/v1/materials")
+        assert visible_list.headers["cache-control"] == "no-store"
+        assert [item["revision_id"] for item in visible_list.json()] == [revision_id]
         assert (
             user.get(f"/api/v1/materials/{revision_id}").json()["segments"][0]["locator"]["page"]
             == 1
         )
-        assert user.get(f"/api/v1/materials/{revision_id}").json()["original_available"] is False
+        text_detail = user.get(f"/api/v1/materials/{revision_id}")
+        assert text_detail.headers["cache-control"] == "no-store"
+        assert text_detail.json()["original_available"] is False
         assert user.get(f"/api/v1/materials/{revision_id}/original").status_code == 404
         revoked = admin.post(
             f"/api/v1/admin/revisions/{revision_id}/revoke",
@@ -159,6 +178,14 @@ def test_admin_upload_review_approval_user_visibility_and_revocation(tmp_path: P
             headers=admin_headers,
         )
         assert revoked.status_code == 200, revoked.text
+        assert (
+            user.post(
+                f"/api/v1/admin/revisions/{revision_id}/revoke",
+                json={"reason": "Unauthorized user request"},
+                headers=user_headers,
+            ).status_code
+            == 403
+        )
         assert user.get("/api/v1/materials").json() == []
         assert user.get(f"/api/v1/materials/{revision_id}").status_code == 404
         assert admin.get(f"/api/v1/admin/revisions/{revision_id}").json()["decision"] == "revoke"

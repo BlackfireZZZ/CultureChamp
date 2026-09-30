@@ -173,20 +173,24 @@ async def upload_source(
 @admin_router.get("/revisions/{revision_id}", response_model=AdminRevisionView)
 async def admin_revision(
     revision_id: UUID,
+    response: Response,
     actor: Annotated[Actor, Depends(current_admin)],
     service: Annotated[SourceService, Depends(get_source_service)],
 ) -> AdminRevisionView:
+    response.headers["Cache-Control"] = "no-store"
     return _admin_view(await service.admin_detail(actor, revision_id))
 
 
 @admin_router.get("/sources", response_model=list[AdminSourceView])
 async def admin_sources(
+    response: Response,
     actor: Annotated[Actor, Depends(current_admin)],
     service: Annotated[SourceService, Depends(get_source_service)],
     status: Literal["candidate", "processing", "review_pending", "failed"] | None = None,
     decision: Literal["approve", "revoke", "none"] | None = None,
     limit: Annotated[int, Query(ge=1, le=100)] = 100,
 ) -> list[AdminSourceView]:
+    response.headers["Cache-Control"] = "no-store"
     return [
         AdminSourceView(**item.__dict__)
         for item in await service.admin_list(actor, status=status, decision=decision, limit=limit)
@@ -225,18 +229,22 @@ async def retry_revision(
 
 @materials_router.get("", response_model=list[MaterialView])
 async def materials_list(
+    response: Response,
     actor: Annotated[Actor, Depends(current_user)],
     service: Annotated[SourceService, Depends(get_source_service)],
 ) -> list[MaterialView]:
+    response.headers["Cache-Control"] = "no-store"
     return [_material_view(item) for item in await service.visible_list(actor)]
 
 
 @materials_router.get("/{revision_id}", response_model=MaterialDetail)
 async def material_detail(
     revision_id: UUID,
+    response: Response,
     actor: Annotated[Actor, Depends(current_user)],
     service: Annotated[SourceService, Depends(get_source_service)],
 ) -> MaterialDetail:
+    response.headers["Cache-Control"] = "no-store"
     return _detail_view(await service.visible_detail(actor, revision_id))
 
 
