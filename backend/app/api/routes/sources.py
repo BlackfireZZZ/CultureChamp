@@ -14,6 +14,7 @@ from app.application.source_management import (
     AdminRevisionData,
     ApprovalData,
     MaterialData,
+    MaterialFilters,
     SourceService,
 )
 from app.core.config import settings
@@ -59,6 +60,11 @@ class SegmentView(BaseModel):
     text: str
 
 
+class TagView(BaseModel):
+    kind: str
+    value: str
+
+
 class MaterialView(BaseModel):
     revision_id: UUID
     title: str
@@ -69,16 +75,12 @@ class MaterialView(BaseModel):
     people: str | None = None
     period: str | None = None
     media_type: str
+    tags: list[TagView]
 
 
 class MaterialDetail(MaterialView):
     segments: list[SegmentView]
     original_available: bool
-
-
-class TagView(BaseModel):
-    kind: str
-    value: str
 
 
 class AdminRevisionView(MaterialDetail):
@@ -87,7 +89,6 @@ class AdminRevisionView(MaterialDetail):
     error_code: str | None
     decision: str | None
     sha256: str
-    tags: list[TagView]
 
 
 class AdminSourceView(BaseModel):
@@ -113,13 +114,20 @@ class RevokeInput(BaseModel):
 
 
 def _material_view(material: MaterialData) -> MaterialView:
+    def first_tag(kind: str) -> str | None:
+        return next((tag.value for tag in material.tags if tag.kind == kind), None)
+
     return MaterialView(
         revision_id=material.revision_id,
         title=material.title,
         creator=material.creator,
         origin_url=material.origin_url,
         rights_usage_note=material.rights_usage_note,
+        region=first_tag("region"),
+        people=first_tag("people"),
+        period=first_tag("period"),
         media_type=material.media_type,
+        tags=[TagView(kind=tag.kind, value=tag.value) for tag in material.tags],
     )
 
 
@@ -158,7 +166,6 @@ def _admin_view(data: AdminRevisionData) -> AdminRevisionView:
         error_code=data.error_code,
         decision=data.decision,
         sha256=data.sha256,
-        tags=[TagView(kind=tag.kind, value=tag.value) for tag in data.tags],
     )
 
 
@@ -253,9 +260,16 @@ async def materials_list(
     response: Response,
     actor: Annotated[Actor, Depends(current_user)],
     service: Annotated[SourceService, Depends(get_source_service)],
+    q: Annotated[str | None, Query(max_length=100)] = None,
+    region: Annotated[str | None, Query(max_length=100)] = None,
+    people: Annotated[str | None, Query(max_length=100)] = None,
+    period: Annotated[str | None, Query(max_length=100)] = None,
+    media_type: Literal["application/pdf", "text/csv"] | None = None,
 ) -> list[MaterialView]:
     response.headers["Cache-Control"] = "no-store"
-    return [_material_view(item) for item in await service.visible_list(actor)]
+    filters = MaterialFilters(q=q, region=region, people=people, period=period,
+                              media_type=media_type)
+    return [_material_view(item) for item in await service.visible_list(actor, filters)]
 
 
 @materials_router.get("/{revision_id}", response_model=MaterialDetail)

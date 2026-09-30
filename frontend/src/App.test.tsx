@@ -70,8 +70,31 @@ test("materials show no unapproved candidates", async () => {
   expect(screen.queryByText(/PDF-02/)).not.toBeInTheDocument()
 })
 
+test("materials search uses approved-only server filters and can be reset", async () => {
+  const material = { revision_id: "rev-filter", title: "Synthetic table", creator: "Author", origin_url: "https://example.invalid/table", rights_usage_note: "Self-authored", region: "Test region", people: null, period: null, media_type: "text/csv", tags: [{ kind: "region", value: "Test region" }] }
+  const requests: string[] = []
+  vi.stubGlobal("fetch", vi.fn((input: string) => {
+    if (input === "/api/v1/auth/me") return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ user: { id: "test-user", username: "tester", role: "user" }, csrf_token: "test-csrf" }) })
+    if (input.startsWith("/api/v1/materials")) {
+      requests.push(input)
+      return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(input === "/api/v1/materials" ? [material] : []) })
+    }
+    throw new Error("Unexpected request")
+  }))
+  renderApp()
+  fireEvent.click(await screen.findByRole("button", { name: "Материалы" }))
+  expect(await screen.findByRole("button", { name: /Synthetic table/ })).toBeInTheDocument()
+  const form = screen.getByRole("form", { name: "Поиск материалов" })
+  fireEvent.change(within(form).getByRole("textbox", { name: "Регион" }), { target: { value: "Other" } })
+  fireEvent.click(within(form).getByRole("button", { name: "Найти" }))
+  expect(await screen.findByRole("heading", { name: "Материалов по запросу не найдено" })).toBeInTheDocument()
+  expect(requests).toContain("/api/v1/materials?region=Other")
+  fireEvent.click(within(form).getByRole("button", { name: "Сбросить" }))
+  expect(await screen.findByRole("button", { name: /Synthetic table/ })).toBeInTheDocument()
+})
+
 test("approved material opens its exact revision and page", async () => {
-  const material = { revision_id: "rev-2", title: "Источник Приморья", creator: "Автор", origin_url: "https://example.org/source.pdf", rights_usage_note: "Review approved", region: null, people: null, period: null, media_type: "application/pdf" }
+  const material = { revision_id: "rev-2", title: "Источник Приморья", creator: "Автор", origin_url: "https://example.org/source.pdf", rights_usage_note: "Review approved", region: "Приморье", people: null, period: null, media_type: "application/pdf", tags: [{ kind: "region", value: "Приморье" }] }
   vi.stubGlobal("fetch", vi.fn((input: string) => {
     if (input === "/api/v1/auth/me") return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ user: { id: "test-user", username: "tester", role: "user" }, csrf_token: "test-csrf" }) })
     if (input === "/api/v1/materials") return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve([material]) })
@@ -89,7 +112,7 @@ test("approved material opens its exact revision and page", async () => {
 test("a chat citation opens the exact approved segment and returns to chat", async () => {
   const revisionId = "rev-cited"
   const segmentId = "segment-cited"
-  const material = { revision_id: revisionId, title: "Учебный синтетический источник", creator: null, origin_url: "https://example.invalid/synthetic", rights_usage_note: "Synthetic", media_type: "application/pdf" }
+  const material = { revision_id: revisionId, title: "Учебный синтетический источник", creator: null, origin_url: "https://example.invalid/synthetic", rights_usage_note: "Synthetic", media_type: "application/pdf", tags: [] }
   vi.stubGlobal("fetch", vi.fn((input: string) => {
     if (input === "/api/v1/auth/me") return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ user: { id: "test-user", username: "tester", role: "user" }, csrf_token: "test-csrf" }) })
     if (input === "/api/v1/chats") return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve([{ id: "chat-cited", title: "Синтетический бриф", updated_at: "2026-09-30T00:00:00Z" }]) })
@@ -108,7 +131,7 @@ test("a chat citation opens the exact approved segment and returns to chat", asy
 })
 
 test("a material without original-file rights keeps the locator but offers no PDF link", async () => {
-  const material = { revision_id: "rev-4", title: "Только текст", creator: null, origin_url: "https://example.org/source.pdf", rights_usage_note: "Text only", media_type: "application/pdf" }
+  const material = { revision_id: "rev-4", title: "Только текст", creator: null, origin_url: "https://example.org/source.pdf", rights_usage_note: "Text only", media_type: "application/pdf", tags: [] }
   vi.stubGlobal("fetch", vi.fn((input: string) => {
     if (input === "/api/v1/auth/me") return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ user: { id: "test-user", username: "tester", role: "user" }, csrf_token: "test-csrf" }) })
     if (input === "/api/v1/materials") return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve([material]) })
@@ -124,7 +147,7 @@ test("a material without original-file rights keeps the locator but offers no PD
 })
 
 test("a table cell keeps its sheet locator without inventing a PDF page", async () => {
-  const material = { revision_id: "rev-table", title: "Synthetic table", creator: null, origin_url: "https://example.invalid/table", rights_usage_note: "Synthetic", media_type: "text/csv" }
+  const material = { revision_id: "rev-table", title: "Synthetic table", creator: null, origin_url: "https://example.invalid/table", rights_usage_note: "Synthetic", media_type: "text/csv", tags: [] }
   vi.stubGlobal("fetch", vi.fn((input: string) => {
     if (input === "/api/v1/auth/me") return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ user: { id: "test-user", username: "tester", role: "user" }, csrf_token: "test-csrf" }) })
     if (input === "/api/v1/materials") return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve([material]) })

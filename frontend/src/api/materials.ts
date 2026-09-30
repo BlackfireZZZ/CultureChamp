@@ -3,14 +3,24 @@ import type { components } from "./schema.generated"
 
 export type MaterialSummary = components["schemas"]["MaterialView"]
 export type MaterialDetail = components["schemas"]["MaterialDetail"]
+export type MaterialFilters = {
+  q?: string
+  region?: string
+  people?: string
+  period?: string
+  media_type?: "application/pdf" | "text/csv"
+}
 
 async function readJson<T>(response: Response): Promise<T> {
   if (!response.ok) throw new ApiError(response.status)
   return (await response.json()) as T
 }
 
-export async function getMaterials(signal?: AbortSignal): Promise<readonly MaterialSummary[]> {
-  const response = await fetch("/api/v1/materials", { credentials: "same-origin", signal })
+export async function getMaterials(filters: MaterialFilters = {}, signal?: AbortSignal): Promise<readonly MaterialSummary[]> {
+  const params = new URLSearchParams()
+  for (const [key, value] of Object.entries(filters)) if (value) params.set(key, value)
+  const suffix = params.size ? `?${params.toString()}` : ""
+  const response = await fetch(`/api/v1/materials${suffix}`, { credentials: "same-origin", signal })
   return readJson<readonly MaterialSummary[]>(response)
 }
 

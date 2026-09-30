@@ -4,7 +4,7 @@ import hashlib
 from typing import BinaryIO
 from uuid import UUID
 
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.application.source_management import (
@@ -13,6 +13,7 @@ from app.application.source_management import (
     ApprovalData,
     IntakeData,
     MaterialData,
+    MaterialFilters,
     OriginalData,
     SegmentData,
     SourceConflict,
@@ -113,6 +114,13 @@ class SqlSourceGateway:
             .order_by(SourceDecision.event_id.desc())
             .limit(1)
         )
+        tags = (
+            await session.scalars(
+                select(SourceTag)
+                .where(SourceTag.revision_id == revision.id)
+                .order_by(SourceTag.kind, SourceTag.value)
+            )
+        ).all()
         return MaterialData(
             revision_id=revision.id,
             title=revision.title,
@@ -120,6 +128,7 @@ class SqlSourceGateway:
             origin_url=source.origin_url,
             rights_usage_note=revision.rights_note,
             media_type=revision.media_type,
+            tags=tuple(TagData(tag.kind, tag.value) for tag in tags),
             segments=tuple(
                 SegmentData(
                     s.id,
@@ -158,13 +167,6 @@ class SqlSourceGateway:
                 .order_by(SourceDecision.event_id.desc())
                 .limit(1)
             )
-            tags = (
-                await session.scalars(
-                    select(SourceTag)
-                    .where(SourceTag.revision_id == revision_id)
-                    .order_by(SourceTag.kind, SourceTag.value)
-                )
-            ).all()
             return AdminRevisionData(
                 material=await self._material(session, revision),
                 source_id=revision.source_id,
@@ -172,7 +174,6 @@ class SqlSourceGateway:
                 error_code=processing.error_code if processing else None,
                 decision=decision.kind if decision else None,
                 sha256=revision.sha256,
-                tags=tuple(TagData(tag.kind, tag.value) for tag in tags),
             )
 
     async def admin_list(
@@ -299,12 +300,77 @@ class SqlSourceGateway:
             )
         )
 
-    async def visible_list(self) -> list[MaterialData]:
+    async def visible_list(self, filters: MaterialFilters) -> list[MaterialData]:
         async with self.factory() as session:
-            revisions = (
-                await session.scalars(self._visible_query().order_by(SourceRevision.captured_at))
+            query = self._visible_query()
+            if filters.q:
+                term = filters.q.strip()
+                if term:
+                    matching_tag = (
+                        select(SourceTag.id)
+                        .where(
+                            SourceTag.revision_id == SourceRevision.id,
+                            SourceTag.value.icontains(term, autoescape=True),
+                        )
+                        .exists()
+                    )
+                    query = query.where(
+                        or_(
+                            SourceRevision.title.icontains(term, autoescape=True),
+                            SourceRevision.creator.icontains(term, autoescape=True),
+                            matching_tag,
+                        )
+                    )
+            for kind, value in (
+                ("region", filters.region),
+                ("people", filters.people),
+                ("period", filters.period),
+            ):
+                if value and value.strip():
+                    query = query.where(
+                        select(SourceTag.id)
+                        .where(
+                            SourceTag.revision_id == SourceRevision.id,
+                            SourceTag.kind == kind,
+                            func.lower(SourceTag.value) == value.strip().lower(),
+                        )
+                        .exists()
+                    )
+            if filters.media_type:
+                query = query.where(SourceRevision.media_type == filters.media_type)
+            rows = (
+                await session.execute(
+                    query.join(Source, Source.id == SourceRevision.source_id)
+                    .add_columns(Source.origin_url)
+                    .order_by(SourceRevision.captured_at, SourceRevision.id)
+                )
             ).all()
-            return [await self._material(session, revision) for revision in revisions]
+            revision_ids = [revision.id for revision, _ in rows]
+            tags_by_revision: dict[UUID, list[TagData]] = {}
+            if revision_ids:
+                tags = (
+                    await session.scalars(
+                        select(SourceTag)
+                        .where(SourceTag.revision_id.in_(revision_ids))
+                        .order_by(SourceTag.kind, SourceTag.value)
+                    )
+                ).all()
+                for tag in tags:
+                    tags_by_revision.setdefault(tag.revision_id, []).append(
+                        TagData(tag.kind, tag.value)
+                    )
+            return [
+                MaterialData(
+                    revision_id=revision.id,
+                    title=revision.title,
+                    creator=revision.creator,
+                    origin_url=origin_url,
+                    rights_usage_note=revision.rights_note,
+                    media_type=revision.media_type,
+                    tags=tuple(tags_by_revision.get(revision.id, ())),
+                )
+                for revision, origin_url in rows
+            ]
 
     async def visible_detail(self, revision_id: UUID) -> MaterialData:
         async with self.factory() as session:

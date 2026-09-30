@@ -299,6 +299,13 @@ def test_admin_upload_review_approval_user_visibility_and_revocation(tmp_path: P
         visible_list = user.get("/api/v1/materials")
         assert visible_list.headers["cache-control"] == "no-store"
         assert [item["revision_id"] for item in visible_list.json()] == [revision_id]
+        assert visible_list.json()[0]["region"] == "Primorye"
+        assert visible_list.json()[0]["tags"] == [{"kind": "region", "value": "Primorye"}]
+        assert [item["revision_id"] for item in user.get(
+            "/api/v1/materials?region=Primorye&q=Owned"
+        ).json()] == [revision_id]
+        assert user.get("/api/v1/materials?region=Other").json() == []
+        assert user.get("/api/v1/materials?q=%25").json() == []
         assert (
             user.get(f"/api/v1/materials/{revision_id}").json()["segments"][0]["locator"]["page"]
             == 1
@@ -322,6 +329,7 @@ def test_admin_upload_review_approval_user_visibility_and_revocation(tmp_path: P
             == 403
         )
         assert user.get("/api/v1/materials").json() == []
+        assert user.get("/api/v1/materials?region=Primorye").json() == []
         assert user.get(f"/api/v1/materials/{revision_id}").status_code == 404
         assert admin.get(f"/api/v1/admin/revisions/{revision_id}").json()["decision"] == "revoke"
         assert any(

@@ -64,7 +64,7 @@ test("login is keyboard accessible and does not show protected views before auth
 
 test("material selection exposes a precise page with keyboard focus at narrow and wide widths", async ({ page }) => {
   await page.route("**/api/v1/chats", (route) => route.fulfill({ json: [] }))
-  const material = { revision_id: "00000000-0000-4000-8000-000000000002", title: "Одобренный источник", creator: "Автор", origin_url: "https://example.org/source.pdf", rights_usage_note: "Approved", media_type: "application/pdf" }
+  const material = { revision_id: "00000000-0000-4000-8000-000000000002", title: "Одобренный источник", creator: "Автор", origin_url: "https://example.org/source.pdf", rights_usage_note: "Approved", media_type: "application/pdf", tags: [{ kind: "region", value: "Приморье" }] }
   await page.route("**/api/v1/auth/me", (route) => route.fulfill({ json: { user: { id: "test-user", username: "tester", role: "user" }, csrf_token: "test-csrf" } }))
   await page.route("**/api/v1/materials", (route) => route.fulfill({ json: [material] }))
   await page.route("**/api/v1/materials/*", (route) => route.fulfill({ json: { ...material, original_available: true, segments: [{ segment_id: "00000000-0000-4000-8000-000000000003", locator: { kind: "page", page: 7 }, text: "Точный текст страницы." }] } }))

@@ -590,6 +590,8 @@ export interface components {
             readonly rights_usage_note: string | null;
             /** Segments */
             readonly segments: readonly components["schemas"]["SegmentView"][];
+            /** Tags */
+            readonly tags: readonly components["schemas"]["TagView"][];
             /** Title */
             readonly title: string;
         };
@@ -614,6 +616,8 @@ export interface components {
             readonly revision_id: string;
             /** Rights Usage Note */
             readonly rights_usage_note: string | null;
+            /** Tags */
+            readonly tags: readonly components["schemas"]["TagView"][];
             /** Title */
             readonly title: string;
         };
@@ -1160,7 +1164,13 @@ export interface operations {
     };
     readonly materials_list_api_v1_materials_get: {
         readonly parameters: {
-            readonly query?: never;
+            readonly query?: {
+                readonly media_type?: ("application/pdf" | "text/csv") | null;
+                readonly people?: string | null;
+                readonly period?: string | null;
+                readonly q?: string | null;
+                readonly region?: string | null;
+            };
             readonly header?: never;
             readonly path?: never;
             readonly cookie?: never;
@@ -1174,6 +1184,15 @@ export interface operations {
                 };
                 content: {
                     readonly "application/json": readonly components["schemas"]["MaterialView"][];
+                };
+            };
+            /** @description Validation Error */
+            readonly 422: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

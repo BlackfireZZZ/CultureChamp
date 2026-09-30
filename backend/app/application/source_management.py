@@ -35,6 +35,15 @@ class TagData:
 
 
 @dataclass(frozen=True)
+class MaterialFilters:
+    q: str | None = None
+    region: str | None = None
+    people: str | None = None
+    period: str | None = None
+    media_type: str | None = None
+
+
+@dataclass(frozen=True)
 class MaterialData:
     revision_id: UUID
     title: str
@@ -42,6 +51,7 @@ class MaterialData:
     origin_url: str
     rights_usage_note: str | None
     media_type: str
+    tags: tuple[TagData, ...] = ()
     segments: tuple[SegmentData, ...] = ()
     original_available: bool = False
 
@@ -54,7 +64,6 @@ class AdminRevisionData:
     error_code: str | None
     decision: str | None
     sha256: str
-    tags: tuple[TagData, ...]
 
 
 @dataclass(frozen=True)
@@ -118,7 +127,7 @@ class SourceGateway(Protocol):
 
     async def retry(self, revision_id: UUID) -> None: ...
 
-    async def visible_list(self) -> list[MaterialData]: ...
+    async def visible_list(self, filters: MaterialFilters) -> list[MaterialData]: ...
 
     async def visible_detail(self, revision_id: UUID) -> MaterialData: ...
 
@@ -206,9 +215,11 @@ class SourceService:
         await self.gateway.retry(revision_id)
         return await self.gateway.admin_detail(revision_id)
 
-    async def visible_list(self, actor: Actor) -> list[MaterialData]:
+    async def visible_list(
+        self, actor: Actor, filters: MaterialFilters | None = None
+    ) -> list[MaterialData]:
         require_role(actor, Role.USER)
-        return await self.gateway.visible_list()
+        return await self.gateway.visible_list(filters or MaterialFilters())
 
     async def visible_detail(self, actor: Actor, revision_id: UUID) -> MaterialData:
         require_role(actor, Role.USER)

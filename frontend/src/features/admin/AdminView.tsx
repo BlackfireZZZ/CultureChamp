@@ -26,7 +26,11 @@ export function AdminView({ csrfToken }: { csrfToken: string }) {
 
   function submitUpload(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    upload.mutate(new FormData(event.currentTarget))
+    const form = new FormData(event.currentTarget)
+    const entries = textField(form, "tag_entries")
+    form.delete("tag_entries")
+    for (const line of entries.split(/\r?\n/).map((item) => item.trim()).filter(Boolean)) form.append("tags", line)
+    upload.mutate(form)
   }
 
   function submitApproval(event: FormEvent<HTMLFormElement>) {
@@ -58,6 +62,7 @@ export function AdminView({ csrfToken }: { csrfToken: string }) {
       <label>Название<input name="title" required maxLength={500} /></label>
       <label>Автор или организация<input name="creator" /></label>
       <label>Примечание о правах<input name="rights_note" /></label>
+      <label>Метки, по одной в строке<textarea name="tag_entries" rows={3} maxLength={2200} placeholder={"region:Регион\nperiod:Период"} /></label>
       <button type="submit" disabled={upload.isPending}>Загрузить на проверку</button>
       {upload.isError && <p role="alert">Не удалось загрузить файл. Проверьте формат, размер и поля.</p>}
       {upload.isSuccess && <p role="status">Кандидат принят. Дождитесь обработки перед решением.</p>}

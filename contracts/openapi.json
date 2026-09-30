@@ -158,14 +158,14 @@
           "origin_url",
           "rights_usage_note",
           "media_type",
+          "tags",
           "segments",
           "original_available",
           "source_id",
           "status",
           "error_code",
           "decision",
-          "sha256",
-          "tags"
+          "sha256"
         ],
         "title": "AdminRevisionView",
         "type": "object"
@@ -873,6 +873,13 @@
             "title": "Segments",
             "type": "array"
           },
+          "tags": {
+            "items": {
+              "$ref": "#/components/schemas/TagView"
+            },
+            "title": "Tags",
+            "type": "array"
+          },
           "title": {
             "title": "Title",
             "type": "string"
@@ -885,6 +892,7 @@
           "origin_url",
           "rights_usage_note",
           "media_type",
+          "tags",
           "segments",
           "original_available"
         ],
@@ -961,6 +969,13 @@
             ],
             "title": "Rights Usage Note"
           },
+          "tags": {
+            "items": {
+              "$ref": "#/components/schemas/TagView"
+            },
+            "title": "Tags",
+            "type": "array"
+          },
           "title": {
             "title": "Title",
             "type": "string"
@@ -972,7 +987,8 @@
           "creator",
           "origin_url",
           "rights_usage_note",
-          "media_type"
+          "media_type",
+          "tags"
         ],
         "title": "MaterialView",
         "type": "object"
@@ -1777,6 +1793,96 @@
     "/api/v1/materials": {
       "get": {
         "operationId": "materials_list_api_v1_materials_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 100,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
+            }
+          },
+          {
+            "in": "query",
+            "name": "region",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 100,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Region"
+            }
+          },
+          {
+            "in": "query",
+            "name": "people",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 100,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "People"
+            }
+          },
+          {
+            "in": "query",
+            "name": "period",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 100,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Period"
+            }
+          },
+          {
+            "in": "query",
+            "name": "media_type",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "application/pdf",
+                    "text/csv"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Media Type"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "content": {
@@ -1791,6 +1897,16 @@
               }
             },
             "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
           }
         },
         "summary": "Materials List",

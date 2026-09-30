@@ -13,6 +13,7 @@ test.setTimeout(360_000)
 test("live synthetic source flows from admin review to cited chat and revocation", async ({ browser }) => {
   const marker = `live${Date.now()}`
   const title = `Synthetic live table ${marker}`
+  const region = `Synthetic region ${marker}`
   const cell = `item: ${marker}; count: seven`
   const csv = Buffer.from(`item,count\r\n${marker},seven\r\n`, "utf8")
   const userName = `user_${marker}`
@@ -46,6 +47,7 @@ test("live synthetic source flows from admin review to cited chat and revocation
     await upload.getByLabel("Название").fill(title)
     await upload.getByLabel("Автор или организация").fill("Self-authored test")
     await upload.getByLabel("Примечание о правах").fill("Self-authored synthetic fixture")
+    await upload.getByLabel("Метки, по одной в строке").fill(`region:${region}\ntopic:Synthetic testing`)
     const intakeResponse = adminPage.waitForResponse((response) => response.url().endsWith("/api/v1/admin/sources") && response.request().method() === "POST")
     await upload.getByRole("button", { name: "Загрузить на проверку" }).click()
     const intake = (await (await intakeResponse).json()) as { revision_id: string }
@@ -90,6 +92,16 @@ test("live synthetic source flows from admin review to cited chat and revocation
       const data = (await response.json()) as { result: { payload: { revision_id: string } }[] }
       return data.result[0]?.payload.revision_id ?? null
     }, { timeout: 180_000 }).toBe(intake.revision_id)
+
+    await userPage.getByRole("button", { name: "Материалы" }).click()
+    const filter = userPage.getByRole("form", { name: "Поиск материалов" })
+    await filter.getByRole("textbox", { name: "Регион" }).fill(region)
+    await filter.getByRole("button", { name: "Найти" }).click()
+    await expect(userPage.getByRole("button", { name: new RegExp(title) })).toBeVisible()
+    await filter.getByRole("textbox", { name: "Регион" }).fill("Unrelated region")
+    await filter.getByRole("button", { name: "Найти" }).click()
+    await expect(userPage.getByRole("heading", { name: "Материалов по запросу не найдено" })).toBeVisible()
+    await userPage.getByRole("button", { name: "Вернуться к чату" }).first().click()
 
     await userPage.getByRole("button", { name: "Новый чат" }).click()
     await userPage.getByRole("textbox", { name: "Ваш творческий бриф" }).fill(cell)

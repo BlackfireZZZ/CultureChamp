@@ -408,3 +408,69 @@ seconds using the existing test admin and cached embedding model.
 Exact next step: Stop the isolated stack, inspect diff, then commit and push.
 G05 stays
 in progress pending adversarial provider and cultural support review.
+
+## 2026-09-30 approved-material discovery update
+
+Objective and actual status: The user materials schema exposed region, people
+and period fields but always returned `null`, while the administrator could
+store revision tags. Approved materials now expose their exact-revision tags,
+populate those fields, and support server-side search and filters. The admin
+upload form accepts newline-separated tags. One synthetic live browser path
+proved a tagged CSV can be found by its region and excluded by another region.
+
+Worktree / branch / base SHA: The same isolated integration worktree,
+`agent/integration-backend`, clean at `42216a5` before this slice. The
+integration agent owns the application source contract, SQL gateway, transport
+contract, generated client, materials/admin UI, tests, tracker and handoff.
+
+Changed contracts and files: `GET /api/v1/materials` adds optional `q`,
+`region`, `people`, `period` and `media_type` query parameters. Existing calls
+without filters retain their selection rule; returned materials add a `tags`
+array and populated context fields. PostgreSQL
+applies visibility before filtering. Text search escapes SQL wildcard characters,
+and tag filters match exact values case-insensitively. The new fields were
+regenerated in `contracts/openapi.json` and the TypeScript schema. No migration
+or vector-index contract changed. The list loads revision metadata and tags in
+two queries without fetching extracted segment bodies; exact detail still loads
+the segments and current original-file permission.
+
+Decision and evidence: `docs/product/USE_CASES.md` calls for materials filters,
+context tags and original/locator detail. The existing `SourceTag` rows and
+approval query are the authority. A candidate or revoked revision fails the
+visibility predicate regardless of a matching filter. The first tag of each
+context kind populates the legacy singular fields; the full array preserves
+multiple values for future collections. Discovery still lacks a concise
+description and pagination at corpus scale.
+
+Verification commands and observed results: The focused source API suite with
+`CORPUS_TEST_DATABASE_URL` on clean PostGIS port 15439 and
+`CORPUS_TEST_VECTOR_URL` on Qdrant port 16336 passed 3 tests, including the new
+tag, filter, literal wildcard and revocation assertions. `make check` against
+those services passed all 61 backend tests, 16 frontend tests, 20 ML tests,
+architecture, Ruff, mypy, OpenAPI/client contract, build and Compose config.
+Ordinary `npm run test:e2e` passed four browser tests with the live test skipped.
+The isolated built Compose stack passed `npm run test:e2e --
+e2e/live.e2e.ts` (1 test, 8.3 seconds) with tagged admin upload and user
+filtering. `make smoke` passed backend liveness/readiness and frontend; clean
+PostGIS `make migration-check` reported no schema drift.
+After changing the list to metadata-only reads, Ruff, mypy and the focused
+three-test source API suite passed again against the isolated services. A second
+full `make check` with the live PostgreSQL and Qdrant endpoints also passed
+61 backend, 16 frontend and 20 ML tests plus all static and contract gates.
+
+What remains unverified and why: The live source was self-authored CSV. No
+eligible real source, rights review, expert cultural judgement or external model
+API was involved. Large-corpus pagination and ranked materials discovery are
+not implemented. The broader U04/U06/Q01 gates remain open.
+
+Risks and open questions: The unfiltered material list is unbounded; the first
+release needs a corpus-size and latency limit, then a paginated contract before
+large institutional collections. Search uses title, creator and tag values, not
+the extracted body. That preserves the current chat/vector retrieval boundary.
+
+Exact next step: Stop the two isolated test stacks, inspect the diff, commit
+and push the slice, then verify CI. Continue the remaining independent UI and
+operations gates without reopening retrieval experiments.
+
+Cleanup completed or retention reason: The isolated test stacks are stopped
+after verification; their named volumes are retained for a repeat run.

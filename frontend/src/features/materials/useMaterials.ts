@@ -1,9 +1,10 @@
 import { useQuery } from "@tanstack/react-query"
 
 import { getMaterial, getMaterials } from "../../api/materials"
+import type { MaterialFilters } from "../../api/materials"
 
-export function useMaterials() {
-  return useQuery({ queryKey: ["materials", "approved"], queryFn: ({ signal }) => getMaterials(signal), retry: false })
+export function useMaterials(filters: MaterialFilters = {}) {
+  return useQuery({ queryKey: ["materials", "approved", filters], queryFn: ({ signal }) => getMaterials(filters, signal), retry: false })
 }
 
 export function useMaterial(revisionId: string | null) {

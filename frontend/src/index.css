@@ -95,6 +95,12 @@ h1 { margin: 0; font: 600 clamp(38px, 5vw, 56px)/1 var(--font-display); letter-s
 .admin-filters label { display: flex; flex-direction: column; gap: 6px; min-width: min(100%, 220px); font-weight: 600; }
 .admin-filters select { min-height: 44px; padding: 8px 12px; border: 1px solid var(--color-border); background: var(--color-surface); color: var(--color-text); font: inherit; }
 .admin-filters select:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 3px; }
+.material-filters { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 190px), 1fr)); gap: 12px; margin-top: 24px; padding: 20px; border: 1px solid var(--color-border); background: var(--color-surface); }
+.material-filters label { display: grid; align-content: start; gap: 6px; font-weight: 600; }
+.material-filters input, .material-filters select { width: 100%; min-height: 44px; padding: 8px 10px; border: 1px solid var(--color-border); background: var(--color-bg); color: var(--color-text); font: inherit; }
+.material-filter-actions { display: flex; align-items: end; gap: 8px; }
+.material-filter-actions button { min-height: 44px; padding: 8px 14px; border: 1px solid var(--color-border); background: var(--color-text); color: var(--color-bg); font: 600 14px var(--font-display); }
+.material-filter-actions button[type="reset"] { background: var(--color-bg); color: var(--color-text); }
 .material-meta { display: grid; grid-template-columns: minmax(90px, 130px) minmax(0, 1fr); gap: 8px 16px; overflow-wrap: anywhere; }
 .material-meta dd { margin: 0; }
 .segment-list li { padding: 16px 0; border-top: 1px solid var(--color-border); }
