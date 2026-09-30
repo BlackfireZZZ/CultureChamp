@@ -28,6 +28,7 @@ LIVE_E2E_BASE_URL=http://127.0.0.1:18083 \
 The browser test requires all four variables and is skipped in the ordinary
 mocked Playwright run. It checks candidate invisibility, a no-evidence response,
 worker extraction, explicit approval, a Qdrant point, a cited chat answer,
+chat switching/deletion, retry after a simulated 503 with the same request ID,
 source focus, exact original bytes and withdrawal. Its random marker and cleanup
 make repeat runs independent. A clean run downloads the embedding model into the
 private test volume once. The external model remains disabled.

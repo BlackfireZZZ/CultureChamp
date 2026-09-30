@@ -474,3 +474,38 @@ operations gates without reopening retrieval experiments.
 
 Cleanup completed or retention reason: The isolated test stacks are stopped
 after verification; their named volumes are retained for a repeat run.
+
+## 2026-09-30 chat lifecycle browser verification
+
+Objective and actual status: Confirm the remaining U02 chat UI paths using the
+real built stack. The existing six starters and in-app guide already match
+`docs/product/USE_CASES.md`: each fills an editable composer without sending,
+and the guide opens before any chat exists. U03 is accepted. The live test now
+checks chat switching, deletion, and a 503 retry that preserves the draft and
+reuses the request ID. U02 is accepted; broader Q01 release scenarios remain.
+
+Worktree / branch / base SHA: The same isolated integration worktree and
+`agent/integration-backend` branch, clean at `b5e3914` before this slice. The
+integration agent owns the browser test, tracker, runbook and this handoff.
+No application code or API contract changed.
+
+Decision and evidence: `USE_CASES.md` requires users to revisit conversations
+and recover from interruptions without losing the brief. The browser check
+uses a self-authored CSV, local Qdrant and the fake model. It injects one 503
+at the chat message route, then observes the draft, retry ID and persisted
+conversation before switching and deleting the earlier chat.
+
+Verification: A fresh `culturechamp_chatjourney` Compose project on ports
+15440/16337/18040/18085 built and became healthy. The first live run passed
+one browser test in 38.5 seconds, including switching and deletion. The second
+run passed one test in 5.8 seconds with the added 503 retry assertion. The
+stack used only synthetic content and never contacted an external model API.
+The full `make check` passed architecture, Ruff, mypy, 48 backend tests with
+13 live-service skips, 16 frontend tests/build, 20 ML tests, OpenAPI/client
+contract and Compose config. The previous slice ran all 61 backend tests
+against isolated PostgreSQL and Qdrant.
+
+Remaining limits: This proves client recovery and mechanical source access,
+not answer quality, expert review, provider activation or use cases UC-01 and
+UC-06–UC-11. The isolated stack was stopped after the final gate; its named
+volumes are retained for repeatable local checks.

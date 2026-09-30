@@ -15,6 +15,7 @@ test("live synthetic source flows from admin review to cited chat and revocation
   const title = `Synthetic live table ${marker}`
   const region = `Synthetic region ${marker}`
   const cell = `item: ${marker}; count: seven`
+  const approvedBrief = `${cell} — summarize the source`
   const csv = Buffer.from(`item,count\r\n${marker},seven\r\n`, "utf8")
   const userName = `user_${marker}`
   const userPassword = "self-authored-live-test-password"
@@ -60,9 +61,21 @@ test("live synthetic source flows from admin review to cited chat and revocation
     await userPage.getByRole("button", { name: "Материалы" }).click()
     await expect(userPage.getByText(title)).toHaveCount(0)
     await userPage.getByRole("button", { name: "Вернуться к чату" }).first().click()
+    const requestIds: string[] = []
+    await userPage.route("**/api/v1/chats/*/messages", async (route) => {
+      const payload = route.request().postDataJSON() as { request_id: string }
+      requestIds.push(payload.request_id)
+      if (requestIds.length === 1) await route.fulfill({ status: 503 })
+      else await route.continue()
+    })
     await userPage.getByRole("textbox", { name: "Ваш творческий бриф" }).fill(cell)
     await userPage.getByRole("button", { name: "Отправить" }).click()
+    await expect(userPage.getByRole("alert")).toContainText("Текст сохранён")
+    await expect(userPage.getByRole("textbox", { name: "Ваш творческий бриф" })).toHaveValue(cell)
+    await userPage.getByRole("button", { name: "Отправить" }).click()
     await expect(userPage.getByText(/There is no approved source evidence/)).toBeVisible()
+    expect(requestIds[1]).toBe(requestIds[0])
+    const unsupportedChatTitle = cell
 
     await expect.poll(async () => {
       const response = await adminContext.request.get(`/api/v1/admin/revisions/${intake.revision_id}`)
@@ -104,9 +117,17 @@ test("live synthetic source flows from admin review to cited chat and revocation
     await userPage.getByRole("button", { name: "Вернуться к чату" }).first().click()
 
     await userPage.getByRole("button", { name: "Новый чат" }).click()
-    await userPage.getByRole("textbox", { name: "Ваш творческий бриф" }).fill(cell)
+    await userPage.getByRole("textbox", { name: "Ваш творческий бриф" }).fill(approvedBrief)
     await userPage.getByRole("button", { name: "Отправить" }).click()
     await expect(userPage.getByText(/Source-supported:/)).toBeVisible({ timeout: 60_000 })
+    await userPage.getByRole("button", { name: unsupportedChatTitle, exact: true }).click()
+    await expect(userPage.getByText(/There is no approved source evidence/)).toBeVisible()
+    await userPage.getByRole("button", { name: "Удалить чат" }).click()
+    await expect(userPage.getByRole("button", { name: unsupportedChatTitle, exact: true })).toHaveCount(0)
+    await userPage.getByRole("button", { name: "Новый чат" }).click()
+    await expect(userPage.getByText(/Source-supported:/)).toHaveCount(0)
+    await userPage.getByRole("button", { name: approvedBrief, exact: true }).click()
+    await expect(userPage.getByText(/Source-supported:/)).toBeVisible()
     await userPage.getByRole("button", { name: /Источник · таблица CSV, строка 2/ }).click()
     await expect(userPage.locator(`#segment-${segmentId}`)).toBeFocused()
     await expect(userPage.getByRole("heading", { name: title })).toBeVisible()
