@@ -36,6 +36,16 @@ class DenyQuota:
         pass
 
 
+class RecordingQuota(AllowQuota):
+    def __init__(self) -> None:
+        self.finished: list[ModelResult | None] = []
+
+    async def finish(
+        self, subject_id: str, idempotency_key: str, result: ModelResult | None
+    ) -> None:
+        self.finished.append(result)
+
+
 class SlowProvider:
     async def generate(self, request: ModelRequest) -> ModelResult:
         await asyncio.sleep(1)
@@ -76,6 +86,22 @@ def test_external_provider_configuration_fails_closed_and_keeps_key_private() ->
 
 def test_fake_quota_retry_and_timeout() -> None:
     asyncio.run(_fake_quota_retry_and_timeout())
+
+
+def test_over_limit_response_finishes_reservation_as_failed() -> None:
+    async def check() -> None:
+        class OverLimitProvider:
+            async def generate(self, request: ModelRequest) -> ModelResult:
+                return ModelResult("too long", 3, 4)
+
+        quota = RecordingQuota()
+        with pytest.raises(ModelFailure, match="provider_unavailable"):
+            await ModelGateway(OverLimitProvider(), quota).generate(
+                ModelRequest("user-1", "Write a brief", "turn-1", max_output_tokens=3)
+            )
+        assert quota.finished == [None]
+
+    asyncio.run(check())
 
 
 async def _fake_quota_retry_and_timeout() -> None:

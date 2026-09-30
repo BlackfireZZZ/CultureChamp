@@ -102,11 +102,12 @@ class ModelGateway:
             except TemporaryModelFailure:
                 return await self.provider.generate(request)
 
-        result: ModelResult | None = None
+        accepted_result: ModelResult | None = None
         try:
             result = await asyncio.wait_for(run(), timeout=self.deadline_seconds)
             if result.output_tokens > request.max_output_tokens:
                 raise ModelFailure("provider_unavailable")
+            accepted_result = result
             return result
         except TimeoutError as exc:
             raise ModelFailure("timeout") from exc
@@ -115,4 +116,6 @@ class ModelGateway:
         except Exception as exc:
             raise ModelFailure("provider_unavailable") from exc
         finally:
-            await self.quota.finish(request.subject_id, request.idempotency_key, result)
+            await self.quota.finish(
+                request.subject_id, request.idempotency_key, accepted_result
+            )

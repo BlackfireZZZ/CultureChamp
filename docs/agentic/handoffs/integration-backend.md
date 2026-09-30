@@ -807,3 +807,25 @@ review remain open under G05/Q02.
 
 Exact next step: Review the diff, stop the isolated test stacks, commit, push
 and verify CI.
+
+## 2026-09-30 model quota rejection fix
+
+Commit `a8dc560` contains the evidence boundary above and was pushed. The
+gateway then exposed a separate quota accounting error: an over-limit provider
+response raised `provider_unavailable` but passed that result to `finish`, which
+marked the reservation `done`. A focused regression test failed with the
+observed `ModelResult` instead of `None`; after the fix all six adapter tests
+passed. The gateway now passes only an accepted result to quota completion, so
+the existing failed-reservation retry contract applies. This does not yet
+measure provider charges for rejected responses.
+
+`PATH=/home/blackfire/.nvm/versions/node/v24.19.0/bin:$PATH make check` passed
+architecture, Ruff, mypy, 60 backend unit tests (14 service-dependent skips),
+19 frontend tests, 20 ML tests, build, OpenAPI contract and Compose config. The
+first invocation used system Node 18 and stopped at Vitest startup; the project
+requires Node 24. Prior clean PostgreSQL/Qdrant, browser and built Compose gates
+for `a8dc560` are recorded above. External model parameters and permissions
+remain the release blockers; measured provider cost and latency remain open.
+For this fix, a fresh isolated PostgreSQL container migrated from zero to head;
+the real `SqlModelQuota` retry/limit test passed (1 test). That project's
+container, network and volume were removed after the check.
