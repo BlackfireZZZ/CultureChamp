@@ -136,6 +136,26 @@ test("live synthetic source flows from admin review to cited chat and revocation
     const download = await downloadPromise
     expect(await readFile(await download.path())).toEqual(csv)
 
+    if (process.env.LIVE_E2E_RESET_VECTOR === "true") {
+      expect(["127.0.0.1", "localhost"]).toContain(new URL(vectorURL!).hostname)
+      const collection = "culture_text_e5_small_v1"
+      const dropped = await fetch(`${vectorURL}/collections/${collection}`, { method: "DELETE" })
+      expect(dropped.ok).toBe(true)
+      await expect.poll(async () => {
+        const response = await fetch(`${vectorURL}/collections/${collection}/points`, {
+          method: "POST", headers: { "content-type": "application/json" },
+          body: JSON.stringify({ ids: [segmentId], with_payload: true, with_vector: false }),
+        })
+        if (!response.ok) return null
+        const data = (await response.json()) as { result: { payload: { revision_id: string } }[] }
+        return data.result[0]?.payload.revision_id ?? null
+      }, { timeout: 180_000 }).toBe(intake.revision_id)
+      await userPage.getByRole("button", { name: "Вернуться к чату" }).first().click()
+      await userPage.getByRole("textbox", { name: "Ваш творческий бриф" }).fill(cell)
+      await userPage.getByRole("button", { name: "Отправить" }).click()
+      await expect(userPage.getByText(/Source-supported:/)).toHaveCount(2)
+    }
+
     const revoke = adminPage.getByRole("form", { name: "Отзыв ревизии" })
     await revoke.getByLabel("Причина отзыва").fill("Self-authored live test completed")
     await revoke.getByRole("button", { name: "Отозвать эту ревизию" }).click()
@@ -145,6 +165,10 @@ test("live synthetic source flows from admin review to cited chat and revocation
     }).toBe("revoke")
     approvedRevisionId = null
     await userPage.reload()
+    await userPage.getByRole("button", { name: approvedBrief, exact: true }).click()
+    await expect(userPage.getByText(/Source-supported:/)).toHaveCount(process.env.LIVE_E2E_RESET_VECTOR === "true" ? 2 : 1)
+    await expect(userPage.getByRole("button", { name: /Источник · таблица CSV, строка 2/ }).first()).toBeDisabled()
+    await expect(userPage.getByText("Источник отозван или недоступен")).toHaveCount(process.env.LIVE_E2E_RESET_VECTOR === "true" ? 2 : 1)
     await userPage.getByRole("button", { name: "Материалы" }).click()
     await expect(userPage.getByText(title)).toHaveCount(0)
   } finally {

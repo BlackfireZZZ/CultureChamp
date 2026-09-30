@@ -25,12 +25,19 @@ LIVE_E2E_BASE_URL=http://127.0.0.1:18083 \
   npm run test:e2e -- e2e/live.e2e.ts
 ```
 
+To add the destructive Qdrant collection-loss/replay drill, set
+`LIVE_E2E_RESET_VECTOR=true` on the test command. It is permitted only with a
+loopback vector URL and must point at a separate test Compose project.
+
 The browser test requires all four variables and is skipped in the ordinary
 mocked Playwright run. It checks candidate invisibility, a no-evidence response,
 worker extraction, explicit approval, a Qdrant point, a cited chat answer,
 chat switching/deletion, retry after a simulated 503 with the same request ID,
-source focus, exact original bytes and withdrawal. Its random marker and cleanup
-make repeat runs independent. A clean run downloads the embedding model into the
+source focus, exact original bytes and withdrawal. With the explicit reset flag,
+it also checks Qdrant collection loss and worker replay.
+After withdrawal, the
+historical answer stays visible but its citation becomes unavailable. A random
+marker and cleanup make repeat runs independent. A clean run downloads the embedding model into the
 private test volume once. The external model remains disabled.
 
 Backend tests that call `ApprovedTextIndexer.index_one()` must use a separate

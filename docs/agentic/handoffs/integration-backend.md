@@ -509,3 +509,59 @@ Remaining limits: This proves client recovery and mechanical source access,
 not answer quality, expert review, provider activation or use cases UC-01 and
 UC-06–UC-11. The isolated stack was stopped after the final gate; its named
 volumes are retained for repeatable local checks.
+
+## 2026-09-30 withdrawn citation verification
+
+Objective and actual status: A cited source can be withdrawn after an answer.
+The live browser journey now reloads the historical conversation after
+revocation and verifies that the answer stays visible, the original citation
+button is disabled, and a withdrawal explanation appears. The materials list
+still excludes the revision. G03 and U05 meet their synthetic acceptance checks;
+this does not establish cultural support quality.
+
+Worktree / branch / base SHA: The same isolated integration checkout on
+`agent/integration-backend`, clean at `d170257` before this slice. The
+integration agent owns the browser test, tracker and this handoff. No API or
+database schema changed.
+
+Verification: Reused the retained `culturechamp_chatjourney` volumes and
+started all five Compose services healthy. `npm run test:e2e --
+e2e/live.e2e.ts` passed one test in 9.6 seconds, including exact CSV row
+navigation, original bytes and post-withdrawal citation behavior. The existing
+PDF page component check and backend exact-revision checks provide the other
+format and authority cases. The fake provider and self-authored CSV were used.
+
+Recovery drill: The same browser journey deleted the isolated Qdrant text
+collection while its synthetic CSV revision was approved. The worker recreated
+the collection and point from PostgreSQL authority, and the next chat turn
+again cited that revision. The first expanded run reached recovery but failed
+on a strict Playwright selector because the chat now contained two supported
+answers. After selecting both explicitly, the full live journey passed one
+test in 6.8 seconds. Q03 is in progress: database/private-original restore,
+monitoring and representative cost/latency evidence remain open.
+
+Backup and restore drill: With the synthetic stack idle, `pg_dump -Fc` and a
+private-source tar archive were taken. `pg_restore` into an independent
+`culturechamp_restore` database completed without errors; original/restored
+counts matched at 5 conversations, 7 turns, 5 revisions, 5 segments and
+10 decisions. Alembic reported no new operations. Five restored CSV originals
+matched both their SHA-256 content-addressed filenames and the restored
+revision hashes. The procedure and its
+production limits are recorded in `docs/operations/backup-restore.md` using
+PostgreSQL and Qdrant primary documentation. This does not establish encrypted
+remote backups, scheduling, retention enforcement or a full-stack replacement
+RTO/RPO. The restored database and temporary archives are synthetic only.
+The restored test database and temporary archives were removed after verification;
+the Compose stack was stopped and its original named test volumes retained.
+The destructive collection-loss check now requires an explicit
+`LIVE_E2E_RESET_VECTOR=true` flag and a loopback Qdrant URL. With the flag,
+the live journey passed in 11.6 seconds; without it, the ordinary live path
+passed in 4.3 seconds. Frontend lint and TypeScript checks passed after this
+guard was added. The final `make check` passed architecture, Ruff, mypy,
+48 backend tests with 13 live-service skips, 16 frontend tests/build, 20 ML
+tests, OpenAPI/client contract and Compose config. The live service paths were
+observed in the browser runs and prior full 61-test database gate.
+
+Remaining limits: Expert factual review, a real provider, eligible cultural
+rights, image/audio locators and broader UC-07–UC-11 adversarial cases remain
+outside this synthetic citation check.
