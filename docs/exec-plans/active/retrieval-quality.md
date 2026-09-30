@@ -82,3 +82,41 @@ locally for internal validation per the owner's instruction. Expert review,
 rights-cleared user release, real table material and provider transfer remain
 separate external decisions. A preliminary result from eight agent-labelled
 questions is only an engineering diagnostic, never release evidence.
+
+The offline study runner now verifies fixture hashes, indexes each candidate in
+a disposable Qdrant collection, and writes only locator keys and measurements.
+The first ablation holds multilingual-E5-small and `pypdf` constant: fixed
+120-word windows yielded Recall@5 1.00 and nDCG@5 0.848; sentence-aligned
+256-token windows yielded 0.90 and 0.867; 384-token windows yielded 0.70 and
+0.765. With Docling extraction, fixed 120-word windows yielded 0.90 and 0.695;
+layout-block 256-token windows yielded 0.90 and 0.775. The study ranks pages by
+their highest-scoring child chunk, so strategies with more chunks also get more
+chances to score; these page-level labels cannot establish which individual
+passage supports a claim. Raw no-evidence
+false-positive rate was 1.00 in every run: every query received a nearest
+neighbor. The observed score of 0.84 in the existing E5 gate was tuned on the
+same eight questions and must not be transferred to another model or parser.
+
+Holding `pypdf` and fixed 120-word windows constant, the local INT8
+Qwen3-Embedding-0.6B-Q CPU run yielded Recall@5 0.90 and nDCG@5 0.816; BGE-M3
+FP16 on CUDA yielded 0.60 and 0.627. BGE-M3 peaked at 1,149.7 MiB CUDA
+allocated (1,250.0 MiB reserved), so it fits the available GPU, but size and
+fit alone do not justify replacing E5. Qwen's model version is
+`af95f2c416ffe9379369ad64f9113e865db6112c`; BGE-M3's is
+`5617a9f61b028005a4858fdac845db406aefb181`. This compares only dense
+vectors, not BGE-M3's sparse/late-interaction modes or a reranker. The small,
+already-seen query set cannot rank the models for release.
+
+Visual inspection of PDF-03 physical page 2 found that Docling placed left-column
+body blocks before right-column blocks and separated page furniture, unlike the
+flat `pypdf` text. This is a one-page parser check, not a corpus-level extraction
+pass. The custom layout-block windows are an ablation inspired by Docling's
+document model; they do not implement or claim to reproduce `HybridChunker`.
+Across all 32 pages, a mechanical word-count comparison of the `pypdf` output
+and Docling body output found Docling-to-`pypdf` ratios of 0.75–0.96 on PDF-02
+and 0.89–0.97 on PDF-01/PDF-03. Page furniture removal and different tokenization
+can explain some of this, but missing source content has not been ruled out.
+The weakest page requires visual and text coverage review before adopting this
+parser or using its output as a ground truth.
+The next gate is expert-confirmed passage-level relevance and locator judgments,
+including a held-out split, before any production chunking or model switch.

@@ -93,6 +93,30 @@ systems on the same corpus version; report each slice, latency, and cost.
 
 ## Reproduction
 
+The controlled, local chunk/model ablation is specified in
+[the retrieval quality plan](../../docs/exec-plans/active/retrieval-quality.md).
+`study_chunking.py` constructs model-token-bounded sentence or Docling layout-block
+windows within a physical page. `run_retrieval_study.py` verifies every fixture
+hash, indexes one candidate in a temporary Qdrant collection, and deletes that
+collection after querying. `--docling-dir` points to local, uncommitted Docling
+JSON exports of the same PDFs. Run files contain only locator keys and metrics;
+they are diagnostic because the eight qrels are provisional page-level labels.
+The custom block windows are not Docling `HybridChunker`. No run below establishes
+an optimal chunk size, model, or no-evidence threshold.
+
+```bash
+CORPUS_TEST_VECTOR_URL=http://127.0.0.1:16333 uv run --package culturechamp-backend --extra dev python ml/evals/run_retrieval_study.py --model e5-small --chunking fixed120 --output ml/evals/runs/study_e5_fixed120.jsonl
+CORPUS_TEST_VECTOR_URL=http://127.0.0.1:16333 uv run --package culturechamp-backend --extra dev python ml/evals/run_retrieval_study.py --model e5-small --chunking sentence256 --output ml/evals/runs/study_e5_sentence256.jsonl
+CORPUS_TEST_VECTOR_URL=http://127.0.0.1:16333 uv run --package culturechamp-backend --extra dev python ml/evals/run_retrieval_study.py --model qwen3-0.6b-int8 --chunking fixed120 --output ml/evals/runs/study_qwen_fixed120.jsonl
+CORPUS_TEST_VECTOR_URL=http://127.0.0.1:16333 uv run --with sentence-transformers --package culturechamp-backend --extra dev python ml/evals/run_retrieval_study.py --model bge-m3-fp16 --chunking fixed120 --output ml/evals/runs/study_bge_fixed120.jsonl
+```
+
+The last command requires a CUDA device and downloads the public model weights;
+none of the PDF text is sent to that host. Docling PDF conversion runs locally
+with OCR disabled for this ablation. Source PDFs and JSON exports stay outside
+Git. Before selecting a release configuration, obtain expert passage judgments,
+audit extraction on representative pages, and repeat on a held-out set.
+
 Set `CORPUS_TEST_DATABASE_URL` to a migrated, disposable local PostgreSQL
 database for the real lexical run. The URL below illustrates the isolated
 Compose check used for this measurement.

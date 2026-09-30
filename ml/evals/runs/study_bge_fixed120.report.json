@@ -1,0 +1,26 @@
+{
+  "model": "bge-m3-fp16",
+  "model_snapshot": "5617a9f61b028005a4858fdac845db406aefb181",
+  "chunking": "fixed120",
+  "extraction": "pypdf",
+  "pages": 32,
+  "segments": 174,
+  "truncated_segments": 0,
+  "load_seconds": 12.592588655999862,
+  "index_seconds": 1.1805974719991355,
+  "mean_query_seconds": 0.016722617874847856,
+  "max_query_seconds": 0.03910498500044923,
+  "peak_rss_kib": 4303760,
+  "peak_cuda_allocated_mib": 1149.7,
+  "peak_cuda_reserved_mib": 1250.0,
+  "metrics": {
+    "queries": 8,
+    "positive_queries": 5,
+    "no_evidence_queries": 3,
+    "recall_at_k": 0.6,
+    "mrr_at_k": 0.6666666666666667,
+    "ndcg_at_k": 0.6265616507022578,
+    "no_evidence_false_positive_rate": 1.0
+  },
+  "label_status": "provisional_agent; same eight cases, no held-out tuning"
+}

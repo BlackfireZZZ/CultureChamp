@@ -1,0 +1,8 @@
+{"query_id": "S05-01", "candidate_keys": ["PDF-03:p2", "PDF-03:p7", "PDF-03:p5", "PDF-02:p8", "PDF-03:p1"]}
+{"query_id": "S05-02", "candidate_keys": ["PDF-02:p7", "PDF-02:p8", "PDF-03:p3", "PDF-02:p9", "PDF-03:p2"]}
+{"query_id": "S05-03", "candidate_keys": ["PDF-02:p3", "PDF-02:p1", "PDF-03:p4", "PDF-03:p1", "PDF-02:p2"]}
+{"query_id": "S05-04", "candidate_keys": ["PDF-01:p1", "PDF-01:p3", "PDF-03:p6", "PDF-02:p3", "PDF-03:p1"]}
+{"query_id": "S05-05", "candidate_keys": ["PDF-03:p2", "PDF-02:p7", "PDF-02:p6", "PDF-03:p3", "PDF-02:p5"]}
+{"query_id": "S05-06", "candidate_keys": ["PDF-02:p8", "PDF-02:p6", "PDF-03:p4", "PDF-03:p3", "PDF-03:p2"]}
+{"query_id": "S05-07", "candidate_keys": ["synthetic-table:Mechanics!B2", "PDF-03:p1", "PDF-03:p2", "PDF-02:p5", "PDF-02:p6"]}
+{"query_id": "S05-08", "candidate_keys": ["PDF-03:p4", "PDF-03:p2", "PDF-02:p6", "PDF-03:p5", "PDF-03:p6"]}

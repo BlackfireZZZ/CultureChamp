@@ -1,0 +1,23 @@
+{
+  "model": "e5-small",
+  "model_snapshot": "614241f622f53c4eeff9890bdc4f31cfecc418b3",
+  "chunking": "fixed120",
+  "pages": 32,
+  "segments": 174,
+  "truncated_segments": 0,
+  "load_seconds": 0.9614688749998095,
+  "index_seconds": 7.773521035000158,
+  "mean_query_seconds": 0.007108471499805091,
+  "max_query_seconds": 0.009541828999317659,
+  "peak_rss_kib": 942652,
+  "metrics": {
+    "queries": 8,
+    "positive_queries": 5,
+    "no_evidence_queries": 3,
+    "recall_at_k": 1.0,
+    "mrr_at_k": 0.8400000000000001,
+    "ndcg_at_k": 0.847870397138568,
+    "no_evidence_false_positive_rate": 1.0
+  },
+  "label_status": "provisional_agent; same eight cases, no held-out tuning"
+}
