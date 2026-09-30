@@ -226,6 +226,23 @@ export interface paths {
         readonly patch?: never;
         readonly trace?: never;
     };
+    readonly "/api/v1/materials/{revision_id}/original": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        /** Material Original */
+        readonly get: operations["material_original_api_v1_materials__revision_id__original_get"];
+        readonly put?: never;
+        readonly post?: never;
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -250,6 +267,8 @@ export interface components {
             readonly media_type: string;
             /** Origin Url */
             readonly origin_url: string;
+            /** Original Available */
+            readonly original_available: boolean;
             /** People */
             readonly people?: string | null;
             /** Period */
@@ -404,6 +423,8 @@ export interface components {
             readonly media_type: string;
             /** Origin Url */
             readonly origin_url: string;
+            /** Original Available */
+            readonly original_available: boolean;
             /** People */
             readonly people?: string | null;
             /** Period */
@@ -663,7 +684,11 @@ export interface operations {
     };
     readonly admin_sources_api_v1_admin_sources_get: {
         readonly parameters: {
-            readonly query?: never;
+            readonly query?: {
+                readonly decision?: ("approve" | "revoke" | "none") | null;
+                readonly limit?: number;
+                readonly status?: ("candidate" | "processing" | "review_pending" | "failed") | null;
+            };
             readonly header?: never;
             readonly path?: never;
             readonly cookie?: never;
@@ -677,6 +702,15 @@ export interface operations {
                 };
                 content: {
                     readonly "application/json": readonly components["schemas"]["AdminSourceView"][];
+                };
+            };
+            /** @description Validation Error */
+            readonly 422: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -867,6 +901,37 @@ export interface operations {
                 };
                 content: {
                     readonly "application/json": components["schemas"]["MaterialDetail"];
+                };
+            };
+            /** @description Validation Error */
+            readonly 422: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    readonly material_original_api_v1_materials__revision_id__original_get: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly revision_id: string;
+            };
+            readonly cookie?: never;
+        };
+        readonly requestBody?: never;
+        readonly responses: {
+            /** @description Successful Response */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/pdf": string;
                 };
             };
             /** @description Validation Error */
