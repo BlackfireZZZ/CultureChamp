@@ -12,7 +12,7 @@ RUN uv sync --frozen --package culturechamp-backend --no-dev --no-install-worksp
 COPY backend ./backend
 RUN uv sync --locked --package culturechamp-backend --no-dev --no-editable
 
-RUN useradd --create-home --uid 10001 appuser && chown -R appuser:appuser /workspace
+RUN useradd --create-home --uid 10001 appuser && mkdir -p /workspace/.private && chown -R appuser:appuser /workspace
 USER appuser
 WORKDIR /workspace/backend
 EXPOSE 8000

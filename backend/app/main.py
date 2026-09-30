@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.routes.health import router as health_router
 from app.api.routes.identity import admin_account_router, auth_router
+from app.api.routes.sources import admin_router, materials_router
 from app.application.identity import IdentityService
 from app.core.config import settings
 from app.infrastructure.db.identity_store import SqlIdentityStore
@@ -25,6 +26,7 @@ def create_app() -> FastAPI:
     codec = Argon2PasswordCodec()
     app.state.session_store = identity_store
     app.state.identity_service = IdentityService(identity_store, codec, codec.dummy_hash)
+    app.state.source_session_factory = session_factory
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.backend_cors_origins,
@@ -35,6 +37,8 @@ def create_app() -> FastAPI:
     app.include_router(health_router, prefix="/api/v1")
     app.include_router(auth_router, prefix="/api/v1")
     app.include_router(admin_account_router, prefix="/api/v1")
+    app.include_router(admin_router, prefix="/api/v1")
+    app.include_router(materials_router, prefix="/api/v1")
     return app
 
 

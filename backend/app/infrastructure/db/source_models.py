@@ -7,6 +7,7 @@ from sqlalchemy import (
     BigInteger,
     Boolean,
     CheckConstraint,
+    DateTime,
     ForeignKey,
     Index,
     String,
@@ -127,3 +128,23 @@ class SourceDecision(Base):
     provider_transfer: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     sensitivity_cleared: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     decided_at: Mapped[datetime] = mapped_column(server_default=func.now(), nullable=False)
+
+
+class SourceProcessing(Base):
+    __tablename__ = "source_processing"
+    __table_args__ = (
+        CheckConstraint(
+            "state IN ('candidate', 'processing', 'review_pending', 'failed')", name="state"
+        ),
+    )
+
+    revision_id: Mapped[UUID] = mapped_column(
+        ForeignKey("source_revisions.id", ondelete="RESTRICT"), primary_key=True
+    )
+    state: Mapped[str] = mapped_column(String(24), nullable=False, default="candidate")
+    attempts: Mapped[int] = mapped_column(nullable=False, default=0)
+    error_code: Mapped[str | None] = mapped_column(String(64))
+    lease_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
+    )

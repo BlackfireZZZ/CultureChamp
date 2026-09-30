@@ -8,6 +8,7 @@ class Settings(BaseSettings):
         "postgresql+asyncpg://culturechamp:culturechamp_local@localhost:5432/culturechamp"
     )
     backend_cors_origins: list[str] = ["http://localhost:5173", "http://localhost:8080"]
+    source_storage_root: str = "/workspace/.private/sources"
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 

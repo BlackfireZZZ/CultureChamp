@@ -74,13 +74,16 @@ async def login(
         raise HTTPException(status_code=429, detail="Login temporarily unavailable") from exc
     except InvalidCredentials as exc:
         raise HTTPException(status_code=401, detail="Invalid credentials") from exc
+    previous_token = request.cookies.get(session_cookie_name())
+    if previous_token:
+        await service.logout(previous_token)
     response.set_cookie(
         session_cookie_name(),
         result.token,
         path="/",
         httponly=True,
         secure=settings.app_env != "development",
-        samesite="lax",
+        samesite="strict",
     )
     return _auth_view(result.session)
 

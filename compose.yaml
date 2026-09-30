@@ -39,6 +39,9 @@ services:
       APP_ENV: ${APP_ENV:-development}
       DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://culturechamp:culturechamp_local@db:5432/culturechamp}
       BACKEND_CORS_ORIGINS: '${BACKEND_CORS_ORIGINS:-["http://localhost:5173","http://localhost:8080"]}'
+      SOURCE_STORAGE_ROOT: /workspace/.private/sources
+    volumes:
+      - source_private:/workspace/.private
     ports:
       - "127.0.0.1:${BACKEND_PORT:-8000}:8000"
     depends_on:
@@ -49,6 +52,20 @@ services:
       interval: 5s
       timeout: 3s
       retries: 20
+
+  ingest-worker:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    command: ["/workspace/.venv/bin/python", "-m", "app.infrastructure.ingestion.worker"]
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://culturechamp:culturechamp_local@db:5432/culturechamp}
+      SOURCE_STORAGE_ROOT: /workspace/.private/sources
+    volumes:
+      - source_private:/workspace/.private
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
 
   frontend:
     build:
@@ -66,3 +83,4 @@ services:
 
 volumes:
   postgres_data:
+  source_private:
