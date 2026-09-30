@@ -1,6 +1,6 @@
 # ADR 0003: Source revisions, decisions and locators
 
-Status: Proposed for C01/C03 implementation; table extraction and approval authority remain open.
+Status: Implemented for PDF page text in the pilot; table extraction and approval authority remain open.
 Date: 2026-09-30
 
 ## Context and evidence
@@ -26,6 +26,14 @@ Comparable design inputs:
   support explicit foreign keys, unique keys and checks; they can enforce locator
   shape and duplicate retry identity. [Alembic guidance](https://alembic.sqlalchemy.org/en/latest/autogenerate.html)
   requires migration review, so the migration is written and tested explicitly.
+- [PostgreSQL 17 locking clauses](https://www.postgresql.org/docs/17/sql-select.html#SQL-FOR-UPDATE-SHARE)
+  explicitly allow `SKIP LOCKED` for a queue-like table while warning that it is
+  unsuitable for a general consistent read. Candidate processing uses that queue
+  pattern, whereas user visibility reads the current decision normally.
+- [OWASP file-upload guidance](https://cheatsheetseries.owasp.org/cheatsheets/File_Upload_Cheat_Sheet.html)
+  recommends size/type checks and private storage outside the webroot. Those
+  controls reduce exposure but do not establish that an arbitrary PDF is safe to
+  parse; parser isolation and resource ceilings remain release work.
 
 ## Decision
 
@@ -54,6 +62,13 @@ Comparable design inputs:
 6. User-facing queries must apply current approval, revocation, sensitivity and
    rights before ranking or serialization. Unknown, held and revoked IDs have the
    same external lookup result. Admin queries are separately authorized.
+7. PDF intake records a candidate processing row before extraction. A separate
+   worker claims rows with a lease and `SKIP LOCKED`, writes all page segments in
+   one transaction, then moves the exact revision to `review_pending`. A failed
+   parse records a bounded error code and no visible segments. A retry reuses the
+   same revision and original bytes; an attempt counter fences an expired worker
+   from overwriting a newer attempt. The append-only decision stream remains the
+   source of truth for visibility; processing state alone never publishes text.
 
 ## Alternatives and tradeoffs
 

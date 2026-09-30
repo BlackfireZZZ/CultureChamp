@@ -50,3 +50,17 @@ Anonymous persistent chats would need device-bound ownership and a separate abus
 - [OWASP Secrets Management Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Secrets_Management_Cheat_Sheet.html): key lifecycle, revocation, and log exclusion.
 - [OWASP Denial of Service Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Denial_of_Service_Cheat_Sheet.html): application and infrastructure rate limits; thresholds remain pilot assumptions.
 - [OWASP LLM Prompt Injection Prevention Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/LLM_Prompt_Injection_Prevention_Cheat_Sheet.html): retrieved text is untrusted data; it cannot change permissions.
+
+## Pilot implementation evidence
+
+The server stores Argon2id password hashes and SHA-256 digests of random session
+tokens in PostgreSQL. Login is limited to five attempts per username per 15-minute
+window; a successful login resets that counter and rotates an existing cookie.
+The local HTTP pilot uses a development-only cookie name without `Secure`; outside
+development the cookie is host-prefixed and `Secure`. Both use `HttpOnly` and
+`SameSite=Strict`; unsafe requests require a matching Origin and CSRF token.
+These choices follow the [OWASP password-storage](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html),
+[session](https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html),
+and [CSRF](https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html)
+guidance. A real HTTPS deployment, admin account audit, recovery, and the chat
+retention purge have not been verified.

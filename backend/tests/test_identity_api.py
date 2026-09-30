@@ -61,7 +61,7 @@ def test_real_app_sessions_roles_csrf_expiry_and_logout() -> None:
         )
         unknown = admin_client.post(
             "/api/v1/auth/login",
-            json={"username": "unknown-account", "password": "wrong-password"},
+            json={"username": f"unknown-{uuid4().hex[:12]}", "password": "wrong-password"},
             headers={"origin": origin},
         )
         assert wrong.status_code == unknown.status_code == 401

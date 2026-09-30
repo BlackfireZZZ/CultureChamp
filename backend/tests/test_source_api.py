@@ -93,7 +93,7 @@ def test_admin_upload_review_approval_user_visibility_and_revocation(tmp_path: P
 
         assert send_file(user, user_headers, payload).status_code == 403
         assert send_file(admin, admin_headers, b"%PDF-1.4\nnot a file").status_code == 422
-        uploaded = send_file(admin, admin_headers, payload)
+        uploaded = send_file(admin, admin_headers, payload, tags="region:Primorye")
         assert uploaded.status_code == 201, uploaded.text
         source_id = uploaded.json()["source_id"]
         revision_id = uploaded.json()["revision_id"]
@@ -108,7 +108,9 @@ def test_admin_upload_review_approval_user_visibility_and_revocation(tmp_path: P
         )
         assert admin.get(f"/api/v1/admin/revisions/{revision_id}").json()["status"] == "candidate"
 
-        duplicate = send_file(admin, admin_headers, payload, source_id=source_id)
+        duplicate = send_file(
+            admin, admin_headers, payload, source_id=source_id, tags="region:Other"
+        )
         assert duplicate.status_code == 201
         assert duplicate.json()["revision_id"] == revision_id
         assert asyncio.run(process_one(factory, private_store)) == UUID(revision_id)
@@ -116,6 +118,7 @@ def test_admin_upload_review_approval_user_visibility_and_revocation(tmp_path: P
         review = admin.get(f"/api/v1/admin/revisions/{revision_id}")
         assert review.status_code == 200
         assert review.json()["status"] == "review_pending"
+        assert review.json()["tags"] == [{"kind": "region", "value": "Primorye"}]
         assert review.json()["segments"][0]["locator"] == {"kind": "page", "page": 1}
         assert "Self authored" in review.json()["segments"][0]["text"]
         assert user.get("/api/v1/materials").json() == []
@@ -161,6 +164,7 @@ def test_admin_upload_review_approval_user_visibility_and_revocation(tmp_path: P
         assert failed["status"] == "failed"
         assert failed["error_code"] == "pdf_extraction_failed"
         assert failed["segments"] == []
+        assert failed["tags"] == []
         assert user.get(f"/api/v1/materials/{broken_id}").status_code == 404
         assert (
             admin.post(

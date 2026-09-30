@@ -135,6 +135,13 @@
             "title": "Status",
             "type": "string"
           },
+          "tags": {
+            "items": {
+              "$ref": "#/components/schemas/TagView"
+            },
+            "title": "Tags",
+            "type": "array"
+          },
           "title": {
             "title": "Title",
             "type": "string"
@@ -152,7 +159,8 @@
           "status",
           "error_code",
           "decision",
-          "sha256"
+          "sha256",
+          "tags"
         ],
         "title": "AdminRevisionView",
         "type": "object"
@@ -268,6 +276,20 @@
               }
             ],
             "title": "Source Id"
+          },
+          "tags": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tags"
           },
           "title": {
             "maxLength": 500,
@@ -654,6 +676,24 @@
           "text"
         ],
         "title": "SegmentView",
+        "type": "object"
+      },
+      "TagView": {
+        "properties": {
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "value": {
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "value"
+        ],
+        "title": "TagView",
         "type": "object"
       },
       "ValidationError": {
