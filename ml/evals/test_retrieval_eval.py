@@ -35,13 +35,24 @@ def test_missing_relevant_page_fails() -> None:
         assert_required_recall(cases, run, 5)
 
 
-def test_no_evidence_false_positive_and_duplicate_ranking_fail() -> None:
+def test_no_evidence_false_positive_fails() -> None:
     cases = load_cases(HERE / "qrels.jsonl")
     run = load_run(HERE / "runs/oracle_smoke.jsonl", cases)
     run["S05-05"] = ["PDF-01:p2"]
     assert summarize(cases, run, 5)["overall"]["no_evidence_false_positive_rate"] > 0
     with pytest.raises(EvaluationFailure, match="S05-05: no-evidence"):
         assert_required_recall(cases, run, 5)
+
+
+def test_duplicate_ranking_is_rejected(tmp_path: Path) -> None:
+    cases = load_cases(HERE / "qrels.jsonl")
+    path = tmp_path / "bad-run.jsonl"
+    path.write_text(
+        '{"query_id":"S05-01","candidate_keys":["PDF-03:p2","PDF-03:p2"]}\n',
+        encoding="utf-8",
+    )
+    with pytest.raises(EvaluationFailure, match="duplicate retrieved key"):
+        load_run(path, cases)
 
 
 def test_fixture_hashes_and_synthetic_locator_are_versioned() -> None:
