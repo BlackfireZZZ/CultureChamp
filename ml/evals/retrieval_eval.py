@@ -16,6 +16,7 @@ class EvaluationFailure(Exception):
 @dataclass(frozen=True)
 class Case:
     query_id: str
+    query: str
     language: str
     format: str
     slice: str
@@ -56,6 +57,7 @@ def load_cases(path: Path) -> list[Case]:
         cases.append(
             Case(
                 query_id=query_id,
+                query=str(row["query"]),
                 language=str(row["language"]),
                 format=str(row["format"]),
                 slice=str(row["slice"]),
