@@ -1,5 +1,40 @@
 # Corpus/backend integration handoff — 2026-09-30
 
+## UC-09 stale-vector non-disclosure — 2026-10-01
+
+Objective and actual status: verify that an unpublished source's title, original
+and passage cannot reach a user even when Qdrant still holds its point. The
+PostgreSQL/Qdrant chat test now seeds a self-authored unpublished revision and
+deliberately upserts its segment into Qdrant. The administrator sees the candidate;
+the user gets 404 for detail and original, an empty filtered materials list and
+an insufficient-evidence chat response without that title or citation. The same
+test confirms a later revoked revision is absent from the filtered catalogue.
+
+Worktree / branch / base SHA: the isolated integration checkout at
+`/mnt/BlackfireZZZ/Hackatons/CultureChamp-integration-backend`, branch
+`agent/integration-backend`, clean at `9b5264b` before this slice. Owner of changed
+files: this agent owns the chat integration test, tracker and handoff updates.
+Changed contracts and files: `backend/tests/test_chat_api.py` adds the UC-09
+counterexample; no public API or runtime behavior changes.
+Decisions and supporting evidence: current PostgreSQL revision decisions remain
+the authority before Qdrant ranking and after candidate retrieval. The test
+targets an orphaned vector point because asynchronous revocation or repair can
+leave stale vectors temporarily. Verification commands and observed results:
+the focused test passed on an isolated clean PostgreSQL/Qdrant stack; `make check`
+passed architecture, Ruff, mypy, 106 backend, 21 frontend and 20 ML tests,
+frontend build, OpenAPI contract and Compose configuration. The CI-equivalent
+mocked `npm run test:e2e` passed four browser tests and skipped the separately
+configured live browser test.
+
+What remains unverified and why: no eligible real source or cultural reviewer is
+available, so this is a technical access check only. Risks and open questions:
+prose in a historical answer remains visible after withdrawal as specified by
+UC-10; it is not a fresh retrieval. Exact next step: complete the remaining
+synthetic boundary cases and later validate permitted real-source behavior.
+Cleanup completed or retention reason: the disposable `culturechamp_uc09` database
+and vector volumes were removed; keep the isolated integration checkout for ongoing
+goal work.
+
 ## Per-attempt reported model usage — 2026-10-01
 
 Objective and actual status: retain a provider's reported token usage when the

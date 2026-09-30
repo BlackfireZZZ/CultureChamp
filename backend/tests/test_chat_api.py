@@ -59,7 +59,8 @@ def test_persisted_chat_ownership_retry_citation_revocation_and_purge(tmp_path: 
 
 
 async def _seed_source(
-    factory: async_sessionmaker, marker: str, *, provider_transfer: bool = False
+    factory: async_sessionmaker, marker: str, *, provider_transfer: bool = False,
+    approve: bool = True,
 ) -> tuple[UUID, UUID]:
     async with factory.begin() as session:
         repo = SourceRepository(session)
@@ -70,7 +71,7 @@ async def _seed_source(
             byte_size=100,
             media_type="application/pdf",
             storage_key=f"{source.id}/{uuid4().hex * 2}.pdf",
-            title="Self-authored synthetic chat fixture",
+            title=f"Self-authored synthetic chat fixture {marker}",
             rights_note="Self-authored synthetic content; technical test only",
         )
         await repo.add_segment(
@@ -81,19 +82,21 @@ async def _seed_source(
             locator=Locator(page=1),
         )
         session.add(SourceProcessing(revision_id=revision.id, state="review_pending"))
-        await repo.record_decision(
-            RevisionDecision(
-                revision.id,
-                DecisionKind.APPROVE,
-                RightsScopes(
-                    user_text=True, original_file=False, provider_transfer=provider_transfer
+        if approve:
+            await repo.record_decision(
+                RevisionDecision(
+                    revision.id,
+                    DecisionKind.APPROVE,
+                    RightsScopes(
+                        user_text=True, original_file=False,
+                        provider_transfer=provider_transfer,
+                    ),
+                    True,
                 ),
-                True,
-            ),
-            reviewer_id="synthetic-test",
-            reason="Self-authored synthetic fixture approved for mechanics test",
-            evidence_url="https://example.invalid/synthetic-chat/rights",
-        )
+                reviewer_id="synthetic-test",
+                reason="Self-authored synthetic fixture approved for mechanics test",
+                evidence_url="https://example.invalid/synthetic-chat/rights",
+            )
         return source.id, revision.id
 
 
@@ -165,14 +168,33 @@ async def _check_chat(url: str, tmp_path: Path) -> None:
                 == 422
             )
 
+            hidden_marker = f"unpublished{uuid4().hex}"
+            hidden_source, hidden_revision = await _seed_source(
+                factory, hidden_marker, approve=False
+            )
+            seeded_sources.append((hidden_source, hidden_revision))
+            async with factory() as session:
+                hidden_segment = await session.scalar(
+                    select(SourceSegment).where(SourceSegment.revision_id == hidden_revision)
+                )
+            assert hidden_segment is not None
+            await index.upsert([(hidden_segment.id, hidden_revision, hidden_segment.text)])
+            admin_candidate = admin.get(f"/api/v1/admin/revisions/{hidden_revision}")
+            assert admin_candidate.status_code == 200
+            assert admin_candidate.json()["title"].endswith(hidden_marker)
+            assert owner.get(f"/api/v1/materials/{hidden_revision}").status_code == 404
+            assert owner.get(f"/api/v1/materials/{hidden_revision}/original").status_code == 404
+            assert owner.get("/api/v1/materials", params={"q": hidden_marker}).json() == []
+
             no_evidence_id = str(uuid4())
-            no_evidence = {"request_id": no_evidence_id, "text": marker}
+            no_evidence = {"request_id": no_evidence_id, "text": hidden_marker}
             first = owner.post(
                 f"/api/v1/chats/{chat_id}/messages", headers=owner_headers, json=no_evidence
             )
             assert first.status_code == 200, first.text
             assert first.json()["evidence_status"] == "insufficient"
             assert first.json()["citations"] == []
+            assert hidden_marker not in first.json()["assistant_text"]
             repeated = owner.post(
                 f"/api/v1/chats/{chat_id}/messages", headers=owner_headers, json=no_evidence
             )
@@ -311,6 +333,7 @@ async def _check_chat(url: str, tmp_path: Path) -> None:
                 is False
             )
             assert owner.get(f"/api/v1/materials/{revision_id}").status_code == 404
+            assert owner.get("/api/v1/materials", params={"q": marker}).json() == []
             assert (
                 owner.delete(f"/api/v1/chats/{chat_id}", headers=owner_headers).status_code == 204
             )
