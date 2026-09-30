@@ -5,6 +5,8 @@ export type AdminSource = components["schemas"]["AdminSourceView"]
 export type AdminRevision = components["schemas"]["AdminRevisionView"]
 export type MetadataInput = components["schemas"]["MetadataInput"]
 export type MetadataEvent = components["schemas"]["MetadataEventView"]
+export type SegmentReviewInput = components["schemas"]["SegmentReviewInput"]
+export type SegmentReviewEvent = components["schemas"]["SegmentReviewEventView"]
 export type AdminFilters = NonNullable<operations["admin_sources_api_v1_admin_sources_get"]["parameters"]["query"]>
 
 async function readJson<T>(response: Response): Promise<T> {
@@ -40,6 +42,19 @@ export async function getAdminMetadataHistory(revisionId: string, signal?: Abort
 
 export async function amendAdminMetadata(revisionId: string, data: MetadataInput, csrfToken: string): Promise<AdminRevision> {
   return readJson(await fetch(`/api/v1/admin/revisions/${encodeURIComponent(revisionId)}/metadata`, {
+    method: "PATCH", credentials: "same-origin",
+    headers: { "content-type": "application/json", "x-csrf-token": csrfToken },
+    body: JSON.stringify(data),
+  }))
+}
+
+export async function getAdminSegmentHistory(revisionId: string, signal?: AbortSignal): Promise<readonly SegmentReviewEvent[]> {
+  const response = await fetch(`/api/v1/admin/revisions/${encodeURIComponent(revisionId)}/segment-history`, { credentials: "same-origin", signal })
+  return readJson(response)
+}
+
+export async function reviewAdminSegments(revisionId: string, data: SegmentReviewInput, csrfToken: string): Promise<AdminRevision> {
+  return readJson(await fetch(`/api/v1/admin/revisions/${encodeURIComponent(revisionId)}/segments`, {
     method: "PATCH", credentials: "same-origin",
     headers: { "content-type": "application/json", "x-csrf-token": csrfToken },
     body: JSON.stringify(data),

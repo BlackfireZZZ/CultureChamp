@@ -271,7 +271,7 @@ test("live synthetic source flows from admin review to cited chat and revocation
     await workbookSearch.getByRole("textbox", { name: "Источник или название" }).fill(workbookTitle)
     await workbookSearch.getByRole("button", { name: "Найти" }).click()
     await adminPage.getByRole("button", { name: new RegExp(workbookTitle) }).click()
-    await expect(adminPage.getByText("Item: Example A; Count: 7")).toBeVisible()
+    await expect(adminPage.getByText("Item: Example A; Count: 7", { exact: true })).toBeVisible()
     const workbookReview = adminPage.getByRole("form", { name: "Одобрение ревизии" })
     await workbookReview.getByLabel("Основание и ограничения").fill("Self-authored workbook for isolated live test")
     await workbookReview.getByLabel("HTTPS-ссылка на доказательство прав").fill(`https://example.invalid/${marker}/workbook/rights`)
@@ -366,8 +366,8 @@ test("live synthetic source flows from admin review to cited chat and revocation
     await proseSearch.getByRole("textbox", { name: "Источник или название" }).fill(proseTitle)
     await proseSearch.getByRole("button", { name: "Найти" }).click()
     await adminPage.getByRole("button", { name: new RegExp(proseTitle) }).click()
-    await expect(adminPage.getByText("Synthetic first page blue kites")).toBeVisible()
-    await expect(adminPage.getByText("Synthetic second page copper discs seven")).toBeVisible()
+    await expect(adminPage.getByText("Synthetic first page blue kites", { exact: true })).toBeVisible()
+    await expect(adminPage.getByText("Synthetic second page copper discs seven", { exact: true })).toBeVisible()
     const proseReviewOriginal = await adminContext.request.get(`/api/v1/admin/revisions/${proseIntake.revision_id}/original`)
     expect(proseReviewOriginal.status()).toBe(200)
     expect(await proseReviewOriginal.body()).toEqual(prose)
@@ -430,6 +430,73 @@ test("live synthetic source flows from admin review to cited chat and revocation
     await userPage.reload()
     await userPage.getByRole("button", { name: proseBrief, exact: true }).click()
     await expect(userPage.getByRole("button", { name: "Источник · страница 2" })).toBeDisabled()
+
+    const textTitle = `Synthetic reviewed TXT ${marker}`
+    const textOriginal = Buffer.from(`Synthetic first line\r\n${marker} has seven.\r\n\r\nUnrelated appendix.\r\n`, "utf8")
+    await upload.getByLabel("Оригинальный файл").setInputFiles({
+      name: "reviewed.txt", mimeType: "text/plain", buffer: textOriginal,
+    })
+    await upload.getByLabel("Ссылка на источник").fill(`https://example.invalid/${marker}/text`)
+    await upload.getByLabel("Название").fill(textTitle)
+    await upload.getByLabel("Примечание о правах").fill("Self-authored TXT for isolated review test")
+    const textIntakeResponse = adminPage.waitForResponse((response) => response.url().endsWith("/api/v1/admin/sources") && response.request().method() === "POST")
+    await upload.getByRole("button", { name: "Загрузить на проверку" }).click()
+    const textIntake = (await (await textIntakeResponse).json()) as { revision_id: string }
+    expect((await userContext.request.get(`/api/v1/materials/${textIntake.revision_id}`)).status()).toBe(404)
+    await expect.poll(async () => {
+      const response = await adminContext.request.get(`/api/v1/admin/revisions/${textIntake.revision_id}`)
+      return ((await response.json()) as { status: string }).status
+    }, { timeout: 120_000 }).toBe("review_pending")
+    await adminPage.reload()
+    await adminPage.getByRole("button", { name: "Админка" }).click()
+    const textSearch = adminPage.getByRole("form", { name: "Поиск в инвентаре" })
+    await textSearch.getByRole("textbox", { name: "Источник или название" }).fill(textTitle)
+    await textSearch.getByRole("button", { name: "Найти" }).click()
+    await adminPage.getByRole("button", { name: new RegExp(textTitle) }).click()
+    const textSegments = ((await (await adminContext.request.get(`/api/v1/admin/revisions/${textIntake.revision_id}`)).json()) as {
+      segments: { segment_id: string; included: boolean; locator: { section: string } }[]
+    }).segments
+    expect(textSegments.map((segment) => segment.locator.section)).toEqual(["Lines 1–2", "Line 4"])
+    const segmentReview = adminPage.getByRole("form", { name: "Проверка фрагментов" })
+    await segmentReview.getByRole("checkbox", { name: /Исключить: Строка 4/ }).check()
+    await segmentReview.getByRole("textbox", { name: "Причина изменения" }).fill("Unrelated synthetic appendix excluded")
+    await segmentReview.getByRole("button", { name: "Сохранить исключения" }).click()
+    await expect(adminPage.getByText("Оригинал содержит исключённые фрагменты и недоступен пользователю.")).toBeVisible()
+    await expect(adminPage.getByRole("form", { name: "Одобрение ревизии" }).getByLabel(/Показ оригинального файла/)).toBeDisabled()
+    const textReview = adminPage.getByRole("form", { name: "Одобрение ревизии" })
+    await textReview.getByLabel("Основание и ограничения").fill("Self-authored TXT with excluded appendix")
+    await textReview.getByLabel("HTTPS-ссылка на доказательство прав").fill(`https://example.invalid/${marker}/text/rights`)
+    await textReview.getByLabel(/Показ текстовых фрагментов/).check()
+    await textReview.getByLabel(/Чувствительность материала/).check()
+    await textReview.getByRole("button", { name: "Одобрить эту ревизию" }).click()
+    await expect(adminPage.getByRole("form", { name: "Отзыв ревизии" })).toBeVisible()
+    approvedRevisionId = textIntake.revision_id
+    await expect.poll(async () => {
+      const response = await fetch(`${vectorURL}/collections/culture_text_e5_small_v1/points`, {
+        method: "POST", headers: { "content-type": "application/json" },
+        body: JSON.stringify({ ids: textSegments.map((segment) => segment.segment_id), with_payload: true, with_vector: false }),
+      })
+      if (!response.ok) return null
+      const data = (await response.json()) as { result: { id: string }[] }
+      return data.result.map((point) => point.id)
+    }, { timeout: 180_000 }).toEqual([textSegments[0].segment_id])
+    expect((await userContext.request.get(`/api/v1/materials/${approvedRevisionId}/original`)).status()).toBe(404)
+    const textUserDetail = await userContext.request.get(`/api/v1/materials/${approvedRevisionId}`)
+    expect(((await textUserDetail.json()) as { segments: { segment_id: string }[] }).segments.map((segment) => segment.segment_id)).toEqual([textSegments[0].segment_id])
+    await userPage.getByRole("button", { name: "Новый чат" }).click()
+    await userPage.getByRole("textbox", { name: "Ваш творческий бриф" }).fill(marker)
+    await userPage.getByRole("button", { name: "Отправить" }).click()
+    await expect(userPage.getByRole("button", { name: "Источник · строки 1–2" })).toBeVisible({ timeout: 60_000 })
+    await userPage.getByRole("button", { name: "Источник · строки 1–2" }).click()
+    await expect(userPage.locator(`#segment-${textSegments[0].segment_id}`)).toBeFocused()
+    const textRevoke = adminPage.getByRole("form", { name: "Отзыв ревизии" })
+    await textRevoke.getByLabel("Причина отзыва").fill("Synthetic TXT review test completed")
+    await textRevoke.getByRole("button", { name: "Отозвать эту ревизию" }).click()
+    await expect.poll(async () => {
+      const response = await adminContext.request.get(`/api/v1/admin/revisions/${textIntake.revision_id}`)
+      return ((await response.json()) as { decision: string }).decision
+    }).toBe("revoke")
+    approvedRevisionId = null
   } finally {
     if (approvedRevisionId && adminCsrfToken) {
       await adminContext.request.post(`/api/v1/admin/revisions/${approvedRevisionId}/revoke`, {

@@ -205,10 +205,20 @@ class QdrantTextIndex:
                 raise VectorUnavailable("Vector cleanup unavailable") from exc
 
     async def has_revision_points(self, revision_id: UUID, segment_ids: Sequence[UUID]) -> bool:
-        if not segment_ids:
-            return True
         async with httpx.AsyncClient(timeout=15) as client:
             try:
+                count_response = await client.post(
+                    f"{self.url}/collections/{self.collection}/points/count",
+                    json={
+                        "filter": {"must": [{"key": "revision_id", "match": {
+                            "value": str(revision_id)
+                        }}]},
+                        "exact": True,
+                    },
+                )
+                count_response.raise_for_status()
+                if int(count_response.json()["result"]["count"]) != len(segment_ids):
+                    return False
                 for start in range(0, len(segment_ids), 256):
                     batch = segment_ids[start:start + 256]
                     response = await client.post(

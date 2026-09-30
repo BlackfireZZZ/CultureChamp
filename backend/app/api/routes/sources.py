@@ -19,6 +19,7 @@ from app.application.source_management import (
     MaterialFilters,
     MetadataAmendment,
     OriginalData,
+    SegmentReview,
     SourceService,
     TagData,
 )
@@ -64,6 +65,7 @@ class SegmentView(BaseModel):
     segment_id: UUID
     locator: LocatorView
     text: str
+    included: bool = True
 
 
 class TagView(BaseModel):
@@ -97,6 +99,7 @@ class AdminRevisionView(MaterialDetail):
     decision: str | None
     sha256: str
     metadata_version: int
+    segment_review_version: int = 0
 
 
 class AdminSourceView(BaseModel):
@@ -134,6 +137,20 @@ class MetadataEventView(BaseModel):
     reason: str
     description: str | None
     tags: list[TagView]
+    changed_at: datetime
+
+
+class SegmentReviewInput(BaseModel):
+    expected_version: int = Field(ge=0)
+    reason: str = Field(min_length=10, max_length=2000)
+    excluded_segment_ids: list[UUID] = Field(max_length=10_000)
+
+
+class SegmentReviewEventView(BaseModel):
+    version: int
+    reviewer_id: str
+    reason: str
+    excluded_segment_ids: list[UUID]
     changed_at: datetime
 
 
@@ -180,6 +197,7 @@ def _detail_view(material: MaterialData) -> MaterialDetail:
                     column_end=s.locator.column_end,
                 ),
                 text=s.text,
+                included=s.included,
             )
             for s in material.segments
         ],
@@ -196,6 +214,7 @@ def _admin_view(data: AdminRevisionData) -> AdminRevisionView:
         decision=data.decision,
         sha256=data.sha256,
         metadata_version=data.metadata_version,
+        segment_review_version=data.segment_review_version,
     )
 
 
@@ -301,6 +320,43 @@ async def revision_metadata_history(
             changed_at=item.changed_at,
         )
         for item in await service.metadata_history(actor, revision_id)
+    ]
+
+
+@admin_router.patch("/revisions/{revision_id}/segments", response_model=AdminRevisionView)
+async def review_revision_segments(
+    revision_id: UUID,
+    data: SegmentReviewInput,
+    actor: Annotated[Actor, Depends(current_admin)],
+    service: Annotated[SourceService, Depends(get_source_service)],
+) -> AdminRevisionView:
+    return _admin_view(await service.review_segments(
+        actor, revision_id,
+        SegmentReview(
+            data.expected_version, data.reason, tuple(data.excluded_segment_ids)
+        ),
+    ))
+
+
+@admin_router.get(
+    "/revisions/{revision_id}/segment-history", response_model=list[SegmentReviewEventView]
+)
+async def revision_segment_history(
+    revision_id: UUID,
+    response: Response,
+    actor: Annotated[Actor, Depends(current_admin)],
+    service: Annotated[SourceService, Depends(get_source_service)],
+) -> list[SegmentReviewEventView]:
+    response.headers["Cache-Control"] = "no-store"
+    return [
+        SegmentReviewEventView(
+            version=item.version,
+            reviewer_id=item.reviewer_id,
+            reason=item.reason,
+            excluded_segment_ids=list(item.excluded_segment_ids),
+            changed_at=item.changed_at,
+        )
+        for item in await service.segment_history(actor, revision_id)
     ]
 
 

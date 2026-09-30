@@ -140,6 +140,40 @@ export interface paths {
         readonly patch?: never;
         readonly trace?: never;
     };
+    readonly "/api/v1/admin/revisions/{revision_id}/segment-history": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        /** Revision Segment History */
+        readonly get: operations["revision_segment_history_api_v1_admin_revisions__revision_id__segment_history_get"];
+        readonly put?: never;
+        readonly post?: never;
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
+    };
+    readonly "/api/v1/admin/revisions/{revision_id}/segments": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly get?: never;
+        readonly put?: never;
+        readonly post?: never;
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        /** Review Revision Segments */
+        readonly patch: operations["review_revision_segments_api_v1_admin_revisions__revision_id__segments_patch"];
+        readonly trace?: never;
+    };
     readonly "/api/v1/admin/sources": {
         readonly parameters: {
             readonly query?: never;
@@ -390,6 +424,11 @@ export interface components {
             readonly revision_id: string;
             /** Rights Usage Note */
             readonly rights_usage_note: string | null;
+            /**
+             * Segment Review Version
+             * @default 0
+             */
+            readonly segment_review_version: number;
             /** Segments */
             readonly segments: readonly components["schemas"]["SegmentView"][];
             /** Sha256 */
@@ -721,8 +760,38 @@ export interface components {
          * @enum {string}
          */
         readonly Role: "user" | "admin";
+        /** SegmentReviewEventView */
+        readonly SegmentReviewEventView: {
+            /**
+             * Changed At
+             * Format: date-time
+             */
+            readonly changed_at: string;
+            /** Excluded Segment Ids */
+            readonly excluded_segment_ids: readonly string[];
+            /** Reason */
+            readonly reason: string;
+            /** Reviewer Id */
+            readonly reviewer_id: string;
+            /** Version */
+            readonly version: number;
+        };
+        /** SegmentReviewInput */
+        readonly SegmentReviewInput: {
+            /** Excluded Segment Ids */
+            readonly excluded_segment_ids: readonly string[];
+            /** Expected Version */
+            readonly expected_version: number;
+            /** Reason */
+            readonly reason: string;
+        };
         /** SegmentView */
         readonly SegmentView: {
+            /**
+             * Included
+             * @default true
+             */
+            readonly included: boolean;
             readonly locator: components["schemas"]["LocatorView"];
             /**
              * Segment Id
@@ -1008,6 +1077,72 @@ export interface operations {
         readonly requestBody: {
             readonly content: {
                 readonly "application/json": components["schemas"]["RevokeInput"];
+            };
+        };
+        readonly responses: {
+            /** @description Successful Response */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["AdminRevisionView"];
+                };
+            };
+            /** @description Validation Error */
+            readonly 422: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    readonly revision_segment_history_api_v1_admin_revisions__revision_id__segment_history_get: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly revision_id: string;
+            };
+            readonly cookie?: never;
+        };
+        readonly requestBody?: never;
+        readonly responses: {
+            /** @description Successful Response */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": readonly components["schemas"]["SegmentReviewEventView"][];
+                };
+            };
+            /** @description Validation Error */
+            readonly 422: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    readonly review_revision_segments_api_v1_admin_revisions__revision_id__segments_patch: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly revision_id: string;
+            };
+            readonly cookie?: never;
+        };
+        readonly requestBody: {
+            readonly content: {
+                readonly "application/json": components["schemas"]["SegmentReviewInput"];
             };
         };
         readonly responses: {

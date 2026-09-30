@@ -112,6 +112,7 @@ class SqlGovernedVectorSearch:
             .join(SourceDecision, SourceDecision.revision_id == SourceRevision.id)
             .where(
                 SourceSegment.id.in_(scores),
+                SourceSegment.included.is_(True),
                 SourceProcessing.state == "review_pending",
                 SourceDecision.event_id == latest_event,
                 SourceDecision.kind == "approve",

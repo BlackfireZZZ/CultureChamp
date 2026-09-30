@@ -54,6 +54,9 @@ class SourceRevision(Base):
     period_note: Mapped[str | None] = mapped_column(Text)
     rights_note: Mapped[str | None] = mapped_column(Text)
     metadata_version: Mapped[int] = mapped_column(nullable=False, default=0, server_default="0")
+    segment_review_version: Mapped[int] = mapped_column(
+        nullable=False, default=0, server_default="0"
+    )
     captured_at: Mapped[datetime] = mapped_column(server_default=func.now(), nullable=False)
 
 
@@ -95,6 +98,26 @@ class SourceMetadataEvent(Base):
     )
 
 
+class SourceSegmentReviewEvent(Base):
+    __tablename__ = "source_segment_review_events"
+    __table_args__ = (
+        UniqueConstraint("revision_id", "version", name="uq_source_segment_review_version"),
+        CheckConstraint("version > 0", name="version_positive"),
+    )
+
+    event_id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    revision_id: Mapped[UUID] = mapped_column(
+        ForeignKey("source_revisions.id", ondelete="RESTRICT"), nullable=False
+    )
+    version: Mapped[int] = mapped_column(nullable=False)
+    reviewer_id: Mapped[str] = mapped_column(String(100), nullable=False)
+    reason: Mapped[str] = mapped_column(Text, nullable=False)
+    excluded_segment_ids: Mapped[list[str]] = mapped_column(JSONB, nullable=False)
+    changed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+
 class SourceSegment(Base):
     __tablename__ = "source_segments"
     __table_args__ = (
@@ -129,6 +152,9 @@ class SourceSegment(Base):
     ordinal: Mapped[int] = mapped_column(nullable=False)
     kind: Mapped[str] = mapped_column(String(16), nullable=False)
     text: Mapped[str] = mapped_column(Text, nullable=False)
+    included: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=True, server_default="true"
+    )
     page: Mapped[int | None]
     section: Mapped[str | None] = mapped_column(Text)
     sheet: Mapped[str | None] = mapped_column(Text)

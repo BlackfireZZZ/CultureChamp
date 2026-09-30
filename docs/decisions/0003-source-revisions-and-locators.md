@@ -178,6 +178,35 @@ who changed catalogue context, but it does not by itself validate the cultural
 accuracy of a tag or description. Source rights and sensitivity decisions still
 require the appointed reviewer under S02.
 
+## Preapproval segment review (2026-10-01)
+
+An extracted segment may contain a parser artifact, unrelated passage or material
+that the reviewer cannot release. The administrator may exclude specific segment
+IDs while the revision is `review_pending` and undecided. The reviewer submits a
+complete exclusion snapshot, expected `segment_review_version` and reason. The
+processing and revision rows are locked in the same order as metadata amendment
+and approval; stale or post-decision edits fail. `source_segment_review_events`
+keeps each version, reviewer, reason and excluded IDs. Version zero means the
+unchanged extraction with all segments included. Original bytes, hash, extracted
+text, locators and segment IDs remain intact for administrator inspection.
+
+At least one segment must remain included. Approval cannot grant user access to
+the whole original when any segment is excluded, because that file would still
+contain the excluded passage. The user material view, citation resolver, current
+SQL retrieval check and text indexer admit included segments only. Qdrant points
+are candidates, never authority: a stale excluded point is rejected by SQL. An
+exact revision point count in the index audit detects extra points, and replay
+deletes every point of that revision before inserting included segments. This
+is a review control for this text slice; it does not establish that an included
+passage is culturally accurate or safe without an appointed reviewer.
+
+[PostgreSQL row locks](https://www.postgresql.org/docs/17/explicit-locking.html)
+provide the transaction boundary, and Qdrant's [point count](https://api.qdrant.tech/api-reference/points/count-points)
+and [point deletion](https://qdrant.tech/documentation/concepts/points/) APIs
+provide an exact replay check. The Qdrant count adds an audit request per
+revision; it does not run on every user query. Exclusions cannot be edited after
+approval, avoiding a publication window while the vector index catches up.
+
 ## XLSX table extension (2026-09-30)
 
 An exact workbook needs a sheet name as well as row and column to resolve a

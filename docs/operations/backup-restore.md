@@ -1,7 +1,7 @@
 # Text-pilot backup and restore
 
 PostgreSQL is authoritative for accounts, account grant events, chat retention,
-source revisions, metadata amendment history, rights decisions, exact locators
+source revisions, metadata and segment review history, rights decisions, exact locators
 and vector completion markers. Private source files are authoritative original bytes.
 Qdrant is a derived index and can be rebuilt from approved PostgreSQL
 revisions after the database and originals are restored. A Qdrant snapshot
@@ -58,15 +58,21 @@ tar -xf culturechamp-sources.tar -C restored-private
 ```
 
 Point `DATABASE_URL` at the restored database and run `make migration-check`.
-Compare account/grant-event/source/revision/metadata-event/decision and chat
+Compare account/grant-event/source/revision/metadata-event/segment-review-event/decision and chat
 counts with the backup manifest. Check that each restored revision has version 0
 and that its latest metadata event matches its current description, tags and `metadata_version`;
+for a revision with segment review events, check the latest excluded IDs against
+`source_segments.included` and `segment_review_version` before replaying Qdrant;
 verify every restored original byte hash against `source_revisions.sha256` and
 its `storage_key`. Challenge one approved, one revoked and one expired record
 through the API before serving traffic. The restored Qdrant collection should
 start empty: run the worker and wait for index replay, then verify a cited answer
 and that the revoked revision remains absent. If restoring Qdrant for speed,
 reconcile it against PostgreSQL and current model ID before enabling search.
+Rolling back migration `f406c9a2b7e1` discards exclusion projections and audit
+events. For a failed deployment after reviewers have made exclusions, restore
+the paired PostgreSQL/private-original backup or roll forward; do not use a
+schema downgrade to recover those decisions.
 
 Do not copy a test restoration over an active database or source volume. Do not
 delete the last known-good backup until the independent restore checks pass.

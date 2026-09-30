@@ -59,10 +59,19 @@ class ApprovedTextIndexer:
             segments = (
                 await session.scalars(
                     select(SourceSegment)
-                    .where(SourceSegment.revision_id == revision_id)
+                    .where(
+                        SourceSegment.revision_id == revision_id,
+                        SourceSegment.included.is_(True),
+                    )
                     .order_by(SourceSegment.ordinal)
                 )
             ).all()
+            all_segment_ids = (
+                await session.scalars(
+                    select(SourceSegment.id).where(SourceSegment.revision_id == revision_id)
+                )
+            ).all()
+        await self.index.delete(all_segment_ids)
         await self.index.upsert([(s.id, revision_id, s.text) for s in segments])
         async with self.factory.begin() as session:
             record = await session.get(SourceVectorIndex, revision_id)
@@ -137,7 +146,10 @@ class ApprovedTextIndexer:
                 return None
             segment_ids = (
                 await session.scalars(
-                    select(SourceSegment.id).where(SourceSegment.revision_id == revision_id)
+                    select(SourceSegment.id).where(
+                        SourceSegment.revision_id == revision_id,
+                        SourceSegment.included.is_(True),
+                    )
                 )
             ).all()
         self._audit_cursor = revision_id

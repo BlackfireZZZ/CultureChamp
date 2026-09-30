@@ -1,5 +1,43 @@
 # Corpus/backend integration handoff — 2026-09-30
 
+## Audited segment exclusion — 2026-10-01
+
+Objective and actual status: an administrator can exclude extracted passage IDs
+before approval without changing source bytes or extracted text. An optimistic
+review version and append-only snapshot history record the reviewer and reason.
+At least one passage must remain; a whole original with exclusions cannot be
+granted to users. User materials, citation resolution, lexical baseline and
+Qdrant-backed search reject excluded passages. The index audit detects an extra
+stale point and replay removes it before inserting the included passages.
+
+Worktree / branch / base SHA: the isolated integration checkout at
+`/mnt/BlackfireZZZ/Hackatons/CultureChamp-integration-backend`, branch
+`agent/integration-backend`, clean at `ad433c1` before this slice. This agent owns
+the source review contract, migration, vector replay, admin UI, tests, ADR 0003
+and tracker edits. The attached source worktrees remain untouched.
+
+The decision follows PostgreSQL row-locking guidance and Qdrant's exact point
+count and deletion APIs, linked in ADR 0003. The tradeoff is that excluding even
+one passage prevents whole-original access. A reviewer can still inspect the
+original privately. The technical test uses only self-authored TXT; real
+cultural accuracy, source rights and appointed review authority remain open.
+
+Verification: `alembic upgrade head` succeeded from an empty isolated
+PostgreSQL database; `make migration-check` reported no new operations.
+`make check` with `CORPUS_TEST_DATABASE_URL` and `CORPUS_TEST_VECTOR_URL` set to
+the isolated stack passed 106 backend, 21 frontend and 20 ML tests plus
+architecture, types, build, contract and Compose gates. The focused TXT API
+test proved denial for non-admin review, unknown/all-excluded IDs, stale
+version and post-decision edits, exclusion from current SQL retrieval and
+citations, original denial, extra stale Qdrant point detection and cleanup.
+`npm run test:e2e -- e2e/live.e2e.ts` passed 1 live browser test on the
+isolated full Compose stack. It included admin segment selection, rights
+decision, Qdrant point check, cited chat and revocation. The first browser
+attempt stopped on an ambiguous XLSX text selector after the new checkbox
+label repeated the excerpt; the selector was made exact and the complete test
+passed on rerun. Production review authority and real-source validation remain
+unverified.
+
 ## Synthetic TXT source path — 2026-10-01
 
 The technical corpus now accepts bounded UTF-8 `.txt` originals. A resource-limited

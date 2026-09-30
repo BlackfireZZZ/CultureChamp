@@ -59,6 +59,11 @@ The journey also uploads a self-authored two-page text-layer PDF. It checks
 candidate isolation, both physical page locators, an indexed page-two segment,
 a page-two chat citation and original link, byte-identical user access to the
 approved PDF, and denial of the original after revocation.
+The journey also uploads a self-authored two-section TXT, excludes one section
+in the admin review form with an audited reason, then approves the included
+section without whole-original access. It checks the included Qdrant point,
+absence of the excluded point, user detail, a line-range chat citation and
+revocation. This is a technical visibility check, not cultural review.
 The same run checks the admin review, cited chat and source detail for document
 overflow at 360, 768, 1280 and 1440 px; it is a layout check on synthetic
 content, not a target-user usability review.

@@ -152,6 +152,7 @@ class SourceRepository:
             .where(
                 SourceSegment.revision_id == revision_id,
                 SourceSegment.id == segment_id,
+                SourceSegment.included.is_(True),
                 SourceDecision.event_id == latest_event_id,
                 SourceDecision.kind == "approve",
                 SourceDecision.user_text.is_(True),

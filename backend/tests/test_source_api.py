@@ -18,6 +18,7 @@ from app.application.access import Role
 from app.application.identity import IdentityService
 from app.application.source_management import MaterialData, SegmentData
 from app.domain.sources import Locator
+from app.infrastructure.db.citation_resolver import SqlCitationResolver
 from app.infrastructure.db.identity_store import SqlIdentityStore
 from app.infrastructure.db.source_models import SourceVectorIndex
 from app.infrastructure.db.vector_search import SqlGovernedVectorSearch
@@ -66,7 +67,7 @@ def test_table_locator_is_not_rewritten_as_pdf_page() -> None:
     assert (locator.sheet, locator.row_start, locator.column_start) == ("Synthetic", 3, 2)
 
 
-def test_txt_section_survives_approval_vector_search_and_original_access(tmp_path: Path) -> None:
+def test_txt_section_review_excludes_source_span_from_user_and_vector(tmp_path: Path) -> None:
     url = os.getenv("CORPUS_TEST_DATABASE_URL")
     vector_url = os.getenv("CORPUS_TEST_VECTOR_URL")
     if url is None or vector_url is None:
@@ -127,27 +128,93 @@ def test_txt_section_survives_approval_vector_search_and_original_access(tmp_pat
             for item in review["segments"]
         )
         assert admin.get(f"/api/v1/admin/revisions/{revision_id}/original").content == payload
+        excluded_id = review["segments"][1]["segment_id"]
+        assert user.patch(
+            f"/api/v1/admin/revisions/{revision_id}/segments", headers=user_headers,
+            json={"expected_version": 0, "reason": "User cannot review segments",
+                  "excluded_segment_ids": [excluded_id]},
+        ).status_code == 403
+        assert admin.patch(
+            f"/api/v1/admin/revisions/{revision_id}/segments", headers=headers,
+            json={"expected_version": 0, "reason": "Cannot exclude every segment",
+                  "excluded_segment_ids": [item["segment_id"] for item in review["segments"]]},
+        ).status_code == 422
+        assert admin.patch(
+            f"/api/v1/admin/revisions/{revision_id}/segments", headers=headers,
+            json={"expected_version": 0, "reason": "Unknown synthetic segment ID",
+                  "excluded_segment_ids": [str(uuid4())]},
+        ).status_code == 422
+        exclusion = admin.patch(
+            f"/api/v1/admin/revisions/{revision_id}/segments", headers=headers,
+            json={"expected_version": 0, "reason": "Exclude synthetic unrelated paragraph",
+                  "excluded_segment_ids": [excluded_id]},
+        )
+        assert exclusion.status_code == 200, exclusion.text
+        assert exclusion.json()["segment_review_version"] == 1
+        assert [item["included"] for item in exclusion.json()["segments"]] == [True, False]
+        assert admin.patch(
+            f"/api/v1/admin/revisions/{revision_id}/segments", headers=headers,
+            json={"expected_version": 0, "reason": "Stale synthetic review attempt",
+                  "excluded_segment_ids": []},
+        ).status_code == 409
+        history = admin.get(f"/api/v1/admin/revisions/{revision_id}/segment-history")
+        assert history.status_code == 200
+        assert history.json()[-1]["excluded_segment_ids"] == [excluded_id]
+        assert admin.post(
+            f"/api/v1/admin/revisions/{revision_id}/approve", headers=headers,
+            json={
+                "reason": "Original would expose an excluded paragraph",
+                "evidence_url": f"https://example.invalid/{marker}/rights",
+                "user_text": True, "original_file": True, "provider_transfer": False,
+                "sensitivity_cleared": True,
+            },
+        ).status_code == 409
         assert admin.post(
             f"/api/v1/admin/revisions/{revision_id}/approve", headers=headers,
             json={
                 "reason": "Self-authored text for technical verification",
                 "evidence_url": f"https://example.invalid/{marker}/rights",
-                "user_text": True, "original_file": True, "provider_transfer": False,
+                "user_text": True, "original_file": False, "provider_transfer": True,
                 "sensitivity_cleared": True,
             },
         ).status_code == 200
-        assert asyncio.run(ApprovedTextIndexer(factory, index).index_one()) == revision_id
+        assert admin.patch(
+            f"/api/v1/admin/revisions/{revision_id}/segments", headers=headers,
+            json={"expected_version": 1, "reason": "Decided revision remains locked",
+                  "excluded_segment_ids": []},
+        ).status_code == 409
+        indexer = ApprovedTextIndexer(factory, index)
+        assert asyncio.run(indexer.index_one()) == revision_id
         found = asyncio.run(SqlGovernedVectorSearch(factory, index).search(
             marker, limit=5, region=None, people=None, for_provider=False
         ))
         assert any(item.revision_id == revision_id and item.locator.section == "Lines 1–2"
                    for item in found)
+        assert not any(item.segment_id == UUID(excluded_id) for item in found)
+        provider_found = asyncio.run(SqlGovernedVectorSearch(factory, index).search(
+            marker, limit=5, region=None, people=None, for_provider=True
+        ))
+        assert {item.segment_id for item in provider_found} == {
+            UUID(review["segments"][0]["segment_id"])
+        }
+        assert asyncio.run(index.has_revision_points(revision_id, [UUID(excluded_id)])) is False
+        asyncio.run(index.upsert([(UUID(excluded_id), revision_id, "Another section.")]))
+        stale = asyncio.run(SqlGovernedVectorSearch(factory, index).search(
+            marker, limit=5, region=None, people=None, for_provider=False
+        ))
+        assert not any(item.segment_id == UUID(excluded_id) for item in stale)
+        assert asyncio.run(SqlCitationResolver(factory).resolve(
+            revision_id, UUID(excluded_id)
+        )) is None
+        assert asyncio.run(indexer.audit_one()) == revision_id
+        assert asyncio.run(indexer.index_one()) == revision_id
+        assert asyncio.run(index.has_revision_points(revision_id, [UUID(excluded_id)])) is False
         detail = user.get(f"/api/v1/materials/{revision_id}")
         assert detail.status_code == 200
+        assert len(detail.json()["segments"]) == 1
         assert detail.json()["segments"][0]["locator"]["kind"] == "section"
         original = user.get(f"/api/v1/materials/{revision_id}/original")
-        assert original.content == payload
-        assert original.headers["content-type"].startswith("text/plain")
+        assert original.status_code == 404
         created = user.post("/api/v1/chats", headers=user_headers)
         assert created.status_code == 201, created.text
         chat_id = created.json()["id"]

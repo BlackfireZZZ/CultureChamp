@@ -19,6 +19,8 @@ from app.application.source_management import (
     MetadataEventData,
     OriginalData,
     SegmentData,
+    SegmentReview,
+    SegmentReviewEventData,
     SourceConflict,
     SourceInputError,
     SourceNotFound,
@@ -32,6 +34,7 @@ from app.infrastructure.db.source_models import (
     SourceProcessing,
     SourceRevision,
     SourceSegment,
+    SourceSegmentReviewEvent,
     SourceTag,
 )
 from app.infrastructure.db.source_repository import SourceRepository
@@ -111,17 +114,16 @@ class SqlSourceGateway:
             await session.flush()
             return IntakeData(source.id, revision.id, processing.state)
 
-    async def _material(self, session: AsyncSession, revision: SourceRevision) -> MaterialData:
+    async def _material(
+        self, session: AsyncSession, revision: SourceRevision, *, admin: bool = False
+    ) -> MaterialData:
         source = await session.get(Source, revision.source_id)
         if source is None:
             raise SourceNotFound
-        segments = (
-            await session.scalars(
-                select(SourceSegment)
-                .where(SourceSegment.revision_id == revision.id)
-                .order_by(SourceSegment.ordinal)
-            )
-        ).all()
+        segment_query = select(SourceSegment).where(SourceSegment.revision_id == revision.id)
+        if not admin:
+            segment_query = segment_query.where(SourceSegment.included.is_(True))
+        segments = (await session.scalars(segment_query.order_by(SourceSegment.ordinal))).all()
         latest = await session.scalar(
             select(SourceDecision)
             .where(SourceDecision.revision_id == revision.id)
@@ -158,6 +160,7 @@ class SqlSourceGateway:
                         column_end=s.column_end,
                     ),
                     s.text,
+                    s.included,
                 )
                 for s in segments
             ),
@@ -183,14 +186,82 @@ class SqlSourceGateway:
                 .limit(1)
             )
             return AdminRevisionData(
-                material=await self._material(session, revision),
+                material=await self._material(session, revision, admin=True),
                 source_id=revision.source_id,
                 status=processing.state if processing else "candidate",
                 error_code=processing.error_code if processing else None,
                 decision=decision.kind if decision else None,
                 sha256=revision.sha256,
                 metadata_version=revision.metadata_version,
+                segment_review_version=revision.segment_review_version,
             )
+
+    async def review_segments(
+        self, revision_id: UUID, reviewer_id: str, data: SegmentReview
+    ) -> AdminRevisionData:
+        async with self.factory.begin() as session:
+            processing = await session.get(SourceProcessing, revision_id, with_for_update=True)
+            if processing is None:
+                raise SourceNotFound
+            if processing.state != "review_pending":
+                raise SourceConflict("Revision is not ready for segment review")
+            revision = await session.get(SourceRevision, revision_id, with_for_update=True)
+            if revision is None:
+                raise SourceNotFound
+            if revision.segment_review_version != data.expected_version:
+                raise SourceConflict("Segment review changed; reload the revision")
+            decided = await session.scalar(
+                select(SourceDecision.event_id)
+                .where(SourceDecision.revision_id == revision_id)
+                .limit(1)
+            )
+            if decided is not None:
+                raise SourceConflict("Decided revision segments are locked")
+            segments = (
+                await session.scalars(
+                    select(SourceSegment).where(SourceSegment.revision_id == revision_id)
+                )
+            ).all()
+            known = {segment.id for segment in segments}
+            excluded = set(data.excluded_segment_ids)
+            if not segments or not excluded.issubset(known):
+                raise SourceInputError("Unknown segment in review")
+            if len(excluded) == len(segments):
+                raise SourceInputError("At least one segment must remain included")
+            if excluded == {segment.id for segment in segments if not segment.included}:
+                raise SourceConflict("Segment review has no changes")
+            for segment in segments:
+                segment.included = segment.id not in excluded
+            revision.segment_review_version += 1
+            session.add(SourceSegmentReviewEvent(
+                revision_id=revision_id,
+                version=revision.segment_review_version,
+                reviewer_id=reviewer_id,
+                reason=data.reason,
+                excluded_segment_ids=[str(item) for item in sorted(excluded)],
+            ))
+            await session.flush()
+        return await self.admin_detail(revision_id)
+
+    async def segment_history(self, revision_id: UUID) -> list[SegmentReviewEventData]:
+        async with self.factory() as session:
+            if await session.get(SourceRevision, revision_id) is None:
+                raise SourceNotFound
+            events = (
+                await session.scalars(
+                    select(SourceSegmentReviewEvent)
+                    .where(SourceSegmentReviewEvent.revision_id == revision_id)
+                    .order_by(SourceSegmentReviewEvent.version)
+                )
+            ).all()
+            return [
+                SegmentReviewEventData(
+                    event.version, event.reviewer_id, event.reason,
+                    tuple(UUID(item) for item in event.excluded_segment_ids),
+                    event.changed_at,
+                )
+                for event in events
+            ]
 
     async def amend_metadata(
         self, revision_id: UUID, reviewer_id: str, data: MetadataAmendment
@@ -335,6 +406,16 @@ class SqlSourceGateway:
             )
             if latest is not None:
                 raise SourceConflict("Revision already decided")
+            segments = (
+                await session.scalars(
+                    select(SourceSegment.included)
+                    .where(SourceSegment.revision_id == revision_id)
+                )
+            ).all()
+            if not any(segments):
+                raise SourceConflict("Revision has no included segments")
+            if data.original_file and not all(segments):
+                raise SourceConflict("Original contains excluded segments")
             await SourceRepository(session).record_decision(
                 RevisionDecision(
                     revision_id,
@@ -490,6 +571,13 @@ class SqlSourceGateway:
                 )
             )
             if revision is None:
+                raise SourceNotFound
+            excluded = await session.scalar(
+                select(SourceSegment.id)
+                .where(SourceSegment.revision_id == revision_id, SourceSegment.included.is_(False))
+                .limit(1)
+            )
+            if excluded is not None:
                 raise SourceNotFound
             return self._read_original(revision)
 

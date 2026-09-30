@@ -63,6 +63,7 @@ class SqlLexicalSearch:
                 SourceDecision.kind == "approve",
                 SourceDecision.user_text.is_(True),
                 SourceDecision.sensitivity_cleared.is_(True),
+                SourceSegment.included.is_(True),
                 vector.op("@@")(tsquery),
             )
         )

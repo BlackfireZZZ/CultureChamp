@@ -335,6 +335,43 @@ test("admin can amend review metadata with a version and inspect its history", a
   await waitFor(() => expect(screen.queryByText("Правка не сохранена")).not.toBeInTheDocument())
 })
 
+test("admin excludes a reviewed segment before approval and original access is disabled", async () => {
+  const revisionId = "rev-segment-review"
+  const source = { revision_id: revisionId, source_id: "source-review", title: "Synthetic paragraphs", origin_url: "https://example.invalid/review", status: "review_pending", decision: null }
+  const segments = [
+    { segment_id: "segment-one", locator: { kind: "section", page: null, section: "Line 1" }, text: "Synthetic supported sentence.", included: true },
+    { segment_id: "segment-two", locator: { kind: "section", page: null, section: "Line 3" }, text: "Unrelated synthetic sentence.", included: true },
+  ]
+  let version = 0
+  const reviews: Array<{ expected_version: number; reason: string; excluded_segment_ids: string[] }> = []
+  vi.stubGlobal("fetch", vi.fn((input: string, options?: RequestInit) => {
+    if (input === "/api/v1/auth/me") return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ user: { id: "admin", username: "admin", role: "admin" }, csrf_token: "review-csrf" }) })
+    if (input === "/api/v1/admin/sources?limit=100") return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve([source]) })
+    if (input === `/api/v1/admin/revisions/${revisionId}`) return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ ...source, segment_review_version: version, metadata_version: 0, description: null, tags: [], sha256: "synthetic-hash", creator: null, rights_usage_note: null, media_type: "text/plain", segments, error_code: null }) })
+    if (input === `/api/v1/admin/revisions/${revisionId}/metadata-history`) return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve([]) })
+    if (input === `/api/v1/admin/revisions/${revisionId}/segment-history`) return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(reviews.map((review, index) => ({ version: index + 1, reviewer_id: "admin", reason: review.reason, excluded_segment_ids: review.excluded_segment_ids, changed_at: "2026-10-01T00:00:00Z" }))) })
+    if (input === `/api/v1/admin/revisions/${revisionId}/segments` && options?.method === "PATCH") {
+      const data = JSON.parse(options.body as string) as typeof reviews[number]
+      reviews.push(data)
+      version += 1
+      for (const segment of segments) segment.included = !data.excluded_segment_ids.includes(segment.segment_id)
+      return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ ...source, segment_review_version: version, segments }) })
+    }
+    throw new Error("Unexpected request")
+  }))
+  renderApp()
+  fireEvent.click(await screen.findByRole("button", { name: /Synthetic paragraphs/ }))
+  const form = await screen.findByRole("form", { name: "Проверка фрагментов" })
+  fireEvent.click(within(form).getByRole("checkbox", { name: /Исключить: Строка 3/ }))
+  fireEvent.change(within(form).getByRole("textbox", { name: "Причина изменения" }), { target: { value: "Unrelated synthetic paragraph" } })
+  fireEvent.click(within(form).getByRole("button", { name: "Сохранить исключения" }))
+  await waitFor(() => expect(reviews).toEqual([{ expected_version: 0, reason: "Unrelated synthetic paragraph", excluded_segment_ids: ["segment-two"] }]))
+  expect(await screen.findByText("Оригинал содержит исключённые фрагменты и недоступен пользователю.")).toBeInTheDocument()
+  expect(within(screen.getByRole("form", { name: "Одобрение ревизии" })).getByRole("checkbox", { name: "Показ оригинального файла разрешён" })).toBeDisabled()
+  fireEvent.click(screen.getByText("История фрагментов"))
+  expect(await screen.findByText("Исключено: 1")).toBeInTheDocument()
+})
+
 test("admin review sends explicit rights scopes and can revoke the exact revision", async () => {
   const revisionId = "00000000-0000-4000-8000-000000000009"
   const source = { revision_id: revisionId, source_id: "source-9", title: "Синтетический кандидат", origin_url: "https://example.invalid/synthetic", status: "review_pending", decision: null }

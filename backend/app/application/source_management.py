@@ -27,6 +27,7 @@ class SegmentData:
     segment_id: UUID
     locator: Locator
     text: str
+    included: bool = True
 
 
 @dataclass(frozen=True)
@@ -78,6 +79,7 @@ class AdminRevisionData:
     decision: str | None
     sha256: str
     metadata_version: int
+    segment_review_version: int = 0
 
 
 @dataclass(frozen=True)
@@ -132,6 +134,22 @@ class MetadataEventData:
     changed_at: datetime
 
 
+@dataclass(frozen=True)
+class SegmentReview:
+    expected_version: int
+    reason: str
+    excluded_segment_ids: tuple[UUID, ...]
+
+
+@dataclass(frozen=True)
+class SegmentReviewEventData:
+    version: int
+    reviewer_id: str
+    reason: str
+    excluded_segment_ids: tuple[UUID, ...]
+    changed_at: datetime
+
+
 class SourceGateway(Protocol):
     async def upload(
         self,
@@ -157,6 +175,12 @@ class SourceGateway(Protocol):
     ) -> AdminRevisionData: ...
 
     async def metadata_history(self, revision_id: UUID) -> list[MetadataEventData]: ...
+
+    async def review_segments(
+        self, revision_id: UUID, reviewer_id: str, data: SegmentReview
+    ) -> AdminRevisionData: ...
+
+    async def segment_history(self, revision_id: UUID) -> list[SegmentReviewEventData]: ...
 
     async def admin_list(self, filters: AdminInventoryFilters) -> list[AdminSourceData]: ...
 
@@ -273,6 +297,27 @@ class SourceService:
     ) -> list[MetadataEventData]:
         require_role(actor, Role.ADMIN)
         return await self.gateway.metadata_history(revision_id)
+
+    async def review_segments(
+        self, actor: Actor, revision_id: UUID, data: SegmentReview
+    ) -> AdminRevisionData:
+        require_role(actor, Role.ADMIN)
+        if (
+            data.expected_version < 0
+            or not 10 <= len(data.reason.strip()) <= 2000
+            or len(set(data.excluded_segment_ids)) != len(data.excluded_segment_ids)
+        ):
+            raise SourceInputError("Invalid segment review")
+        return await self.gateway.review_segments(
+            revision_id, actor.subject_id,
+            SegmentReview(data.expected_version, data.reason.strip(), data.excluded_segment_ids),
+        )
+
+    async def segment_history(
+        self, actor: Actor, revision_id: UUID
+    ) -> list[SegmentReviewEventData]:
+        require_role(actor, Role.ADMIN)
+        return await self.gateway.segment_history(revision_id)
 
     async def admin_list(
         self, actor: Actor, filters: AdminInventoryFilters | None = None

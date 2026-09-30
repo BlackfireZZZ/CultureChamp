@@ -134,6 +134,11 @@
             ],
             "title": "Rights Usage Note"
           },
+          "segment_review_version": {
+            "default": 0,
+            "title": "Segment Review Version",
+            "type": "integer"
+          },
           "segments": {
             "items": {
               "$ref": "#/components/schemas/SegmentView"
@@ -1159,8 +1164,82 @@
         "title": "Role",
         "type": "string"
       },
+      "SegmentReviewEventView": {
+        "properties": {
+          "changed_at": {
+            "format": "date-time",
+            "title": "Changed At",
+            "type": "string"
+          },
+          "excluded_segment_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "title": "Excluded Segment Ids",
+            "type": "array"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "reviewer_id": {
+            "title": "Reviewer Id",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "version",
+          "reviewer_id",
+          "reason",
+          "excluded_segment_ids",
+          "changed_at"
+        ],
+        "title": "SegmentReviewEventView",
+        "type": "object"
+      },
+      "SegmentReviewInput": {
+        "properties": {
+          "excluded_segment_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 10000,
+            "title": "Excluded Segment Ids",
+            "type": "array"
+          },
+          "expected_version": {
+            "minimum": 0.0,
+            "title": "Expected Version",
+            "type": "integer"
+          },
+          "reason": {
+            "maxLength": 2000,
+            "minLength": 10,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "expected_version",
+          "reason",
+          "excluded_segment_ids"
+        ],
+        "title": "SegmentReviewInput",
+        "type": "object"
+      },
       "SegmentView": {
         "properties": {
+          "included": {
+            "default": true,
+            "title": "Included",
+            "type": "boolean"
+          },
           "locator": {
             "$ref": "#/components/schemas/LocatorView"
           },
@@ -1633,6 +1712,106 @@
           }
         },
         "summary": "Revoke Revision",
+        "tags": [
+          "admin-sources"
+        ]
+      }
+    },
+    "/api/v1/admin/revisions/{revision_id}/segment-history": {
+      "get": {
+        "operationId": "revision_segment_history_api_v1_admin_revisions__revision_id__segment_history_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "revision_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Revision Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/SegmentReviewEventView"
+                  },
+                  "title": "Response Revision Segment History Api V1 Admin Revisions  Revision Id  Segment History Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Revision Segment History",
+        "tags": [
+          "admin-sources"
+        ]
+      }
+    },
+    "/api/v1/admin/revisions/{revision_id}/segments": {
+      "patch": {
+        "operationId": "review_revision_segments_api_v1_admin_revisions__revision_id__segments_patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "revision_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Revision Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SegmentReviewInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminRevisionView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Review Revision Segments",
         "tags": [
           "admin-sources"
         ]
