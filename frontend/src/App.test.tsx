@@ -92,3 +92,30 @@ test("admin navigation is visible only for an admin session", async () => {
   renderApp()
   expect(await screen.findByRole("button", { name: "Админка" })).toBeInTheDocument()
 })
+
+test("logout sends CSRF and clears local chat before another login", async () => {
+  const fetchMock = vi.fn((input: string, options?: RequestInit) => {
+    if (input === "/api/v1/auth/me") return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ user: { id: "first", username: "first", role: "user" }, csrf_token: "test-csrf" }) })
+    if (input === "/api/v1/auth/logout") {
+      expect(options?.headers).toEqual({ "x-csrf-token": "test-csrf" })
+      expect(options?.credentials).toBe("same-origin")
+      return Promise.resolve({ ok: true, status: 204 })
+    }
+    if (input === "/api/v1/auth/login") return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ user: { id: "second", username: "second", role: "user" }, csrf_token: "other-csrf" }) })
+    throw new Error("Unexpected request")
+  })
+  vi.stubGlobal("fetch", fetchMock)
+  renderApp()
+  await screen.findByRole("heading", { name: "Идея с культурным контекстом" })
+  fireEvent.change(screen.getByRole("textbox", { name: "Ваш творческий бриф" }), { target: { value: "Локальный секретный черновик" } })
+  fireEvent.click(screen.getByRole("button", { name: "Отправить" }))
+  expect(await screen.findByText("Локальный секретный черновик")).toBeInTheDocument()
+  fireEvent.click(screen.getByRole("button", { name: "Выйти" }))
+  await screen.findByRole("heading", { name: "Войти в мастерскую" })
+  fireEvent.change(screen.getByRole("textbox", { name: "Имя пользователя" }), { target: { value: "second" } })
+  fireEvent.change(screen.getByLabelText("Пароль"), { target: { value: "password" } })
+  fireEvent.click(screen.getByRole("button", { name: "Войти" }))
+  await screen.findByRole("heading", { name: "Идея с культурным контекстом" })
+  expect(screen.queryByText("Локальный секретный черновик")).not.toBeInTheDocument()
+  expect(screen.getByRole<HTMLTextAreaElement>("textbox", { name: "Ваш творческий бриф" }).value).toBe("")
+})
