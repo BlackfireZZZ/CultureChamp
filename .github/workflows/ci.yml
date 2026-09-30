@@ -84,7 +84,12 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - run: make compose-check
       - run: make up
-      - run: make smoke
+      - name: Smoke backend liveness
+        run: ./scripts/smoke.sh live
+      - name: Smoke backend readiness
+        run: ./scripts/smoke.sh ready
+      - name: Smoke frontend
+        run: ./scripts/smoke.sh frontend
       - if: failure()
         run: docker compose logs --no-color
       - if: always()

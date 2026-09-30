@@ -111,6 +111,7 @@ an optimal chunk size, model, or no-evidence threshold.
 CORPUS_TEST_VECTOR_URL=http://127.0.0.1:16333 uv run --package culturechamp-backend --extra dev python ml/evals/run_retrieval_study.py --model e5-small --chunking fixed120 --output ml/evals/runs/study_e5_fixed120.jsonl
 CORPUS_TEST_VECTOR_URL=http://127.0.0.1:16333 uv run --package culturechamp-backend --extra dev python ml/evals/run_retrieval_study.py --model e5-small --chunking sentence256 --output ml/evals/runs/study_e5_sentence256.jsonl
 CORPUS_TEST_VECTOR_URL=http://127.0.0.1:16333 uv run --package culturechamp-backend --extra dev python ml/evals/run_retrieval_study.py --model qwen3-0.6b-int8 --chunking fixed120 --output ml/evals/runs/study_qwen_fixed120.jsonl
+CORPUS_TEST_VECTOR_URL=http://127.0.0.1:16333 uv run --with sentence-transformers --package culturechamp-backend --extra dev python ml/evals/run_retrieval_study.py --model e5-large-fp16 --chunking fixed120 --output ml/evals/runs/study_e5_large_fixed120.jsonl
 CORPUS_TEST_VECTOR_URL=http://127.0.0.1:16333 uv run --with sentence-transformers --package culturechamp-backend --extra dev python ml/evals/run_retrieval_study.py --model bge-m3-fp16 --chunking fixed120 --output ml/evals/runs/study_bge_fixed120.jsonl
 ```
 

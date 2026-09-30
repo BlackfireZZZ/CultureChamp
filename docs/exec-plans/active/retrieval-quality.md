@@ -44,6 +44,7 @@ memory, and index-size budgets.
 | [Document Segmentation Matters, ACL 2025](https://aclanthology.org/2025.findings-acl.422/) | Boundary choice changes retrieval and QA results; fixed lengths can split related evidence or dilute a short fact. | Its open-domain results do not establish a best size for Russian ethnographic prose. |
 | [Late Chunking](https://arxiv.org/abs/2409.04701) | Long-context token encoding before chunk pooling can preserve context; the paper also reports cases where naive chunks are comparable or better. | Evaluate only after correct reading order and with a compatible long-context encoder. |
 | [BGE-M3 paper](https://arxiv.org/abs/2402.03216) and [model card](https://huggingface.co/BAAI/bge-m3) | Multilingual 1024-dimensional embeddings, up to 8192 tokens, and dense/sparse/late-interaction signals; its authors recommend hybrid retrieval and reranking. | Language coverage is not proof of quality on our communities, names, and historical material. |
+| [Multilingual-E5-large model card](https://huggingface.co/intfloat/multilingual-e5-large) | The same query/passage prefix family as the current small model, 1024 dimensions and a 512-token input limit; the authors report stronger Russian Mr.TyDi ranking than E5-small. | A same-family capacity increase is a cleaner model ablation than changing training family; benchmark local passages and GPU memory rather than inheriting the public score. |
 | [Qwen3-Embedding-0.6B model card](https://huggingface.co/Qwen/Qwen3-Embedding-0.6B) | 0.6B parameters, 1024 dimensions and long context with task instruction format. | Compare exact model preprocessing and measured VRAM on the local 12 GiB RTX 4070 Ti; do not assume longer input should replace passage search. |
 | [Qdrant hybrid guidance](https://qdrant.tech/documentation/search-tuning/how-to-tune-hybrid-search/) | Compare dense and sparse legs before RRF/DBSF fusion; candidate depth and scoring depend on the collection and labels. | Keep PostgreSQL rights checks authoritative after retrieval; fusion must not become a rights bypass. |
 
@@ -65,7 +66,7 @@ memory, and index-size budgets.
    after child retrieval. Keep page/cell provenance and measure truncation,
    index expansion, passage relevance and duplicate overlap. Late chunking is
    an optional measured candidate, not the default.
-4. **Benchmark local retrievers.** Compare E5-small, BGE-M3 and Qwen3-0.6B
+4. **Benchmark local retrievers.** Compare E5-small, E5-large, BGE-M3 and Qwen3-0.6B
    dense search on the same extracted corpus, queries and candidate depth.
    Measure peak GPU memory and latency. Test sparse and dense+sparse fusion
    separately for exact names/toponyms; rerank only a bounded candidate set.
@@ -109,6 +110,18 @@ fit alone do not justify replacing E5. Qwen's model version is
 `5617a9f61b028005a4858fdac845db406aefb181`. This compares only dense
 vectors, not BGE-M3's sparse/late-interaction modes or a reranker. The small,
 already-seen query set cannot rank the models for release.
+
+Multilingual-E5-large FP16, snapshot
+`3d7cfbdacd47fdda877c5cd8a79fbcc4f2a574f3`, is a promising same-family
+candidate: with `pypdf` and fixed 120-word windows it yielded Recall@5,
+MRR@5 and nDCG@5 of 1.00 on the eight provisional cases; peak CUDA allocation
+was 1,137.6 MiB. Its sentence-aligned 256-token run yielded Recall@5 1.00,
+MRR@5 0.90 and nDCG@5 0.915. Docling extraction with the same fixed windows
+yielded Recall@5 1.00, MRR@5 0.74 and nDCG@5 0.766; Docling layout-block
+256-token windows yielded 0.90, 0.90 and 0.862. These are neither held-out nor
+passage-level judgments. The no-evidence false-positive rate remains 1.00
+without a separately calibrated abstention mechanism. Keep E5-large as a
+candidate, not a production decision.
 
 Visual inspection of PDF-03 physical page 2 found that Docling placed left-column
 body blocks before right-column blocks and separated page furniture, unlike the

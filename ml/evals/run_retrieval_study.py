@@ -22,6 +22,7 @@ from study_chunking import block_token_windows, docling_pages, sentence_token_wi
 ROOT = Path(__file__).resolve().parents[2]
 MODELS = {
     "e5-small": ("intfloat/multilingual-e5-small", 384, 512),
+    "e5-large-fp16": ("intfloat/multilingual-e5-large", 1024, 512),
     "qwen3-0.6b-int8": ("Qwen/Qwen3-Embedding-0.6B-Q", 1024, 32768),
     "bge-m3-fp16": ("BAAI/bge-m3", 1024, 8192),
 }
@@ -31,14 +32,14 @@ INSTRUCTION = "Retrieve evidence from Russian scholarly cultural sources for the
 def _load_model(name: str):  # type: ignore[no-untyped-def]
     if name == "e5-small":
         return _model()
-    if name == "bge-m3-fp16":
+    if name in {"e5-large-fp16", "bge-m3-fp16"}:
         import torch
         from sentence_transformers import SentenceTransformer
 
         if not torch.cuda.is_available():
-            raise RuntimeError("BGE-M3 GPU experiment requires CUDA")
+            raise RuntimeError("FP16 GPU experiment requires CUDA")
         return SentenceTransformer(
-            "BAAI/bge-m3", device="cuda", model_kwargs={"torch_dtype": torch.float16}
+            MODELS[name][0], device="cuda", model_kwargs={"torch_dtype": torch.float16}
         )
     return TextEmbedding(model_name=MODELS[name][0], cache_dir=os.getenv("EMBEDDING_CACHE_ROOT"))
 
@@ -46,13 +47,13 @@ def _load_model(name: str):  # type: ignore[no-untyped-def]
 def _prefix(name: str, text: str, *, query: bool) -> str:
     if name == "bge-m3-fp16":
         return text
-    if name == "e5-small":
+    if name.startswith("e5-"):
         return f"{'query' if query else 'passage'}: {text}"
     return f"Instruct: {INSTRUCTION}\nQuery: {text}" if query else text
 
 
 def _encode(model, model_name: str, inputs: list[str]):  # type: ignore[no-untyped-def]
-    if model_name == "bge-m3-fp16":
+    if model_name in {"e5-large-fp16", "bge-m3-fp16"}:
         return list(model.encode(inputs, batch_size=8, normalize_embeddings=True))
     return list(model.embed(inputs))
 
@@ -67,7 +68,8 @@ async def run(
     load_started = perf_counter()
     model = await asyncio.to_thread(_load_model, model_name)
     load_seconds = perf_counter() - load_started
-    tokenizer = model.tokenizer if model_name == "bge-m3-fp16" else model.model.tokenizer
+    gpu_model = model_name in {"e5-large-fp16", "bge-m3-fp16"}
+    tokenizer = model.tokenizer if gpu_model else model.model.tokenizer
     manifest = json.loads((ROOT / "ml/evals/manifest.json").read_text(encoding="utf-8"))
     cases = load_cases(ROOT / "ml/evals/qrels.jsonl")
     rows: list[tuple[str, str]] = []
@@ -175,19 +177,24 @@ async def run(
         encoding="utf-8",
     )
     gpu_memory = {}
-    if model_name == "bge-m3-fp16":
+    gpu_snapshot = None
+    if gpu_model:
         import torch
+        from huggingface_hub import snapshot_download
 
         gpu_memory = {
             "peak_cuda_allocated_mib": round(torch.cuda.max_memory_allocated() / 2**20, 1),
             "peak_cuda_reserved_mib": round(torch.cuda.max_memory_reserved() / 2**20, 1),
         }
+        gpu_snapshot = getattr(model[0].auto_model.config, "_commit_hash", None)
+        if not gpu_snapshot:
+            gpu_snapshot = Path(
+                snapshot_download(MODELS[model_name][0], local_files_only=True)
+            ).name
     report = {
         "model": model_name,
         "model_snapshot": (
-            getattr(model[0].auto_model.config, "_commit_hash", "unverified_hf_snapshot")
-            if model_name == "bge-m3-fp16"
-            else Path(model.model._model_dir).name
+            gpu_snapshot if gpu_model else Path(model.model._model_dir).name
         ),
         "chunking": chunking,
         "extraction": "docling" if docling_dir else "pypdf",

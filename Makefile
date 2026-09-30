@@ -51,7 +51,7 @@ logs:
 	docker compose logs -f --tail=100
 
 smoke:
-	BASE_URL=$${BASE_URL:-http://localhost:8000} FRONTEND_URL=$${FRONTEND_URL:-http://localhost:8080} ./scripts/smoke.sh
+	BASE_URL=$${BASE_URL:-http://127.0.0.1:8000} FRONTEND_URL=$${FRONTEND_URL:-http://127.0.0.1:8080} ./scripts/smoke.sh
 
 migration:
 	DATABASE_URL=$${DATABASE_URL:-postgresql+asyncpg://culturechamp:culturechamp_local@localhost:5432/culturechamp} uv run --package culturechamp-backend --extra dev alembic -c backend/alembic.ini revision --autogenerate -m "$(NAME)"

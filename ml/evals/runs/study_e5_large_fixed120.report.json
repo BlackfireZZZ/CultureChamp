@@ -1,0 +1,26 @@
+{
+  "model": "e5-large-fp16",
+  "model_snapshot": "3d7cfbdacd47fdda877c5cd8a79fbcc4f2a574f3",
+  "chunking": "fixed120",
+  "extraction": "pypdf",
+  "pages": 32,
+  "segments": 174,
+  "truncated_segments": 0,
+  "load_seconds": 10.18730590299856,
+  "index_seconds": 1.1864167050007381,
+  "mean_query_seconds": 0.015384705999849757,
+  "max_query_seconds": 0.03843535099986184,
+  "peak_rss_kib": 4258532,
+  "peak_cuda_allocated_mib": 1137.6,
+  "peak_cuda_reserved_mib": 1232.0,
+  "metrics": {
+    "queries": 8,
+    "positive_queries": 5,
+    "no_evidence_queries": 3,
+    "recall_at_k": 1.0,
+    "mrr_at_k": 1.0,
+    "ndcg_at_k": 1.0,
+    "no_evidence_false_positive_rate": 1.0
+  },
+  "label_status": "provisional_agent; same eight cases, no held-out tuning"
+}
