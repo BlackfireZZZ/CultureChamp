@@ -104,6 +104,15 @@ they are diagnostic because the eight qrels are provisional page-level labels.
 Reports also store only per-query similarity scores, making abstention overlap
 visible without exposing source text; they must not be used to tune and validate
 the same threshold.
+`--review-csv /tmp/culturechamp-e5-large-review.csv` optionally writes the top
+five passage candidates per query, including locally held excerpts and blank
+relevance/notes columns. The runner rejects review paths inside the repository.
+For persistent local review, copy the completed file into the Git-ignored
+`.private/reviews/` directory and keep it off remote storage.
+This file is for local, accountable review only: a reviewer checks the original
+physical page, grades whether the exact passage supports the question (0/1/2),
+records context/sensitivity concerns, and signs a separate review record. The
+current packet is neither expert validation nor a held-out test split.
 `docling_picture_regions` keeps figure OCR children and their PDF-space bounding
 box separate from running prose; a local map-page check found partial, erroneous
 OCR labels, so they are review candidates and are not indexed as verified text.

@@ -154,3 +154,9 @@ inspection against the source image. Neither parser/OCR mode can be treated as
 ground truth for those details.
 The next gate is expert-confirmed passage-level relevance and locator judgments,
 including a held-out split, before any production chunking or model switch.
+An optional review CSV now exports only to a path outside the repository. The
+local E5-large packet contains five passage candidates for each of eight queries
+(40 rows), with exact source hash, physical page, score, excerpt and blank
+review fields. This makes the first human passage check concrete, but the packet
+uses the same provisional questions and is not held-out validation. Do not
+commit the CSV or return its held source text to users or providers.

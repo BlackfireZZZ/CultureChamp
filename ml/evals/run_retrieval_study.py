@@ -2,6 +2,7 @@
 
 import argparse
 import asyncio
+import csv
 import hashlib
 import json
 import os
@@ -64,7 +65,10 @@ async def run(
     vector_url: str,
     output: Path,
     docling_dir: Path | None,
+    review_csv: Path | None,
 ) -> None:
+    if review_csv is not None and review_csv.resolve().is_relative_to(ROOT):
+        raise ValueError("review CSV with held source text must stay outside the repository")
     load_started = perf_counter()
     model = await asyncio.to_thread(_load_model, model_name)
     load_seconds = perf_counter() - load_started
@@ -120,10 +124,12 @@ async def run(
     vector_name = "dense"
     dimensions = MODELS[model_name][1]
     id_to_key = {uuid5(NAMESPACE_URL, key): key for key, _ in rows}
+    key_to_text = dict(rows)
     index_started = perf_counter()
     timings: list[float] = []
     rankings: dict[str, list[str]] = {}
     score_diagnostics: dict[str, dict[str, float | None]] = {}
+    review_rows: list[tuple[str, str, str, str, str, str, int | None, int, float, str]] = []
     async with httpx.AsyncClient(timeout=90) as client:
         response = await client.put(
             f"{vector_url}/collections/{collection}",
@@ -155,8 +161,29 @@ async def run(
                 )
                 response.raise_for_status()
                 timings.append(perf_counter() - started)
+                points = response.json()["result"]["points"]
+                if review_csv is not None:
+                    for rank, point in enumerate(points[:5], 1):
+                        key = id_to_key[UUID(point["id"])]
+                        source_id = key.split(":p", 1)[0]
+                        review_rows.append(
+                            (
+                                case.query_id,
+                                case.query,
+                                key,
+                                source_id,
+                                manifest["source_files"].get(source_id, ""),
+                                manifest["source_hashes"].get(source_id, "synthetic"),
+                                int(key.split(":p", 1)[1].split(":", 1)[0])
+                                if ":p" in key
+                                else None,
+                                rank,
+                                float(point["score"]),
+                                key_to_text[key],
+                            )
+                        )
                 best_by_page: dict[str, float] = {}
-                for point in response.json()["result"]["points"]:
+                for point in points:
                     key = id_to_key[UUID(point["id"])]
                     page_key = key.rsplit(":c", 1)[0] if ":c" in key else key
                     best_by_page[page_key] = max(
@@ -222,6 +249,18 @@ async def run(
         "label_status": "provisional_agent; same eight cases, no held-out tuning",
     }
     output.with_suffix(".report.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
+    if review_csv is not None:
+        review_csv.parent.mkdir(parents=True, exist_ok=True)
+        with review_csv.open("w", encoding="utf-8", newline="") as stream:
+            writer = csv.writer(stream)
+            writer.writerow(
+                (
+                    "query_id", "query", "candidate_key", "source_id", "source_file",
+                    "source_sha256", "physical_page", "rank", "cosine_score", "excerpt",
+                    "relevance_grade_0_1_2", "notes",
+                )
+            )
+            writer.writerows((*row, "", "") for row in review_rows)
     print(json.dumps(report, indent=2))
 
 
@@ -234,6 +273,7 @@ def main() -> None:
         required=True,
     )
     parser.add_argument("--docling-dir", type=Path)
+    parser.add_argument("--review-csv", type=Path)
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
     asyncio.run(
@@ -243,6 +283,7 @@ def main() -> None:
             os.environ["CORPUS_TEST_VECTOR_URL"].rstrip("/"),
             args.output,
             args.docling_dir,
+            args.review_csv,
         )
     )
 
