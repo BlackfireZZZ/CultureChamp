@@ -160,10 +160,10 @@ gate. Each row is intended as one cohesive review.
 | ID | Status · owner · handoff | Depends | Deliverable and owned area | Acceptance and smallest falsifying check |
 |---|---|---|---|---|
 | G01 | in_progress · integration agent · — | S03 | Server-side model API adapter with secret isolation, timeout, retry, rate/cost limits and fake provider; `backend/app/infrastructure/model/` | Fake and failure paths pass; external provider configuration and provider-transfer filtering are wired; exact service/model, live activation, measured cost and secret-handling review remain. |
-| G02 | in_progress · integration agent · — | R05, G01, S02 | Text orchestration: task prompt, approved evidence context, uncertainty and fact/interpretation/creation framing; `backend/app/application/generation/` | Synthetic fake-model cases pass; expert support review and full vector-backed journey remain. |
+| G02 | in_progress · integration agent · — | R05, G01, S02 | Text orchestration: task prompt, approved evidence context, uncertainty and fact/interpretation/creation framing; `backend/app/application/generation/` | Synthetic fake-model and live vector-backed cases pass; the fact field now requires a verbatim cited span. Expert support review remains. |
 | G03 | in_progress · integration agent · — | G02, C01 | Citation validation and source-location resolution; `backend/app/application/citations/` | Synthetic exact-revision checks pass; mixed format and source withdrawal UI checks remain. |
 | G04 | in_progress · integration agent · — | C02, G03, S03 | Conversation/message model and chat API (list, create, send, continue, delete per retention decision); `backend/app/api/`, `backend/app/infrastructure/db/` | PostgreSQL ownership/retry/citation test passes; client and end-to-end checks remain. |
-| G05 | todo · integration agent · — | G02, G03, S02 | Prompt-injection and sensitive/no-evidence guardrails; `backend/app/application/generation/`, `ml/evals/` | Retrieved instructions cannot change role/secret policy; UC-07–UC-11 return safe, accurately labelled behavior in adversarial fixtures. |
+| G05 | in_progress · integration agent · — | G02, G03, S02 | Prompt-injection and sensitive/no-evidence guardrails; `backend/app/application/generation/`, `ml/evals/` | Model-selected IDs are rechecked and an unsupported fact with a valid citation now fails closed. This does not prove that interpretation or creative prose is culturally supported; adversarial provider and UC-07–UC-11 review remain. |
 
 ### M4 — User and administrator interfaces
 

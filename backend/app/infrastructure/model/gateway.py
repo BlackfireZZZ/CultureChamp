@@ -66,7 +66,7 @@ class GroundedFakeProvider:
         excerpt = evidence["excerpt"].split(".", 1)[0][:300]
         output = json.dumps(
             {
-                "fact": f"The approved excerpt says: {excerpt}",
+                "fact": excerpt,
                 "interpretation": "This excerpt may inform the brief; review its context.",
                 "creative": "Use the brief to draft a contemporary concept, labelled as new work.",
                 "citations": [evidence["id"]],

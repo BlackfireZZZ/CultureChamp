@@ -370,3 +370,41 @@ release gates without reopening the owner-accepted retrieval experiments.
 
 Cleanup completed or retention reason: The isolated test stack was stopped after
 verification; its named volumes were retained for another local run.
+
+## 2026-09-30 generation output guard update
+
+Objective and actual status: A model answer that cites an allowed segment while
+inventing a different fact previously passed validation. A failing synthetic test
+reproduced this. The generation service now accepts the `fact` field only when
+its normalized text is a contiguous span of at least one cited excerpt. The
+fake provider emits that span directly. This narrows the fact claim to text the
+user can inspect; it does not validate interpretation or creative prose.
+
+Worktree / branch / base SHA: The same isolated integration worktree and branch,
+starting at `85316ab`; the worktree was clean before this slice. The integration
+agent owns the changed generation service, fake provider, test, tracker and
+handoff files. No schema or API contract changed.
+
+Decision and evidence: [OWASP RAG Security](https://cheatsheetseries.owasp.org/cheatsheets/RAG_Security_Cheat_Sheet.html)
+recommends treating retrieved content as untrusted and validating output. The
+current JSON data boundary, bounded excerpts, separate system message and
+current-authority citation lookup were already present. The new exact-span rule
+addresses the observed case where a real citation ID alone gave an invented fact
+an appearance of support. It can reject useful paraphrases; that is a deliberate
+MVP restriction until an expert-reviewed support checker exists. A quoted source
+span can still contain false or malicious source content, so source review remains
+necessary.
+
+Verification: `uv run --package culturechamp-backend --extra dev pytest
+backend/tests/test_generation.py -q` first failed the new unsupported-fact case
+(3 passed, 1 failed); after the fix, the generation and chat test selection
+reported 4 passed and 1 integration test skipped without a live vector URL.
+The full `make check` passed architecture, Ruff, mypy, 48 backend tests with
+13 live-service skips, 15 frontend tests/build, 20 ML tests, OpenAPI contract
+and Compose config. The isolated Compose stack rebuilt with the new fake
+provider; `npm run test:e2e -- e2e/live.e2e.ts` passed 1 live test in 9.5
+seconds using the existing test admin and cached embedding model.
+
+Exact next step: Stop the isolated stack, inspect diff, then commit and push.
+G05 stays
+in progress pending adversarial provider and cultural support review.

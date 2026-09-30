@@ -123,3 +123,25 @@ def test_fabricated_model_citation_causes_safe_failure() -> None:
         assert json.loads(model.calls[0].prompt)["evidence"][0]["id"] == str(segment_id)
 
     asyncio.run(check())
+
+
+def test_authorized_citation_does_not_validate_an_unsupported_fact() -> None:
+    async def check() -> None:
+        revision_id, segment_id = uuid4(), uuid4()
+        locator = Locator(page=1)
+        evidence = EvidenceSegment(
+            revision_id, segment_id, "Synthetic fixture", None, locator,
+            "The synthetic count is seven.", 0.5,
+        )
+        model = CaptureModel(json.dumps({
+            "fact": "The synthetic count is ninety-nine.",
+            "interpretation": "This could inspire a design.",
+            "creative": "Create a draft labelled as new work.",
+            "citations": [str(segment_id)],
+        }))
+        resolver = CurrentCitation(Citation(revision_id, segment_id, locator))
+        service = GenerationService(RetrievalService(StaticSearch((evidence,))), model, resolver)
+        with pytest.raises(GenerationUnavailable):
+            await service.generate(Actor("user-1", Role.USER), "Count brief", "turn-1")
+
+    asyncio.run(check())
