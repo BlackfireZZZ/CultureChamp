@@ -5,6 +5,7 @@ import type { FormEvent, KeyboardEvent } from "react"
 import { createDemoReply, getDemoChats } from "./api/demo"
 import type { DemoChat } from "./api/demo"
 import { ApiError } from "./api/auth"
+import { AdminView } from "./features/admin/AdminView"
 import { LoginScreen } from "./features/auth/LoginScreen"
 import { useAuth } from "./features/auth/useAuth"
 import { MaterialsView } from "./features/materials/MaterialsView"
@@ -131,7 +132,7 @@ export function App() {
       </div>
     </main>}
     {view === "materials" && <MaterialsView onBack={() => setView("chat")} />}
-    {view === "admin" && <main className="simple-page"><p className="eyebrow">Администрация · макет</p><h1>Документы</h1><div className="empty-panel"><h2>Инвентарь ожидает серверный API</h2><p>В предпросмотре нет доступа к неопубликованным ревизиям, действиям одобрения или статусам обработки.</p><button type="button" onClick={() => setView("chat")}>Вернуться к чату</button></div></main>}
+    {view === "admin" && <AdminView onBack={() => setView("chat")} />}
     {guideOpen && <StarterGuide onChoose={chooseStarter} onClose={() => { setGuideOpen(false); guideTriggerRef.current?.focus() }} />}
   </div>
 }
