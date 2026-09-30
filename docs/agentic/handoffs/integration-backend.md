@@ -985,3 +985,19 @@ visible in admin review, indexed page-two segment, cited page two with focus,
 `#page=2` original link, exact original bytes available while approved and
 denied after withdrawal. This verifies mechanics only; it does not assess real
 cultural prose, OCR, document layout or model answer quality.
+
+## 2026-10-01 account grant attribution
+
+Expected result: authenticated admin account creation records the granting
+actor, target account, initial role and timestamp in the same database
+transaction; event-write failure leaves no new account. Added migration
+`f128c768b4ae` and a PostgreSQL API check for both user and admin grants,
+duplicate rejection and rollback on an invalid actor foreign key. A clean
+database upgrade and `alembic check` passed. The table is an application audit
+record, not a tamper-proof external log; production retention and independent
+review remain open under S03. The full `make check` passed. The live synthetic
+CSV/PDF/XLSX browser journey also passed on an isolated PostgreSQL/Qdrant stack
+using the updated backend source, and its newly created test user has one grant
+event. Docker registry TLS timeouts prevented a fresh backend image build, so
+the test mounted current source into a previously built image with the same
+locked dependencies; GitHub CI must still verify the clean image build.

@@ -62,5 +62,27 @@ development the cookie is host-prefixed and `Secure`. Both use `HttpOnly` and
 These choices follow the [OWASP password-storage](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html),
 [session](https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html),
 and [CSRF](https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html)
-guidance. A real HTTPS deployment, admin account audit, recovery, and the chat
-retention purge have not been verified.
+guidance. A real HTTPS deployment, complete administrator action audit, recovery,
+and the chat retention purge have not been verified.
+
+## Account grant audit, 2026-10-01
+
+An authenticated administrator creating an account now writes an
+`account_grant_events` row with actor ID, new account ID, assigned initial role
+and database timestamp. The row and account are inserted in one PostgreSQL
+transaction, so an event-write failure rolls both back. Direct test seeding
+through the low-level store has no actor and does not create an event; the
+application service always passes the authenticated actor. First-admin offline
+bootstrap has no grant row and remains an external operator procedure. No
+role-change or account-deletion API exists yet.
+
+This follows [OWASP's logging guidance](https://cheatsheetseries.owasp.org/cheatsheets/Logging_Cheat_Sheet.html)
+to record user administration and privilege assignment with who, what and when.
+[SQLAlchemy's transaction context](https://docs.sqlalchemy.org/en/20/orm/session_transaction.html)
+commits the account and event together or rolls them back together. Unlike a
+separate security log sink, this pilot table uses the same database account as
+the application; a database operator could still change or drop records. A
+production audit-retention period, read-only review path and tamper resistance
+remain deployment decisions. A clean PostgreSQL upgrade and repeatable API
+test verified user/admin grants, actor attribution, duplicate rejection and
+rollback when the actor foreign key is invalid.

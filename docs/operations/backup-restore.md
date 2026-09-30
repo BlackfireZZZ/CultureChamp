@@ -1,8 +1,8 @@
 # Text-pilot backup and restore
 
-PostgreSQL is authoritative for accounts, chat retention, source revisions,
-metadata amendment history, rights decisions, exact locators and vector
-completion markers. Private source files are authoritative original bytes.
+PostgreSQL is authoritative for accounts, account grant events, chat retention,
+source revisions, metadata amendment history, rights decisions, exact locators
+and vector completion markers. Private source files are authoritative original bytes.
 Qdrant is a derived index and can be rebuilt from approved PostgreSQL
 revisions after the database and originals are restored. A Qdrant snapshot
 alone must never decide source visibility.
@@ -58,9 +58,9 @@ tar -xf culturechamp-sources.tar -C restored-private
 ```
 
 Point `DATABASE_URL` at the restored database and run `make migration-check`.
-Compare source/revision/metadata-event/decision and chat counts with the backup
-manifest. Check that each restored revision has version 0 and that its latest
-metadata event matches its current description, tags and `metadata_version`;
+Compare account/grant-event/source/revision/metadata-event/decision and chat
+counts with the backup manifest. Check that each restored revision has version 0
+and that its latest metadata event matches its current description, tags and `metadata_version`;
 verify every restored original byte hash against `source_revisions.sha256` and
 its `storage_key`. Challenge one approved, one revoked and one expired record
 through the API before serving traffic. The restored Qdrant collection should

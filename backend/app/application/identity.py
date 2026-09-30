@@ -43,7 +43,7 @@ class IdentityStore(Protocol):
     async def get_account(self, username: str) -> StoredAccount | None: ...
 
     async def create_account(
-        self, username: str, password_hash: str, role: Role
+        self, username: str, password_hash: str, role: Role, *, created_by: str | None = None
     ) -> StoredAccount: ...
 
     async def bootstrap_admin(self, username: str, password_hash: str) -> StoredAccount: ...
@@ -92,7 +92,10 @@ class IdentityService:
         require_role(actor, Role.ADMIN)
         normalized = normalize_username(username)
         validate_password(password)
-        return await self.store.create_account(normalized, await self.codec.hash(password), role)
+        return await self.store.create_account(
+            normalized, await self.codec.hash(password), role,
+            created_by=actor.subject_id,
+        )
 
     async def login(self, username: str, password: str) -> LoginResult:
         try:

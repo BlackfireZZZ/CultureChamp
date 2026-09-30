@@ -2,17 +2,18 @@ import asyncio
 import hashlib
 import os
 from datetime import UTC, datetime, timedelta
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import select, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlalchemy.pool import NullPool
 
 from app.application.access import Role
 from app.application.identity import IdentityService
-from app.infrastructure.db.identity_models import Account, LoginSession
+from app.infrastructure.db.identity_models import Account, AccountGrantEvent, LoginSession
 from app.infrastructure.db.identity_store import SqlIdentityStore
 from app.infrastructure.passwords import Argon2PasswordCodec
 from app.main import create_app
@@ -125,13 +126,44 @@ def test_real_app_sessions_roles_csrf_expiry_and_logout() -> None:
             ).status_code
             == 403
         )
+        invited_user = f"new-{uuid4().hex[:12]}"
         created = admin_client.post(
             account_path,
-            json={"username": f"new-{uuid4().hex[:12]}", "password": PASSWORD},
+            json={"username": invited_user, "password": PASSWORD},
             headers={"origin": origin, "x-csrf-token": admin_login.json()["csrf_token"]},
         )
         assert created.status_code == 201
         assert created.json()["role"] == "user"
+        invited_admin = f"admin-{uuid4().hex[:12]}"
+        granted = admin_client.post(
+            account_path,
+            json={"username": invited_admin, "password": PASSWORD, "role": "admin"},
+            headers={"origin": origin, "x-csrf-token": admin_login.json()["csrf_token"]},
+        )
+        assert granted.status_code == 201
+        assert granted.json()["role"] == "admin"
+        duplicate = admin_client.post(
+            account_path,
+            json={"username": invited_admin, "password": PASSWORD, "role": "admin"},
+            headers={"origin": origin, "x-csrf-token": admin_login.json()["csrf_token"]},
+        )
+        assert duplicate.status_code == 409
+
+        async def inspect_grants() -> None:
+            async with factory() as session:
+                events = (await session.scalars(select(AccountGrantEvent).where(
+                    AccountGrantEvent.account_id.in_([
+                        UUID(created.json()["id"]), UUID(granted.json()["id"]),
+                    ])
+                ))).all()
+                assert len(events) == 2
+                assert {str(event.account_id): event.role for event in events} == {
+                    created.json()["id"]: "user", granted.json()["id"]: "admin",
+                }
+                assert all(str(event.actor_id) == admin_login.json()["user"]["id"]
+                           for event in events)
+
+        asyncio.run(inspect_grants())
 
         async def expire() -> None:
             async with factory.begin() as session:
@@ -178,3 +210,27 @@ def test_login_throttle_has_generic_credentials_error_then_429() -> None:
         ]
         assert statuses == [401, 401, 401, 401, 401, 429]
     asyncio.run(engine.dispose())
+
+
+def test_failed_account_grant_rolls_back_account() -> None:
+    url = os.getenv("CORPUS_TEST_DATABASE_URL")
+    if url is None:
+        pytest.skip("set CORPUS_TEST_DATABASE_URL for PostgreSQL integration")
+    engine = create_async_engine(url, poolclass=NullPool)
+    factory = async_sessionmaker(engine, expire_on_commit=False)
+    store = SqlIdentityStore(factory)
+    username = f"failed-grant-{uuid4().hex[:12]}"
+
+    async def check() -> None:
+        with pytest.raises(IntegrityError):
+            await store.create_account(
+                username, "synthetic-hash", Role.ADMIN, created_by=str(uuid4())
+            )
+        async with factory() as session:
+            assert await session.scalar(select(Account).where(Account.username == username)) is None
+            assert await session.scalar(select(AccountGrantEvent).join(
+                Account, AccountGrantEvent.account_id == Account.id
+            ).where(Account.username == username)) is None
+        await engine.dispose()
+
+    asyncio.run(check())

@@ -10,7 +10,12 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.application.access import Actor, Role, Session
 from app.application.identity import InvalidAccountInput, StoredAccount
-from app.infrastructure.db.identity_models import Account, LoginAttempt, LoginSession
+from app.infrastructure.db.identity_models import (
+    Account,
+    AccountGrantEvent,
+    LoginAttempt,
+    LoginSession,
+)
 
 
 def _digest(value: str) -> str:
@@ -36,11 +41,18 @@ class SqlIdentityStore:
             account = await session.scalar(select(Account).where(Account.username == username))
             return _account_record(account) if account is not None else None
 
-    async def create_account(self, username: str, password_hash: str, role: Role) -> StoredAccount:
+    async def create_account(
+        self, username: str, password_hash: str, role: Role, *, created_by: str | None = None
+    ) -> StoredAccount:
         async with self.factory.begin() as session:
             account = Account(username=username, password_hash=password_hash, role=role.value)
             session.add(account)
             await session.flush()
+            if created_by is not None:
+                session.add(AccountGrantEvent(
+                    actor_id=UUID(created_by), account_id=account.id, role=role.value
+                ))
+                await session.flush()
             return _account_record(account)
 
     async def bootstrap_admin(self, username: str, password_hash: str) -> StoredAccount:
