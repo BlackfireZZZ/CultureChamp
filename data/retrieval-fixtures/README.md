@@ -34,7 +34,7 @@ title or authorship.
   per-document review are complete. PDF-01 contains an author's interpretation
   of culture and religion; attribute its claims to the author.
 
-To verify the preserved bytes, run `sha256sum data/retrieval-fixtures/raw/*.pdf`
+To verify local copies, run `sha256sum data/retrieval-fixtures/raw/*.pdf`
 from the repository root and compare the results with the inventory above.
 The files were included in the initial public Git history. Removing them from
 the current tree does not erase that history or any remote copies; history
