@@ -4,20 +4,40 @@ from typing import Annotated, cast
 from fastapi import Depends, HTTPException, Request
 
 from app.application.access import Actor, Role, Session, SessionStore
+from app.application.identity import IdentityService
+from app.core.config import settings
 
-SESSION_COOKIE = "__Host-culturechamp-session"
+SESSION_COOKIE = "culturechamp-dev-session"
+PRODUCTION_SESSION_COOKIE = "__Host-culturechamp-session"
 UNSAFE_METHODS = frozenset({"POST", "PUT", "PATCH", "DELETE"})
+
+
+def session_cookie_name() -> str:
+    return PRODUCTION_SESSION_COOKIE if settings.app_env != "development" else SESSION_COOKIE
 
 
 def _same_origin(request: Request) -> bool:
     origin = request.headers.get("origin")
     if not origin:
         return False
-    return origin.rstrip("/") == str(request.base_url).rstrip("/")
+    allowed = {str(request.base_url).rstrip("/"), *settings.backend_cors_origins}
+    return origin.rstrip("/") in allowed
+
+
+def require_allowed_origin(request: Request) -> None:
+    if not _same_origin(request):
+        raise HTTPException(status_code=403, detail="Request forbidden")
+
+
+def get_identity_service(request: Request) -> IdentityService:
+    service = cast("IdentityService | None", getattr(request.app.state, "identity_service", None))
+    if service is None:
+        raise HTTPException(status_code=503, detail="Authentication unavailable")
+    return service
 
 
 async def current_session(request: Request) -> Session:
-    token = request.cookies.get(SESSION_COOKIE)
+    token = request.cookies.get(session_cookie_name())
     if not token:
         raise HTTPException(status_code=401, detail="Authentication required")
     store = cast("SessionStore | None", getattr(request.app.state, "session_store", None))

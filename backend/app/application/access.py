@@ -13,6 +13,7 @@ class Role(StrEnum):
 class Actor:
     subject_id: str
     role: Role
+    username: str | None = None
 
 
 @dataclass(frozen=True)
