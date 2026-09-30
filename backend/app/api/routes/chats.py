@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from app.api.auth import current_user
 from app.application.access import Actor
 from app.application.chat import ChatCitationData, ChatData, ChatService, ChatTurnData
-from app.application.generation import GenerationService
+from app.application.generation import GenerationService, GenerationUnavailable
 from app.application.retrieval import RetrievalService
 from app.core.config import settings
 from app.infrastructure.db.chat_store import SqlChatStore
@@ -20,7 +20,7 @@ from app.infrastructure.db.model_quota import SqlModelQuota
 from app.infrastructure.db.session import session_factory
 from app.infrastructure.db.vector_search import SqlGovernedVectorSearch
 from app.infrastructure.model.application_adapter import GatewayModelPort
-from app.infrastructure.model.gateway import GroundedFakeProvider, ModelGateway, ModelProvider
+from app.infrastructure.model.gateway import ModelGateway, ModelProvider
 from app.infrastructure.vector.text_vectors import LocalTextEmbedder, QdrantTextIndex
 
 router = APIRouter(prefix="/chats", tags=["chats"])
@@ -30,7 +30,9 @@ def get_chat_service(request: Request) -> ChatService:
     factory: async_sessionmaker[AsyncSession] = getattr(
         request.app.state, "source_session_factory", session_factory
     )
-    provider: ModelProvider = getattr(request.app.state, "model_provider", GroundedFakeProvider())
+    provider: ModelProvider | None = getattr(request.app.state, "model_provider", None)
+    if provider is None:
+        raise GenerationUnavailable("Model provider unavailable")
     index: QdrantTextIndex = getattr(
         request.app.state,
         "vector_index",

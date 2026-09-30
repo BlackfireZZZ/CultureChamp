@@ -7,6 +7,8 @@ from app.infrastructure.model.http import HttpModelProvider
 
 def configured_provider(settings: Settings) -> ModelProvider:
     if settings.model_provider == "fake":
+        if settings.app_env != "development":
+            raise ValueError("fake model provider is available only in development")
         return GroundedFakeProvider()
     if not settings.model_policy_approved:
         raise ValueError("external model policy is not approved")

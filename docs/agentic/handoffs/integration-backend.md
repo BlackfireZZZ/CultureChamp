@@ -1,5 +1,22 @@
 # Corpus/backend integration handoff — 2026-09-30
 
+## Development-only fake provider guard — 2026-10-01
+
+The operator has chosen an external OpenAI-compatible provider for the MVP but
+has not selected its service, Chat Completions URL, model ID or key. The server
+now rejects `MODEL_PROVIDER=fake` whenever `APP_ENV` is not `development`.
+Chat construction returns the existing generic HTTP 503 if its configured
+provider is absent, rather than silently creating a fake one. Local development
+and synthetic integration tests still use the fake provider explicitly.
+
+The expected result was falsified by three new tests before the change. With an
+isolated clean PostgreSQL/Qdrant stack and Node 24, the full `make check` passed:
+94 backend, 19 frontend and 20 ML tests, architecture, Ruff, mypy, frontend
+build, API contract and Compose configuration. The chat integration test passed
+against those services. No real provider call or cultural source transfer was
+made. The actual provider contract remains unverified until the operator supplies
+its endpoint, model ID and secret through deployment configuration.
+
 ## External model configuration checkpoint
 
 The owner accepted the current retrieval study for MVP engineering progress and

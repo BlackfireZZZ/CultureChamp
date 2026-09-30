@@ -2,6 +2,9 @@
 
 The backend defaults to the deterministic `fake` provider. It exercises chat,
 citations, quotas and failure handling but does not create useful cultural prose.
+The fake provider is available only with `APP_ENV=development`. Any other
+environment rejects it at server startup, and a missing provider during a chat
+request returns HTTP 503 instead of silently selecting the fake provider.
 The provider adapter accepts an operator-selected HTTPS endpoint compatible with
 Chat Completions. No service, model ID, endpoint or key is selected for this pilot.
 

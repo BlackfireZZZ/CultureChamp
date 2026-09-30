@@ -2,11 +2,16 @@ import asyncio
 
 import httpx
 import pytest
+from fastapi import FastAPI
+from starlette.requests import Request
 
+from app.api.routes.chats import get_chat_service
+from app.application.generation import GenerationUnavailable
 from app.core.config import Settings
 from app.infrastructure.model.configuration import configured_provider
 from app.infrastructure.model.gateway import (
     FakeModelProvider,
+    GroundedFakeProvider,
     ModelFailure,
     ModelGateway,
     ModelRequest,
@@ -82,6 +87,22 @@ def test_external_provider_configuration_fails_closed_and_keeps_key_private() ->
     assert provider.requires_provider_transfer is True
     assert "secret-canary" not in repr(ready)
     assert "secret-canary" not in repr(provider)
+
+
+@pytest.mark.parametrize("app_env", ["staging", "production"])
+def test_fake_provider_is_development_only(app_env: str) -> None:
+    development = Settings(_env_file=None, app_env="development", model_provider="fake")
+    assert isinstance(configured_provider(development), GroundedFakeProvider)
+    deployed = Settings(_env_file=None, app_env=app_env, model_provider="fake")
+    with pytest.raises(ValueError, match="fake model provider"):
+        configured_provider(deployed)
+
+
+def test_missing_model_provider_cannot_fall_back_to_fake() -> None:
+    app = FastAPI()
+    request = Request({"type": "http", "app": app})
+    with pytest.raises(GenerationUnavailable, match="Model provider unavailable"):
+        get_chat_service(request)
 
 
 def test_fake_quota_retry_and_timeout() -> None:

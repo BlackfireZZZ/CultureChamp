@@ -103,6 +103,7 @@ async def _check_chat(url: str, tmp_path: Path) -> None:
     identity_store = SqlIdentityStore(factory)
     codec = Argon2PasswordCodec()
     app = create_app()
+    default_provider = app.state.model_provider
     app.state.session_store = identity_store
     app.state.identity_service = IdentityService(identity_store, codec, codec.dummy_hash)
     app.state.source_session_factory = factory
@@ -268,7 +269,7 @@ async def _check_chat(url: str, tmp_path: Path) -> None:
                 assert marker not in sent
                 assert names[0] not in sent
                 assert "synthetic-key" not in sent
-            del app.state.model_provider
+            app.state.model_provider = default_provider
             transfer_revoke = admin.post(
                 f"/api/v1/admin/revisions/{transferable_revision}/revoke",
                 json={"reason": "Synthetic provider-transfer path completed"},
@@ -288,7 +289,7 @@ async def _check_chat(url: str, tmp_path: Path) -> None:
                 f"/api/v1/chats/{chat_id}/messages", headers=owner_headers, json=broken_payload
             )
             assert broken.status_code == 503, broken.text
-            del app.state.model_provider
+            app.state.model_provider = default_provider
             recovered = owner.post(
                 f"/api/v1/chats/{chat_id}/messages", headers=owner_headers, json=broken_payload
             )
