@@ -234,6 +234,8 @@ test("admin inventory and exact revision come from admin API", async () => {
   fireEvent.click(await screen.findByRole("button", { name: "Админка" }))
   fireEvent.click(await screen.findByRole("button", { name: /Кандидат/ }))
   expect(await screen.findByText("test-hash")).toBeInTheDocument()
+  expect(screen.getByRole("link", { name: "Открыть оригинал для проверки" })).toHaveAttribute("href", "/api/v1/admin/revisions/rev-3/original")
+  expect(screen.getByRole("link", { name: "https://example.org" })).toHaveAttribute("href", "https://example.org")
   expect(screen.getByText("Не подтверждены")).toBeInTheDocument()
   expect(screen.getByText("region: Приморье")).toBeInTheDocument()
   fireEvent.change(screen.getByRole("combobox", { name: "Обработка" }), { target: { value: "failed" } })

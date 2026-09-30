@@ -396,12 +396,22 @@ class SqlSourceGateway:
             )
             if revision is None:
                 raise SourceNotFound
-            try:
-                with self.store.open_original(revision.storage_key) as stream:
-                    content = stream.read()
-            except (OSError, IntakeError) as exc:
-                raise SourceNotFound from exc
-            if hashlib.sha256(content).hexdigest() != revision.sha256:
+            return self._read_original(revision)
+
+    async def admin_original(self, revision_id: UUID) -> OriginalData:
+        async with self.factory() as session:
+            revision = await session.get(SourceRevision, revision_id)
+            if revision is None:
                 raise SourceNotFound
-            suffix = ".pdf" if revision.media_type == "application/pdf" else ".csv"
-            return OriginalData(content, f"source-{revision_id}{suffix}", revision.media_type)
+            return self._read_original(revision)
+
+    def _read_original(self, revision: SourceRevision) -> OriginalData:
+        try:
+            with self.store.open_original(revision.storage_key) as stream:
+                content = stream.read()
+        except (OSError, IntakeError) as exc:
+            raise SourceNotFound from exc
+        if hashlib.sha256(content).hexdigest() != revision.sha256:
+            raise SourceNotFound
+        suffix = ".pdf" if revision.media_type == "application/pdf" else ".csv"
+        return OriginalData(content, f"source-{revision.id}{suffix}", revision.media_type)

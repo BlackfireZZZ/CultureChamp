@@ -15,6 +15,7 @@ from app.application.source_management import (
     ApprovalData,
     MaterialData,
     MaterialFilters,
+    OriginalData,
     SourceService,
 )
 from app.core.config import settings
@@ -213,6 +214,28 @@ async def admin_revision(
     return _admin_view(await service.admin_detail(actor, revision_id))
 
 
+def _original_response(original: OriginalData) -> Response:
+    disposition = "inline" if original.media_type == "application/pdf" else "attachment"
+    return Response(
+        content=original.content,
+        media_type=original.media_type,
+        headers={
+            "Content-Disposition": f'{disposition}; filename="{original.filename}"',
+            "X-Content-Type-Options": "nosniff",
+            "Cache-Control": "no-store",
+        },
+    )
+
+
+@admin_router.get("/revisions/{revision_id}/original", response_class=Response)
+async def admin_original(
+    revision_id: UUID,
+    actor: Annotated[Actor, Depends(current_admin)],
+    service: Annotated[SourceService, Depends(get_source_service)],
+) -> Response:
+    return _original_response(await service.admin_original(actor, revision_id))
+
+
 @admin_router.get("/sources", response_model=list[AdminSourceView])
 async def admin_sources(
     response: Response,
@@ -302,14 +325,4 @@ async def material_original(
     actor: Annotated[Actor, Depends(current_user)],
     service: Annotated[SourceService, Depends(get_source_service)],
 ) -> Response:
-    original = await service.visible_original(actor, revision_id)
-    disposition = "inline" if original.media_type == "application/pdf" else "attachment"
-    return Response(
-        content=original.content,
-        media_type=original.media_type,
-        headers={
-            "Content-Disposition": f'{disposition}; filename="{original.filename}"',
-            "X-Content-Type-Options": "nosniff",
-            "Cache-Control": "no-store",
-        },
-    )
+    return _original_response(await service.visible_original(actor, revision_id))

@@ -119,6 +119,8 @@ class SourceGateway(Protocol):
 
     async def admin_detail(self, revision_id: UUID) -> AdminRevisionData: ...
 
+    async def admin_original(self, revision_id: UUID) -> OriginalData: ...
+
     async def admin_list(
         self, *, status: str | None, decision: str | None, limit: int
     ) -> list[AdminSourceData]: ...
@@ -189,6 +191,10 @@ class SourceService:
     async def admin_detail(self, actor: Actor, revision_id: UUID) -> AdminRevisionData:
         require_role(actor, Role.ADMIN)
         return await self.gateway.admin_detail(revision_id)
+
+    async def admin_original(self, actor: Actor, revision_id: UUID) -> OriginalData:
+        require_role(actor, Role.ADMIN)
+        return await self.gateway.admin_original(revision_id)
 
     async def admin_list(
         self,

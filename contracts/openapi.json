@@ -1308,6 +1308,42 @@
         ]
       }
     },
+    "/api/v1/admin/revisions/{revision_id}/original": {
+      "get": {
+        "operationId": "admin_original_api_v1_admin_revisions__revision_id__original_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "revision_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Revision Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Admin Original",
+        "tags": [
+          "admin-sources"
+        ]
+      }
+    },
     "/api/v1/admin/revisions/{revision_id}/retry": {
       "post": {
         "operationId": "retry_revision_api_v1_admin_revisions__revision_id__retry_post",

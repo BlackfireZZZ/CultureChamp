@@ -88,9 +88,18 @@ test("admin can filter inventory with keyboard without exposing it to user navig
     const url = new URL(route.request().url())
     return route.fulfill({ json: url.searchParams.get("status") === "failed" ? [] : [source] })
   })
+  await page.route("**/api/v1/admin/revisions/00000000-0000-4000-8000-000000000004", (route) => route.fulfill({ json: {
+    ...source, creator: "Self-authored fixture", media_type: "text/csv", description: "Synthetic review data",
+    rights_usage_note: null, tags: [], segments: [], sha256: "synthetic-hash", error_code: null,
+    original_available: false,
+  } }))
   await page.goto("/")
   await page.getByRole("button", { name: "Админка" }).click()
-  await expect(page.getByRole("button", { name: /Кандидат/ })).toBeVisible()
+  const candidate = page.getByRole("button", { name: /Кандидат/ })
+  await candidate.focus()
+  await page.keyboard.press("Enter")
+  await expect(page.getByRole("link", { name: "Открыть оригинал для проверки" })).toHaveAttribute("href", "/api/v1/admin/revisions/00000000-0000-4000-8000-000000000004/original")
+  await expect(page.getByText("Self-authored fixture")).toBeVisible()
   const status = page.getByRole("combobox", { name: "Обработка" })
   await status.focus()
   await status.selectOption("failed")

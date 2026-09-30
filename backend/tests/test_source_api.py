@@ -119,6 +119,13 @@ def test_csv_upload_to_vector_and_original_access(tmp_path: Path) -> None:
         assert segment["locator"]["page"] is None
         assert (segment["locator"]["row_start"], segment["locator"]["column_start"]) == (2, 3)
         assert user.get(f"/api/v1/materials/{revision_id}").status_code == 404
+        candidate_original = admin.get(f"/api/v1/admin/revisions/{revision_id}/original")
+        assert candidate_original.status_code == 200
+        assert candidate_original.content == payload
+        assert candidate_original.headers["cache-control"] == "no-store"
+        assert user.get(f"/api/v1/admin/revisions/{revision_id}/original").status_code == 403
+        assert admin.get(f"/api/v1/admin/revisions/{uuid4()}/original").status_code == 404
+        assert user.get(f"/api/v1/materials/{revision_id}/original").status_code == 404
         approved = admin.post(
             f"/api/v1/admin/revisions/{revision_id}/approve",
             json={
@@ -149,6 +156,7 @@ def test_csv_upload_to_vector_and_original_access(tmp_path: Path) -> None:
         ).status_code == 200
         assert user.get(f"/api/v1/materials/{revision_id}").status_code == 404
         assert user.get(f"/api/v1/materials/{revision_id}/original").status_code == 404
+        assert admin.get(f"/api/v1/admin/revisions/{revision_id}/original").content == payload
         assert asyncio.run(SqlGovernedVectorSearch(factory, index).search(
             "Пробный объект число", limit=5, region=None, people=None, for_provider=False
         )) == ()

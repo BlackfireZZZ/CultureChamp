@@ -616,3 +616,36 @@ the exact external provider remain outside this technical slice.
 Remaining limits: Expert factual review, a real provider, eligible cultural
 rights, image/audio locators and broader UC-07–UC-11 adversarial cases remain
 outside this synthetic citation check.
+
+## 2026-09-30 private original during administrator review
+
+Objective and actual status: Administrators can now open the stored original
+for any exact revision, including a candidate before approval and a withdrawn
+revision. The admin detail links to its protected route and displays origin,
+creator, format and source identity alongside the extracted segments. The user
+original route continues to require the exact current rights decision.
+
+Worktree / branch / base SHA: The isolated integration worktree and
+`agent/integration-backend` branch were clean at `793ed0a` before this slice.
+The integration agent owns the application protocol, SQL adapter, HTTP route,
+OpenAPI/client, admin UI, tests, ADR extension, runbook and tracker. The
+primary checkout and other authors' work were untouched.
+
+Falsifiable check and observed evidence: A self-authored CSV candidate returns
+identical bytes from the admin original route before approval; a user receives
+403 there and 404 from the user material route. After withdrawal, the admin
+can still inspect the bytes while the user remains unable to do so. Stored
+bytes are verified against the revision SHA-256 before serving; both original
+routes use generated filenames, `nosniff` and `no-store`. The focused source
+API suite passed 3 tests on isolated PostgreSQL/Qdrant. Full `make check`
+passed architecture, 61 backend, 16 frontend and 20 ML tests, static checks,
+contract generation and Compose config. A mocked keyboard admin browser path
+passed. A fresh Compose stack passed the synthetic live browser journey in
+33.2 seconds with candidate review, user denial and withdrawn audit access.
+
+Risk and integration: This route is deliberately admin-only, including when
+rights are unconfirmed; admin credentials remain a high-trust boundary. The
+hash check detects mismatched private bytes. The broader U06 error, format and
+keyboard review and real-source approval are still open. Review the diff,
+commit and push, then verify CI. Stop both isolated test stacks after the
+smoke check; retain their named volumes for repeat checks.

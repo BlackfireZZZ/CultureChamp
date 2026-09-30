@@ -88,6 +88,11 @@ Comparable design inputs:
    and [HTTP caching guidance](https://httpwg.org/specs/rfc9111.html#field.cache-control)
    inform the response headers. These headers are defense in depth; authorization
    remains the current database decision.
+   Administrators can retrieve the hash-verified private original of a candidate
+   or withdrawn revision through a separate admin-only route to compare it with
+   extracted segments before making a decision. This review route never changes
+   the user-facing rights check and uses the same generated filename, `nosniff`
+   and `no-store` response rules.
 9. The API rejects request bodies above the PDF limit plus bounded multipart
    overhead before parsing the multipart form. The proxy also caps bodies.
    The worker invokes the parser in a separate isolated Python process with a

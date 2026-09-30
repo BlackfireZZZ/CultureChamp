@@ -86,6 +86,12 @@ test("live synthetic source flows from admin review to cited chat and revocation
     await adminPage.reload()
     await adminPage.getByRole("button", { name: "Админка" }).click()
     await adminPage.getByRole("button", { name: new RegExp(title) }).click()
+    const reviewOriginalPath = `/api/v1/admin/revisions/${intake.revision_id}/original`
+    await expect(adminPage.getByRole("link", { name: "Открыть оригинал для проверки" })).toHaveAttribute("href", reviewOriginalPath)
+    const reviewOriginal = await adminContext.request.get(reviewOriginalPath)
+    expect(reviewOriginal.status()).toBe(200)
+    expect(await reviewOriginal.body()).toEqual(csv)
+    expect((await userContext.request.get(reviewOriginalPath)).status()).toBe(403)
     const review = adminPage.getByRole("form", { name: "Одобрение ревизии" })
     await review.getByLabel("Основание и ограничения").fill("Self-authored synthetic CSV for a private live test")
     await review.getByLabel("HTTPS-ссылка на доказательство прав").fill(`https://example.invalid/${marker}/rights`)
@@ -166,6 +172,7 @@ test("live synthetic source flows from admin review to cited chat and revocation
       const response = await adminContext.request.get(`/api/v1/admin/revisions/${intake.revision_id}`)
       return ((await response.json()) as { decision: string }).decision
     }).toBe("revoke")
+    expect(await (await adminContext.request.get(reviewOriginalPath)).body()).toEqual(csv)
     approvedRevisionId = null
     await userPage.reload()
     await userPage.getByRole("button", { name: approvedBrief, exact: true }).click()

@@ -31,14 +31,16 @@ loopback vector URL and must point at a separate test Compose project.
 
 The browser test requires all four variables and is skipped in the ordinary
 mocked Playwright run. It checks candidate invisibility, a no-evidence response,
-worker extraction, explicit approval, a Qdrant point, a cited chat answer,
-chat switching/deletion, retry after a simulated 503 with the same request ID,
+worker extraction, admin-only review of the original before approval, explicit
+approval, a Qdrant point, a cited chat answer, chat switching/deletion, retry
+after a simulated 503 with the same request ID,
 source focus, exact original bytes and withdrawal. With the explicit reset flag,
-it also checks Qdrant collection loss and worker replay.
-After withdrawal, the
-historical answer stays visible but its citation becomes unavailable. A random
-marker and cleanup make repeat runs independent. A clean run downloads the embedding model into the
-private test volume once. The external model remains disabled.
+it also checks Qdrant collection loss and worker replay. After withdrawal, the
+historical answer stays visible but its citation becomes unavailable. The
+administrator can still inspect the withdrawn original for audit, while the
+user cannot retrieve it through either original route. A random marker and
+cleanup make repeat runs independent. A clean run downloads the embedding
+model into the private test volume once. The external model remains disabled.
 
 Backend tests that call `ApprovedTextIndexer.index_one()` must use a separate
 database and vector index with no ingest worker. The worker claims the same
