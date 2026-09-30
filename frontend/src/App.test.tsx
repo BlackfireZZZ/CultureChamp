@@ -150,7 +150,9 @@ test("admin inventory and exact revision come from admin API", async () => {
   const source = { revision_id: "rev-3", source_id: "source-3", title: "Кандидат", origin_url: "https://example.org", status: "ready", decision: null }
   vi.stubGlobal("fetch", vi.fn((input: string) => {
     if (input === "/api/v1/auth/me") return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ user: { id: "admin", username: "admin", role: "admin" }, csrf_token: "csrf" }) })
-    if (input === "/api/v1/admin/sources") return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve([source]) })
+    if (input === "/api/v1/admin/sources?limit=100") return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve([source]) })
+    if (input === "/api/v1/admin/sources?status=failed&decision=none&limit=100") return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve([]) })
+    if (input.startsWith("/api/v1/admin/sources?")) return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve([source]) })
     if (input === "/api/v1/admin/revisions/rev-3") return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ ...source, sha256: "test-hash", creator: null, rights_usage_note: null, media_type: "application/pdf", tags: [{ kind: "region", value: "Приморье" }], segments: [] }) })
     throw new Error("Unexpected request")
   }))
@@ -160,6 +162,9 @@ test("admin inventory and exact revision come from admin API", async () => {
   expect(await screen.findByText("test-hash")).toBeInTheDocument()
   expect(screen.getByText("Не подтверждены")).toBeInTheDocument()
   expect(screen.getByText("region: Приморье")).toBeInTheDocument()
+  fireEvent.change(screen.getByRole("combobox", { name: "Обработка" }), { target: { value: "failed" } })
+  fireEvent.change(screen.getByRole("combobox", { name: "Решение" }), { target: { value: "none" } })
+  expect(await screen.findByText("Ревизий не найдено")).toBeInTheDocument()
 })
 
 test("logout sends CSRF and clears local chat before another login", async () => {
