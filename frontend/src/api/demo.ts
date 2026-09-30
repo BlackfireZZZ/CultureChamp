@@ -15,10 +15,6 @@ export function getDemoChats(): Promise<DemoChat[]> {
   return Promise.resolve(structuredClone(chats))
 }
 
-export function getApprovedMaterialsPreview(): Promise<[]> {
-  return Promise.resolve([])
-}
-
 export function createDemoReply(brief: string): Promise<string> {
   if (!brief.trim()) return Promise.reject(new Error("Empty brief"))
   return new Promise((resolve) => window.setTimeout(

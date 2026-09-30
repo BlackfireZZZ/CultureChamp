@@ -2,11 +2,12 @@ import { useQuery } from "@tanstack/react-query"
 import { useEffect, useRef, useState } from "react"
 import type { FormEvent, KeyboardEvent } from "react"
 
-import { createDemoReply, getApprovedMaterialsPreview, getDemoChats } from "./api/demo"
+import { createDemoReply, getDemoChats } from "./api/demo"
 import type { DemoChat } from "./api/demo"
 import { ApiError } from "./api/auth"
 import { LoginScreen } from "./features/auth/LoginScreen"
 import { useAuth } from "./features/auth/useAuth"
+import { MaterialsView } from "./features/materials/MaterialsView"
 import { StarterGuide } from "./features/onboarding/StarterGuide"
 import { starters } from "./features/onboarding/starters"
 
@@ -15,7 +16,6 @@ type View = "chat" | "materials" | "admin"
 export function App() {
   const auth = useAuth()
   const chats = useQuery({ queryKey: ["demo-chats"], queryFn: getDemoChats, staleTime: Infinity })
-  const materials = useQuery({ queryKey: ["demo-materials"], queryFn: getApprovedMaterialsPreview, staleTime: Infinity })
   const [view, setView] = useState<View>("chat")
   const [theme, setTheme] = useState<"light" | "dark">(document.documentElement.dataset.theme === "dark" ? "dark" : "light")
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -115,7 +115,7 @@ export function App() {
       <button className="signout" type="button" onClick={() => auth.signOut.mutate(activeSession.csrf_token, { onSuccess: () => { setLocalChats([]); setSelectedId(null); setDraft(""); setView("chat") } })} disabled={auth.signOut.isPending}>Выйти</button>
     </header>
     {auth.signOut.isError && <p className="auth-error" role="alert">Не удалось выйти. Повторите попытку.</p>}
-    <div className="preview-banner" role="status">Предпросмотр интерфейса · чаты не сохраняются · источники ещё не одобрены</div>
+    <div className="preview-banner" role="status">Предпросмотр чата · чаты не сохраняются · ответы не содержат проверенных ссылок</div>
     {view === "chat" && <main className="workspace">
       <aside ref={listRef} className={`chat-rail ${listOpen ? "open" : ""}`} aria-label="Список чатов" onKeyDown={onListKeyDown}>
         <div className="rail-heading"><h2>Чаты</h2><button type="button" onClick={() => { setSelectedId(null); setListOpen(false); composerRef.current?.focus() }}>Новый чат</button></div>
@@ -130,7 +130,7 @@ export function App() {
         <form className="composer" onSubmit={(event) => { void send(event) }}><label htmlFor="brief">Ваш творческий бриф</label><textarea id="brief" ref={composerRef} value={draft} onChange={(event) => setDraft(event.target.value)} onKeyDown={onComposerKeyDown} placeholder="Например: подготовить текст для музейной вводной панели…" rows={3} /><div className="composer-actions"><span>Enter — отправить · Shift+Enter — новая строка</span><button type="submit" disabled={!draft.trim() || pending}>{pending ? "Готовим демо…" : "Отправить"}</button></div>{pending && <p role="status">Создаём демонстрационный ответ…</p>}{sendError && <p role="alert">Не удалось создать демо-ответ. Текст сохранён; повторите отправку.</p>}</form>
       </div>
     </main>}
-    {view === "materials" && <main className="simple-page"><p className="eyebrow">Материалы</p><h1>Проверенные источники</h1>{materials.isPending && <p role="status">Загружаем материалы…</p>}{materials.isError && <p role="alert">Не удалось загрузить материалы. <button type="button" onClick={() => void materials.refetch()}>Повторить</button></p>}{materials.isSuccess && <div className="empty-panel"><h2>Одобренных материалов пока нет</h2><p>Кандидатные PDF не показываются до проверки прав, контекста и точной ревизии.</p><button type="button" onClick={() => setView("chat")}>Вернуться к чату</button></div>}</main>}
+    {view === "materials" && <MaterialsView onBack={() => setView("chat")} />}
     {view === "admin" && <main className="simple-page"><p className="eyebrow">Администрация · макет</p><h1>Документы</h1><div className="empty-panel"><h2>Инвентарь ожидает серверный API</h2><p>В предпросмотре нет доступа к неопубликованным ревизиям, действиям одобрения или статусам обработки.</p><button type="button" onClick={() => setView("chat")}>Вернуться к чату</button></div></main>}
     {guideOpen && <StarterGuide onChoose={chooseStarter} onClose={() => { setGuideOpen(false); guideTriggerRef.current?.focus() }} />}
   </div>

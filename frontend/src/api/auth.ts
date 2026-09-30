@@ -1,5 +1,7 @@
-export type AuthUser = { id: string; username: string; role: "user" | "admin" }
-export type AuthSession = { user: AuthUser; csrf_token: string }
+import type { components } from "./schema.generated"
+
+export type AuthUser = components["schemas"]["AccountView"]
+export type AuthSession = components["schemas"]["AuthView"]
 
 export class ApiError extends Error {
   constructor(readonly status: number) {

@@ -11,8 +11,9 @@ function renderApp() {
 
 function mockSession(role: "user" | "admin" = "user") {
   vi.stubGlobal("fetch", vi.fn((input: string) => {
-    if (input !== "/api/v1/auth/me") throw new Error("Unexpected request")
-    return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ user: { id: "test-user", username: "tester", role }, csrf_token: "test-csrf" }) })
+    if (input === "/api/v1/auth/me") return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ user: { id: "test-user", username: "tester", role }, csrf_token: "test-csrf" }) })
+    if (input === "/api/v1/materials") return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve([]) })
+    throw new Error("Unexpected request")
   }))
 }
 
@@ -53,6 +54,42 @@ test("materials show no unapproved candidates", async () => {
   fireEvent.click(screen.getByRole("button", { name: "Материалы" }))
   expect(await screen.findByText("Одобренных материалов пока нет")).toBeInTheDocument()
   expect(screen.queryByText(/PDF-02/)).not.toBeInTheDocument()
+})
+
+test("approved material opens its exact revision and page", async () => {
+  const material = { revision_id: "rev-2", title: "Источник Приморья", creator: "Автор", origin_url: "https://example.org/source.pdf", rights_usage_note: "Review approved", region: null, people: null, period: null, media_type: "application/pdf" }
+  vi.stubGlobal("fetch", vi.fn((input: string) => {
+    if (input === "/api/v1/auth/me") return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ user: { id: "test-user", username: "tester", role: "user" }, csrf_token: "test-csrf" }) })
+    if (input === "/api/v1/materials") return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve([material]) })
+    if (input === "/api/v1/materials/rev-2") return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ ...material, segments: [{ segment_id: "seg-1", locator: { kind: "page", page: 7 }, text: "Проверяемый фрагмент." }] }) })
+    throw new Error("Unexpected request")
+  }))
+  renderApp()
+  await screen.findByRole("heading", { name: "Идея с культурным контекстом" })
+  fireEvent.click(screen.getByRole("button", { name: "Материалы" }))
+  fireEvent.click(await screen.findByRole("button", { name: /Источник Приморья/ }))
+  expect(await screen.findByText("Проверяемый фрагмент.")).toBeInTheDocument()
+  expect(screen.getByRole("link", { name: "Открыть страницу 7 в источнике" })).toHaveAttribute("href", "https://example.org/source.pdf#page=7")
+})
+
+test("materials error can be retried without showing candidates", async () => {
+  let attempts = 0
+  vi.stubGlobal("fetch", vi.fn((input: string) => {
+    if (input === "/api/v1/auth/me") return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ user: { id: "test-user", username: "tester", role: "user" }, csrf_token: "test-csrf" }) })
+    if (input === "/api/v1/materials") {
+      attempts += 1
+      if (attempts === 1) return Promise.resolve({ ok: false, status: 503 })
+      return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve([]) })
+    }
+    throw new Error("Unexpected request")
+  }))
+  renderApp()
+  await screen.findByRole("heading", { name: "Идея с культурным контекстом" })
+  fireEvent.click(screen.getByRole("button", { name: "Материалы" }))
+  expect(await screen.findByRole("alert")).toHaveTextContent("Не удалось загрузить материалы")
+  fireEvent.click(within(screen.getByRole("alert")).getByRole("button", { name: "Повторить" }))
+  expect(await screen.findByText("Одобренных материалов пока нет")).toBeInTheDocument()
+  expect(attempts).toBe(2)
 })
 
 test("a failed demo send keeps the editable brief", async () => {
