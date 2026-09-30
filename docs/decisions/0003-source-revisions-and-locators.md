@@ -1,6 +1,6 @@
 # ADR 0003: Source revisions, decisions and locators
 
-Status: Implemented for PDF page text in the pilot; table extraction and approval authority remain open.
+Status: Implemented for PDF page text and synthetic UTF-8 CSV cells in the pilot; real table fidelity and approval authority remain open.
 Date: 2026-09-30
 
 ## Context and evidence
@@ -91,6 +91,29 @@ Comparable design inputs:
    the worker and candidate remain available for retry. This is process and
    resource isolation, not a hardened syscall or network sandbox. Untrusted bulk
    intake remains a separate deployment gate.
+
+## CSV table extension (2026-09-30)
+
+This extends decisions 4 and 7–9 above. The private original store accepts
+`text/csv` with a `.csv` filename and a 2 MiB limit. The worker parses UTF-8 CSV
+in a resource-limited child, stores each nonempty data cell as a `table` segment,
+and records the one-based CSV record and column without inventing a PDF page or
+XLSX sheet. Search text includes the original column header and first-column row
+key. The API serves a permitted original as an attachment with its recorded media
+type; page links continue to apply only to PDFs. Extraction failure remains held
+and uses `source_extraction_failed` for both supported formats.
+
+The accepted subset requires a comma delimiter, a unique nonempty header row,
+two or more columns, a first-column key for nonempty data rows, regular row width,
+and strict UTF-8 decoding. Quoted newlines count as one CSV record. Empty cells
+retain their column positions and are not indexed. This avoids a heuristic header
+or delimiter decision that could assign a cultural value to the wrong label.
+The design follows [RFC 4180](https://datatracker.ietf.org/doc/html/rfc4180) and
+Python's [CSV parser documentation](https://docs.python.org/3/library/csv.html).
+The syntax is general, but cultural table semantics and retrieval effectiveness
+still require a real eligible fixture and expert judgements. XLSX merged cells,
+formulas and sheet locators remain unimplemented. The existing parser process
+limits are resource isolation, not a syscall or network sandbox.
 
 ## Alternatives and tradeoffs
 

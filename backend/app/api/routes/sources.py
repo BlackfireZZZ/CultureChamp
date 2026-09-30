@@ -19,7 +19,7 @@ from app.application.source_management import (
 from app.core.config import settings
 from app.infrastructure.db.governed_sources import SqlSourceGateway
 from app.infrastructure.db.session import session_factory
-from app.infrastructure.ingestion.storage import PrivatePdfStore
+from app.infrastructure.ingestion.storage import PrivateOriginalStore
 
 admin_router = APIRouter(prefix="/admin", tags=["admin-sources"])
 materials_router = APIRouter(prefix="/materials", tags=["materials"])
@@ -29,9 +29,9 @@ def get_source_service(request: Request) -> SourceService:
     factory: async_sessionmaker[AsyncSession] = getattr(
         request.app.state, "source_session_factory", session_factory
     )
-    store: PrivatePdfStore = getattr(request.app.state, "source_store", None) or PrivatePdfStore(
-        Path(settings.source_storage_root)
-    )
+    store: PrivateOriginalStore = getattr(
+        request.app.state, "source_store", None
+    ) or PrivateOriginalStore(Path(settings.source_storage_root))
     return SourceService(SqlSourceGateway(factory, store))
 
 
@@ -273,7 +273,10 @@ async def material_detail(
     "/{revision_id}/original",
     response_class=Response,
     responses={
-        200: {"content": {"application/pdf": {"schema": {"type": "string", "format": "binary"}}}}
+        200: {"content": {
+            "application/pdf": {"schema": {"type": "string", "format": "binary"}},
+            "text/csv": {"schema": {"type": "string", "format": "binary"}},
+        }}
     },
 )
 async def material_original(
@@ -282,11 +285,12 @@ async def material_original(
     service: Annotated[SourceService, Depends(get_source_service)],
 ) -> Response:
     original = await service.visible_original(actor, revision_id)
+    disposition = "inline" if original.media_type == "application/pdf" else "attachment"
     return Response(
         content=original.content,
-        media_type="application/pdf",
+        media_type=original.media_type,
         headers={
-            "Content-Disposition": f'inline; filename="{original.filename}"',
+            "Content-Disposition": f'{disposition}; filename="{original.filename}"',
             "X-Content-Type-Options": "nosniff",
             "Cache-Control": "no-store",
         },

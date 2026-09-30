@@ -76,7 +76,7 @@ evidence; ADR 0006 sets the vector storage direction.
 | Milestone | Gate | Status |
 |---|---|---|
 | M0 — Product slice and decisions | One narrow corpus/task slice, source policy, format matrix, identity/provider constraints and evaluable examples are recorded. | in_progress: policy and examples exist; real-source rights, reviewer and provider terms are external dependencies |
-| M1 — Governed corpus | An approved source revision can be ingested, inspected, cited, revoked, and excluded from user retrieval; text and table locations survive extraction. | in_progress: synthetic PDF vertical path verified; table extraction absent |
+| M1 — Governed corpus | An approved source revision can be ingested, inspected, cited, revoked, and excluded from user retrieval; text and table locations survive extraction. | in_progress: synthetic PDF and UTF-8 CSV vertical paths verified; real table fidelity and rights remain open |
 | M2 — Vector retrieval | Versioned embeddings are indexed in Qdrant; chat uses vector candidates with authoritative rights rechecks; measured retrieval meets agreed thresholds. | in_progress: synthetic vector and revocation checks pass; same-fixture provisional dense recall@5 1.00; expert relevance, replay and release thresholds remain |
 | M3 — Grounded chat | A text brief produces a persisted text conversation with validated source citations, no-evidence behavior, and bounded model API calls. | in_progress: synthetic backend path passes; UI, external provider and end-to-end checks remain |
 | M4 — Two-role product UI | User chat, starter guide, source browser/citation view and admin document inventory work at canonical widths and keyboard paths. | in_progress: persisted chat, exact citation links and admin review/write controls pass component checks; live browser and canonical-width checks remain |
@@ -139,10 +139,10 @@ gate. Each row is intended as one cohesive review.
 | C03 | done · integration agent · [handoff](../../agentic/handoffs/integration-backend.md) | C01 | Alembic tables and repository ports/adapters for sources, revisions, tags and locators; `backend/app/infrastructure/db/` | Clean PostgreSQL upgrade works and repository round-trip preserves the exact revision and locator; migration check and integration test pass. |
 | C04 | done · integration agent · [handoff](../../agentic/handoffs/integration-backend.md) | C02, C03, S04 | Authorized file intake, private storage, type/size validation and immutable content hash; `backend/app/infrastructure/` | Spoofed type, oversized file and duplicate retry are rejected or safely deduplicated; original bytes stay outside public webroot. |
 | C05 | in_progress · integration agent · [handoff](../../agentic/handoffs/integration-backend.md) | C04 | Text extraction adapters with structure and location preservation for approved formats; `backend/app/infrastructure/ingestion/` | Fixtures produce non-empty ordered sections with stable page/heading locators; malformed input fails with a recorded error, not partial publication. |
-| C06 | ready · integration agent · — | C04 | Table extraction adapters retaining sheet/table, row/column, headers and cell meaning; `backend/app/infrastructure/ingestion/` | A queryable table fact maps back to its original sheet/table and cell range; merged/empty cells and encoding errors have fixture checks. |
+| C06 | in_progress · integration agent · [handoff](../../agentic/handoffs/integration-backend.md) | C04 | Table extraction adapters retaining sheet/table, row/column, headers and cell meaning; `backend/app/infrastructure/ingestion/` | A queryable table fact maps back to its original sheet/table and cell range; merged/empty cells and encoding errors have fixture checks. Synthetic CSV cells and invalid encoding are covered; real table and XLSX merged cells remain open. |
 | C07 | in_progress · integration agent · [handoff](../../agentic/handoffs/integration-backend.md) | C03, C05, C06, S02 | Background processing, revision lifecycle, review and exact-revision approval/revocation; `backend/app/application/ingestion/` | Retried processing is idempotent; only an approved revision appears in user retrieval, and revocation removes it without destroying provenance. |
 | C08 | done · integration agent · [handoff](../../agentic/handoffs/integration-backend.md) | C02, C03, C07 | Admin inventory/detail/filter API and generated OpenAPI client contract; `backend/app/api/`, `contracts/` | Admin sees tags, structure, state and errors; user receives denial for the same unpublished detail; success/error/schema checks pass. |
-| C09 | in_progress · integration agent · [handoff](../../agentic/handoffs/integration-backend.md) | C02, C03, C07 | User materials list/detail and authorized original/locator API; `backend/app/api/materials/`, `contracts/` | Page and sheet/row/cell locators survive the API contract without invented pages; user sees approved revisions only; a real extracted table and authorized non-PDF original still need end-to-end proof. |
+| C09 | in_progress · integration agent · [handoff](../../agentic/handoffs/integration-backend.md) | C02, C03, C07 | User materials list/detail and authorized original/locator API; `backend/app/api/materials/`, `contracts/` | Page and table/row/cell locators survive the API contract without invented pages; user sees approved revisions only; synthetic CSV original access passes, real table proof remains open. |
 | C10 | done · integration agent · [handoff](../../agentic/handoffs/integration-backend.md) | C02, C04, C07 | Admin import/status and approval/revocation command API; `backend/app/api/admin/`, `contracts/` | Authorized import reaches a reviewable state; an admin can approve/revoke exact revisions; user and malformed commands are denied. |
 
 ### M2 — Retrieval and evaluation
@@ -357,7 +357,7 @@ path, evaluation cases, and data-handling constraints exist.
   35 backend, 12 frontend and 6 ML tests; OpenAPI and Compose config matched.
   Four Playwright tests and live Compose HTTP worker/approval/revocation paths
   also passed. See the [integration handoff](../../agentic/handoffs/integration-backend.md).
-- **Remaining M1 limits:** no rights-cleared real corpus, appointed review authority,
+- **Remaining M1 limits (earlier PDF checkpoint):** no rights-cleared real corpus, appointed review authority,
   table fixture/extractor, hardened parser sandbox, tag-value
   admin filtering, or passage-level sensitivity exclusion. Exact original-file
   access and admin state/decision filters are implemented for the PDF slice.
@@ -368,6 +368,14 @@ path, evaluation cases, and data-handling constraints exist.
   Their page counts and hashes are recorded, and text extraction produced
   nonempty output. S04 remains open: extraction fidelity, exact locators,
   rights and a table fixture still need assessment.
+- **2026-09-30, synthetic CSV extension:** A narrow UTF-8 comma CSV with unique
+  headers and a first-column row key now passes private intake, isolated parsing,
+  exact cell storage, admin review, Qdrant indexing, material detail, permitted
+  original download and immediate rights revocation. Empty interior cells preserve
+  their original column number. A clean PostgreSQL migration and live API/vector
+  test passed. This is a technical fixture only. C06 and S04 remain open for real
+  cultural table comparison and XLSX/merged-cell semantics; no table quality
+  threshold is claimed. See ADR 0003 and the format matrix.
 - **2026-09-30:** Product shape accepted from the user: two roles; chat as the user
   home; starter tasks and in-app guide; secondary materials view; source-linked
   answers; admin structured document inventory; text-only MVP; external model API.

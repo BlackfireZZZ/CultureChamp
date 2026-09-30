@@ -30,11 +30,13 @@ from app.infrastructure.db.source_models import (
     SourceTag,
 )
 from app.infrastructure.db.source_repository import SourceRepository
-from app.infrastructure.ingestion.storage import IntakeError, PrivatePdfStore
+from app.infrastructure.ingestion.storage import IntakeError, PrivateOriginalStore
 
 
 class SqlSourceGateway:
-    def __init__(self, factory: async_sessionmaker[AsyncSession], store: PrivatePdfStore) -> None:
+    def __init__(
+        self, factory: async_sessionmaker[AsyncSession], store: PrivateOriginalStore
+    ) -> None:
         self.factory = factory
         self.store = store
 
@@ -78,7 +80,7 @@ class SqlSourceGateway:
                 source.id,
                 sha256=stored.sha256,
                 byte_size=stored.byte_size,
-                media_type="application/pdf",
+                media_type=media_type,
                 storage_key=stored.storage_key,
                 title=title,
                 creator=creator,
@@ -330,4 +332,5 @@ class SqlSourceGateway:
                 raise SourceNotFound from exc
             if hashlib.sha256(content).hexdigest() != revision.sha256:
                 raise SourceNotFound
-            return OriginalData(content, f"source-{revision_id}.pdf")
+            suffix = ".pdf" if revision.media_type == "application/pdf" else ".csv"
+            return OriginalData(content, f"source-{revision_id}{suffix}", revision.media_type)

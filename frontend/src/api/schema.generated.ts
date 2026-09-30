@@ -1227,6 +1227,7 @@ export interface operations {
                 };
                 content: {
                     readonly "application/pdf": string;
+                    readonly "text/csv": string;
                 };
             };
             /** @description Validation Error */

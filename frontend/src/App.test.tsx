@@ -135,6 +135,7 @@ test("a table cell keeps its sheet locator without inventing a PDF page", async 
   fireEvent.click(await screen.findByRole("button", { name: "Материалы" }))
   fireEvent.click(await screen.findByRole("button", { name: /Synthetic table/ }))
   expect(await screen.findByRole("heading", { name: "Таблица Synthetic, строка 3, столбец 2" })).toBeInTheDocument()
+  expect(screen.getByRole("link", { name: "Скачать исходную таблицу CSV" })).toHaveAttribute("href", "/api/v1/materials/rev-table/original")
   expect(screen.queryByRole("link", { name: /Открыть страницу/ })).not.toBeInTheDocument()
 })
 

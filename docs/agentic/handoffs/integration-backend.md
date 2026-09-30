@@ -1,5 +1,31 @@
 # Corpus/backend integration handoff — 2026-09-30
 
+## Latest CSV integration evidence
+
+Objective and status: C06 and C09 gained a synthetic UTF-8 CSV path with exact
+record/column evidence, governed visibility, vector search and original access.
+Real cultural tables, XLSX merged cells and expert retrieval labels remain open.
+Worktree: `/mnt/BlackfireZZZ/Hackatons/CultureChamp-integration-backend`, branch
+`agent/integration-backend`, base `f67a0586f55e4bf3aa5192628d95a0d0cb527096`;
+the integration agent owns these changes. Before this slice the branch was clean
+at `4af785554f4b154d43ec67173f6c79e88c5de074`.
+Contracts changed: private original storage, worker extraction, source/original
+API, OpenAPI snapshot/client, admin and materials UI, ADR 0003, format matrix and
+active tracker. RFC 4180 and Python's CSV parser documentation support the
+explicit delimiter/header choice; no delimiter inference is used.
+Verification: a clean PostgreSQL upgrade through `b516391e8732` passed; the
+live `test_csv_upload_to_vector_and_original_access` passed against PostgreSQL
+and Qdrant, including immediate revocation. `PATH=/home/blackfire/.nvm/versions/node/v24.19.0/bin:$PATH
+CORPUS_TEST_DATABASE_URL=postgresql+asyncpg://culturechamp:culturechamp_local@localhost:25436/culturechamp
+CORPUS_TEST_VECTOR_URL=http://localhost:26336 make check` passed: 60 backend,
+15 frontend and 17 ML tests, lint, mypy, build, contracts and Compose config.
+`make migration-check` reported no new upgrade operations; `git diff --check`
+passed. The previous vector-prefilter commit's [CI run](https://github.com/BlackfireZZZ/CultureChamp/actions/runs/36753793607)
+also completed successfully. No real source entered user publication or a model
+provider. Next: obtain the user's passage grades, then evaluate release gates;
+compare an eligible real table against CSV cells and implement XLSX only with a
+merged-cell fixture. The isolated test stack can be removed after verification.
+
 ## Current integration checkpoint (supersedes older status statements below)
 
 The integration branch now has a Qdrant text vector index with locally generated,
@@ -14,12 +40,13 @@ work retained in F02–F05 of the active tracker.
 
 The same branch now has persisted, owned chat turns with retry IDs, citation
 withdrawal checks, bounded fake model calls and a frontend connected to those
-APIs. The admin UI can upload a PDF candidate, inspect extracted segments and
+APIs. The admin UI can upload a PDF or narrow UTF-8 CSV candidate, inspect extracted segments and
 errors, retry failed processing, explicitly grant rights on an exact revision,
 and revoke it. Original-file and provider-transfer grants default to false.
-Material detail now preserves table cell locators in its API and UI instead of
-coercing them to page 1; extraction and authorized serving of a real table
-original remain open.
+Material detail preserves table cell locators in its API and UI instead of
+coercing them to page 1. The synthetic CSV path has isolated extraction,
+Qdrant indexing, exact cell lookup and authorized original download; a real
+cultural table remains unverified.
 The three supplied PDFs have been used only in local retrieval diagnostics; no
 provided cultural source has been approved for user answers or sent to a model
 provider. User authorization covers this internal validation, not public use.
@@ -178,16 +205,16 @@ added the evaluation test to the root `make check` target.
 
 ## What remains unverified and why
 
-S01/S02/S04 and C01/C05/C07/C09 remain partial as recorded in the
-tracker. No table file exists, so table extraction, cell locators in user APIs and
-table UI cannot be claimed. No real source has reuse, provider-transfer or
+S01/S02/S04 and C01/C05/C06/C07/C09 remain partial as recorded in the
+tracker. A synthetic CSV has exact cell locators through the user API and table
+UI, plus a permitted original download. Real cultural tables and XLSX/merged
+cells remain unverified. No real source has reuse, provider-transfer or
 community-sensitive clearance; the three PDFs remain admin-only candidates.
 Heading extraction and complete multicolumn reading order are unverified. The
-  ingress/proxy has no explicit request-body limit before multipart spooling, and
-the PDF parser has no hardened process sandbox or CPU/memory ceiling. Admin
-  tag-value filters, passage-level exclusions and audited account role changes
-  are absent. Provider policy remains disabled; real
-generation and chat persistence are absent. The live Compose test used an
+PDF and CSV parsers have bounded CPU/memory child processes and request-body
+limits, but no hardened syscall/network sandbox. Admin tag-value filters,
+passage-level exclusions and audited account role changes are absent. External
+generation remains gated on retrieval review. The live Compose test used an
 example.invalid rights URL only for self-authored synthetic bytes; it is not a
 model for accepting evidence about a third-party source.
 
@@ -195,17 +222,16 @@ model for accepting evidence about a third-party source.
 
 Appoint a rights and cultural approval authority; obtain exact-version grants
 for user excerpts and provider transmission separately. Verify full PDF-03
-reading order and supply a rights-cleared table fixture before widening the
-format gate. Set proxy body limits and parser isolation before untrusted bulk
+reading order and supply an eligible real table fixture before widening the
+format gate. Harden parser isolation before untrusted bulk
 uploads. The rate limiter is per username and can be abused to lock an account;
 evaluate an IP/account policy with operators before broader availability.
 
 ## Exact next step
 
-For the next backend slice, add a rights-cleared real table fixture and prove a
-cell-to-original locator through C06 before widening C07/C09. Add a constrained
-parser process and request-body ingress limit before accepting untrusted bulk
-uploads; then test process termination, retry and candidate isolation.
+For the next backend slice, compare an eligible real table against CSV cell
+locators and add XLSX merged-cell handling with a separate fixture. Harden the
+parser sandbox before accepting untrusted bulk uploads.
 Keep all three supplied PDFs held until a named reviewer has documented rights,
 sensitivity and extraction fidelity for an exact hash. Re-run `make check`, clean
 migration and live role/revocation checks for any contract or schema change.

@@ -1,4 +1,4 @@
-"""Bounded private storage for candidate PDF originals."""
+"""Bounded private storage for candidate PDF and CSV originals."""
 
 import hashlib
 import os
@@ -9,6 +9,7 @@ from typing import BinaryIO
 from uuid import UUID
 
 MAX_PDF_BYTES = 10 * 1024 * 1024
+MAX_CSV_BYTES = 2 * 1024 * 1024
 CHUNK_SIZE = 64 * 1024
 
 
@@ -24,7 +25,7 @@ class StoredOriginal:
     duplicate: bool
 
 
-class PrivatePdfStore:
+class PrivateOriginalStore:
     def __init__(self, root: Path, *, public_root: Path | None = None) -> None:
         if root.is_symlink():
             raise IntakeError("private storage root cannot be a symlink")
@@ -42,10 +43,12 @@ class PrivatePdfStore:
         filename: str,
         claimed_media_type: str,
     ) -> StoredOriginal:
-        if Path(filename).name != filename or not filename.lower().endswith(".pdf"):
-            raise IntakeError("only PDF filenames are accepted")
-        if claimed_media_type != "application/pdf":
-            raise IntakeError("claimed media type must be application/pdf")
+        if Path(filename).name != filename:
+            raise IntakeError("invalid filename")
+        suffix = Path(filename).suffix.lower()
+        media_types = {".pdf": "application/pdf", ".csv": "text/csv"}
+        if suffix not in media_types or claimed_media_type != media_types[suffix]:
+            raise IntakeError("unsupported filename or claimed media type")
 
         source_dir = self.root / str(source_id)
         source_dir.mkdir(mode=0o700, exist_ok=True)
@@ -59,21 +62,23 @@ class PrivatePdfStore:
                 tail = bytearray()
                 while chunk := stream.read(CHUNK_SIZE):
                     total += len(chunk)
-                    if total > MAX_PDF_BYTES:
-                        raise IntakeError("PDF exceeds size limit")
+                    if total > (MAX_PDF_BYTES if suffix == ".pdf" else MAX_CSV_BYTES):
+                        raise IntakeError("original exceeds size limit")
                     if len(header) < 8:
                         header.extend(chunk[: 8 - len(header)])
                     tail = (tail + chunk)[-1024:]
                     digest.update(chunk)
                     temp.write(chunk)
-                if not header.startswith(b"%PDF-") or b"%%EOF" not in tail:
+                if suffix == ".pdf" and (
+                    not header.startswith(b"%PDF-") or b"%%EOF" not in tail
+                ):
                     raise IntakeError("PDF signature or trailer is invalid")
                 if total == 0:
-                    raise IntakeError("empty PDF")
+                    raise IntakeError("empty original")
                 temp.flush()
                 os.fsync(temp.fileno())
                 sha256 = digest.hexdigest()
-                key = f"{source_id}/{sha256}.pdf"
+                key = f"{source_id}/{sha256}{suffix}"
                 final_path = self.root / key
                 try:
                     os.link(temp_path, final_path)
@@ -88,12 +93,14 @@ class PrivatePdfStore:
 
     def open_original(self, storage_key: str) -> BinaryIO:
         parts = Path(storage_key).parts
-        if len(parts) != 2 or len(parts[1]) != 68 or not parts[1].endswith(".pdf"):
+        if len(parts) != 2 or Path(parts[1]).suffix not in {".pdf", ".csv"}:
             raise IntakeError("invalid storage key")
         try:
             UUID(parts[0])
         except ValueError as exc:
             raise IntakeError("invalid storage key") from exc
-        if any(char not in "0123456789abcdef" for char in parts[1][:-4]):
+        suffix = Path(parts[1]).suffix
+        digest = parts[1][: -len(suffix)]
+        if len(digest) != 64 or any(char not in "0123456789abcdef" for char in digest):
             raise IntakeError("invalid storage key")
         return (self.root / storage_key).open("rb")

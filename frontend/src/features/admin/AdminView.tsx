@@ -52,8 +52,8 @@ export function AdminView({ csrfToken }: { csrfToken: string }) {
     <h1>Кандидаты и ревизии</h1>
     <p>Загружайте кандидаты, проверяйте извлечение и права точной ревизии. Только явное одобрение делает материал доступным пользователям.</p>
     <form className="admin-form" onSubmit={submitUpload} aria-label="Загрузка кандидата">
-      <h2>Загрузить PDF-кандидат</h2>
-      <label>Оригинальный файл<input type="file" name="file" accept="application/pdf,.pdf" required /></label>
+      <h2>Загрузить PDF или CSV</h2>
+      <label>Оригинальный файл<input type="file" name="file" accept="application/pdf,.pdf,text/csv,.csv" required /></label>
       <label>Ссылка на источник<input name="origin_url" type="url" required /></label>
       <label>Название<input name="title" required maxLength={500} /></label>
       <label>Автор или организация<input name="creator" /></label>
@@ -70,7 +70,7 @@ export function AdminView({ csrfToken }: { csrfToken: string }) {
     {sources.isSuccess && sources.data.length > 0 && <div className="materials-layout">
       <section aria-label="Инвентарь кандидатов"><h2>Ревизии</h2><ul className="material-list">{sources.data.map((item) => <li key={item.revision_id}><button type="button" aria-current={revisionId === item.revision_id ? "true" : undefined} onClick={() => setRevisionId(item.revision_id)}><strong>{item.title}</strong><span>Обработка: {item.status} · Решение: {item.decision || "нет"}</span></button></li>)}</ul></section>
       <section aria-label="Детали ревизии" className="material-detail">
-        {!revisionId && <p>Выберите ревизию для проверки статуса и страниц.</p>}
+        {!revisionId && <p>Выберите ревизию для проверки статуса и фрагментов.</p>}
         {revisionId && revision.isPending && <p role="status">Загружаем ревизию…</p>}
         {revisionId && revision.isError && <div role="alert"><p>Не удалось загрузить ревизию.</p><button type="button" onClick={() => void revision.refetch()}>Повторить</button></div>}
         {revisionId && revision.isSuccess && <><h2>{revision.data.title}</h2><dl className="material-meta"><dt>Ревизия</dt><dd>{revision.data.revision_id}</dd><dt>Обработка</dt><dd>{revision.data.status}</dd><dt>Ошибка</dt><dd>{revision.data.error_code || "Нет"}</dd><dt>Решение</dt><dd>{revision.data.decision || "Нет"}</dd><dt>Права</dt><dd>{revision.data.rights_usage_note || "Не подтверждены"}</dd><dt>Метки</dt><dd>{revision.data.tags.length ? revision.data.tags.map((tag) => `${tag.kind}: ${tag.value}`).join(" · ") : "Не указаны"}</dd><dt>SHA-256</dt><dd>{revision.data.sha256}</dd></dl><h3>Фрагменты ({revision.data.segments.length})</h3><ol className="segment-list">{revision.data.segments.map((segment) => <li key={segment.segment_id}><strong>{segment.locator.kind === "table" ? `Таблица ${segment.locator.sheet || segment.locator.table || ""}, строка ${segment.locator.row_start}, столбец ${segment.locator.column_start}` : `Страница ${segment.locator.page}`}</strong><p>{segment.text}</p></li>)}</ol>

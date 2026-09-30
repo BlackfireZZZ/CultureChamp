@@ -1,4 +1,4 @@
-"""Durable, retryable PDF extraction without publishing candidate text."""
+"""Durable, retryable extraction without publishing candidate text."""
 
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -13,9 +13,11 @@ from app.infrastructure.db.chat_store import SqlChatStore
 from app.infrastructure.db.model_quota import SqlModelQuota
 from app.infrastructure.db.source_models import SourceProcessing, SourceRevision, SourceSegment
 from app.infrastructure.ingestion.chunking import chunk_text
+from app.infrastructure.ingestion.csv_table import ExtractedCell
+from app.infrastructure.ingestion.isolated_csv import extract_csv_isolated
 from app.infrastructure.ingestion.isolated_pdf import extract_pdf_isolated
 from app.infrastructure.ingestion.pdf_text import ExtractionError
-from app.infrastructure.ingestion.storage import PrivatePdfStore
+from app.infrastructure.ingestion.storage import PrivateOriginalStore
 from app.infrastructure.vector.indexing import ApprovedTextIndexer
 from app.infrastructure.vector.text_vectors import (
     LocalTextEmbedder,
@@ -25,7 +27,7 @@ from app.infrastructure.vector.text_vectors import (
 
 
 async def process_one(
-    factory: async_sessionmaker[AsyncSession], store: PrivatePdfStore
+    factory: async_sessionmaker[AsyncSession], store: PrivateOriginalStore
 ) -> UUID | None:
     now = datetime.now(UTC)
     async with factory.begin() as session:
@@ -54,13 +56,22 @@ async def process_one(
             if revision is None:
                 raise ExtractionError("revision missing")
             with store.open_original(revision.storage_key) as stream:
-                pages = extract_pdf_isolated(stream.read())
+                data = stream.read()
+            cells: tuple[ExtractedCell, ...]
+            if revision.media_type == "application/pdf":
+                pages = extract_pdf_isolated(data)
+                cells = ()
+            elif revision.media_type == "text/csv":
+                pages = ()
+                cells = extract_csv_isolated(data)
+            else:
+                raise ExtractionError("unsupported source media type")
     except (ExtractionError, OSError, ValueError):
         async with factory.begin() as session:
             record = await session.get(SourceProcessing, revision_id, with_for_update=True)
             if record is not None and record.state == "processing" and record.attempts == attempt:
                 record.state = "failed"
-                record.error_code = "pdf_extraction_failed"
+                record.error_code = "source_extraction_failed"
                 record.lease_until = None
         return revision_id
     async with factory.begin() as session:
@@ -81,6 +92,21 @@ async def process_one(
                     )
                 )
                 ordinal += 1
+        for cell in cells:
+            session.add(
+                SourceSegment(
+                    revision_id=revision_id,
+                    ordinal=ordinal,
+                    kind="table",
+                    text=cell.text,
+                    table_name=cell.locator.table,
+                    row_start=cell.locator.row_start,
+                    row_end=cell.locator.row_end,
+                    column_start=cell.locator.column_start,
+                    column_end=cell.locator.column_end,
+                )
+            )
+            ordinal += 1
         record.state = "review_pending"
         record.error_code = None
         record.lease_until = None
@@ -90,7 +116,7 @@ async def process_one(
 async def run_worker(factory: async_sessionmaker[AsyncSession], root: Path) -> None:
     import asyncio
 
-    store = PrivatePdfStore(root)
+    store = PrivateOriginalStore(root)
     indexer = ApprovedTextIndexer(
         factory, QdrantTextIndex(settings.vector_url, LocalTextEmbedder())
     )

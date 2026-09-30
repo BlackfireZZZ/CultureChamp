@@ -78,6 +78,7 @@ class IntakeData:
 class OriginalData:
     content: bytes
     filename: str
+    media_type: str
 
 
 @dataclass(frozen=True)

@@ -25,7 +25,7 @@ from app.infrastructure.db.source_models import (
     SourceVectorIndex,
 )
 from app.infrastructure.db.source_repository import SourceRepository
-from app.infrastructure.ingestion.storage import PrivatePdfStore
+from app.infrastructure.ingestion.storage import PrivateOriginalStore
 from app.infrastructure.model.gateway import ModelFailure, ModelRequest, ModelResult
 from app.infrastructure.passwords import Argon2PasswordCodec
 from app.infrastructure.vector.indexing import ApprovedTextIndexer
@@ -99,7 +99,7 @@ async def _check_chat(url: str, tmp_path: Path) -> None:
     app.state.session_store = identity_store
     app.state.identity_service = IdentityService(identity_store, codec, codec.dummy_hash)
     app.state.source_session_factory = factory
-    app.state.source_store = PrivatePdfStore(tmp_path / "private")
+    app.state.source_store = PrivateOriginalStore(tmp_path / "private")
     index = QdrantTextIndex(os.environ["CORPUS_TEST_VECTOR_URL"], ConstantEmbedder())
     app.state.vector_index = index
     marker = f"chatprobe{uuid4().hex}"

@@ -1865,6 +1865,12 @@
                   "format": "binary",
                   "type": "string"
                 }
+              },
+              "text/csv": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
               }
             },
             "description": "Successful Response"

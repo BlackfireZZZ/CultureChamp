@@ -24,7 +24,8 @@ model transmission are unresolved in the [source policy](SOURCE_POLICY.md).
 | Text-layer PDF, parallel/multicolumn | PDF-03 | Text exists; Poppler layout fails page 2 reading order, while sampled `pypdf` content order is better | Hold from user publication until full reading-order review. |
 | Scanned/image-only PDF | None | No OCR or page-text test | Unsupported; reject or hold for separate OCR decision. |
 | TXT/Markdown/DOCX/HTML | None | No fixture or fidelity test | Unsupported in this slice. |
-| CSV/XLSX or embedded PDF table | None verified | No row/column, header or cell-locator test | **Table coverage unverified.** S04 acceptance remains open until a rights-cleared table fixture is supplied and inspected. |
+| UTF-8 comma CSV with a header row and first-column row keys | Self-authored synthetic table only | Empty interior cells retain their original one-based column; each nonempty data cell carries its column header and row key; clean-database API, original-file and Qdrant checks pass | Technical CSV path is implemented. Cultural table fidelity and retrieval quality remain unverified until an eligible real fixture is inspected. |
+| XLSX or embedded PDF table | None verified | No merged-cell, formula, sheet or embedded-table locator test | Unsupported in this slice; C06 remains open. |
 
 ## Reproduction
 
@@ -36,5 +37,11 @@ pdftotext -f 1 -l 2 -layout data/retrieval-fixtures/raw/51-88-1-SM.pdf -
 
 Repeat `pdfinfo` and `pdftotext` for the other two inventory paths. For PDF-03,
 compare page 2's left and right columns with extracted lines before designing a
-paragraph locator. The next falsifying check is a real table fixture with merged
-and empty cells and a row/cell-to-original comparison; no such file is supplied.
+paragraph locator. For CSV, compare the exact record/column in an eligible real
+table with its extracted segment, including quoted newlines, empty cells and
+headers. XLSX needs a separate merged-cell and sheet-locator fixture; none is
+supplied. The CSV adapter follows [RFC 4180](https://datatracker.ietf.org/doc/html/rfc4180)
+for commas, quotes and records and Python's [CSV parser](https://docs.python.org/3/library/csv.html)
+in strict mode. It deliberately requires UTF-8 and a nonempty unique header row
+with a first-column key; delimiter or header inference would make cell meaning
+ambiguous. The isolated child process has the same bounded runtime pattern as PDF.
