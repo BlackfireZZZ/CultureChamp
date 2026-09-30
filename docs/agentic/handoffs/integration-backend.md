@@ -829,3 +829,17 @@ remain the release blockers; measured provider cost and latency remain open.
 For this fix, a fresh isolated PostgreSQL container migrated from zero to head;
 the real `SqlModelQuota` retry/limit test passed (1 test). That project's
 container, network and volume were removed after the check.
+
+## 2026-09-30 provider-neutral call telemetry
+
+Expected result: each reserved model call produces a content-free line with
+elapsed time, outcome, attempt count and any reported usage. Existing boundaries
+are ADR 0004's no-content log rule, the gateway/quota protocol and Q03's
+operations criterion. A new test first failed because no line was emitted. The
+gateway now uses Uvicorn's configured error logger, monotonic elapsed time and
+the parsed final response's token counts. A rejected over-limit response remains
+failed in the quota while its reported usage appears in the log. Focused adapter
+tests pass (8); a direct run with Uvicorn's production logging configuration
+emitted the expected line. This is a call metric, not a verified provider bill:
+failed attempts can be charged without returning usage. No real provider has
+been configured, so cost and pilot latency targets remain open.

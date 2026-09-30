@@ -103,6 +103,18 @@ replacement or recovery objectives at scale.
   and provider token/cost estimates. Thresholds and alert routing need measured
   pilot traffic; they are not configured yet.
 
+Each reserved model call emits one `model_call` line through the backend's
+Uvicorn error logger. `docker compose logs backend | rg 'model_call '` shows
+`outcome`, elapsed `duration_ms`, provider `attempts`, and reported input/output
+tokens. The duration covers the provider phase and quota finalization; it does
+not include retrieval or HTTP transport. Failed calls without a parsed response
+have `None` token counts. An over-limit parsed response records its reported
+usage in the log even though its quota reservation fails. These lines contain
+no prompt, response, user ID, request ID, key or excerpt. Provider retries may
+incur usage absent from the final response; reconcile actual invoices before
+calling these counts cost. Pricing, production log retention, p95 thresholds
+and alert routing remain pending the selected provider and pilot traffic.
+
 The procedure follows [PostgreSQL's `pg_dump` and `pg_restore` documentation](https://www.postgresql.org/docs/current/backup-dump.html)
 and [Qdrant snapshot/recovery guidance](https://qdrant.tech/documentation/operations/snapshots/).
 The project uses replay for its small text index; Qdrant snapshots may reduce

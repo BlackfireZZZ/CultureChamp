@@ -88,20 +88,68 @@ def test_fake_quota_retry_and_timeout() -> None:
     asyncio.run(_fake_quota_retry_and_timeout())
 
 
-def test_over_limit_response_finishes_reservation_as_failed() -> None:
+def test_over_limit_response_finishes_reservation_as_failed(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
     async def check() -> None:
         class OverLimitProvider:
             async def generate(self, request: ModelRequest) -> ModelResult:
                 return ModelResult("too long", 3, 4)
 
         quota = RecordingQuota()
-        with pytest.raises(ModelFailure, match="provider_unavailable"):
-            await ModelGateway(OverLimitProvider(), quota).generate(
-                ModelRequest("user-1", "Write a brief", "turn-1", max_output_tokens=3)
-            )
+        with caplog.at_level("INFO", logger="uvicorn.error"):
+            with pytest.raises(ModelFailure, match="provider_unavailable"):
+                await ModelGateway(OverLimitProvider(), quota).generate(
+                    ModelRequest("user-1", "Write a brief", "turn-1", max_output_tokens=3)
+                )
         assert quota.finished == [None]
 
     asyncio.run(check())
+    assert "model_call outcome=provider_unavailable" in caplog.text
+    assert "input_tokens=3 output_tokens=4" in caplog.text
+
+
+def test_gateway_logs_duration_and_usage_without_request_content(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    async def check() -> None:
+        class MeteredProvider:
+            async def generate(self, request: ModelRequest) -> ModelResult:
+                return ModelResult("private-response-canary", 7, 3)
+
+        with caplog.at_level("INFO", logger="uvicorn.error"):
+            await ModelGateway(MeteredProvider(), AllowQuota()).generate(
+                ModelRequest("private-user-canary", "private-prompt-canary", "private-key-canary")
+            )
+
+    asyncio.run(check())
+    assert "model_call outcome=ok" in caplog.text
+    assert "duration_ms=" in caplog.text
+    assert "input_tokens=7 output_tokens=3" in caplog.text
+    for canary in (
+        "private-response-canary",
+        "private-user-canary",
+        "private-prompt-canary",
+        "private-key-canary",
+    ):
+        assert canary not in caplog.text
+
+
+def test_gateway_does_not_log_unrecognized_provider_error(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    async def check() -> None:
+        class BadProvider:
+            async def generate(self, request: ModelRequest) -> ModelResult:
+                raise ModelFailure("private-error-canary")
+
+        with caplog.at_level("INFO", logger="uvicorn.error"):
+            with pytest.raises(ModelFailure):
+                await ModelGateway(BadProvider(), AllowQuota()).generate(request())
+
+    asyncio.run(check())
+    assert "model_call outcome=provider_unavailable" in caplog.text
+    assert "private-error-canary" not in caplog.text
 
 
 async def _fake_quota_retry_and_timeout() -> None:
