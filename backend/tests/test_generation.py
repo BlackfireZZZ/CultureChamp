@@ -43,7 +43,9 @@ class AllowQuota:
     async def reserve(self, subject_id: str, idempotency_key: str) -> bool:
         return True
 
-    async def finish(self, subject_id: str, idempotency_key: str, result) -> None:
+    async def finish(
+        self, subject_id: str, idempotency_key: str, result, *, accepted: bool = True
+    ) -> None:
         pass
 
 

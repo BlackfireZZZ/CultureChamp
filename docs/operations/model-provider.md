@@ -9,6 +9,12 @@ Each accepted generation attempt consumes a user and global UTC daily quota slot
 including a retry after a failed request. A provider transport retry may make a
 second HTTP call within the same reserved generation; reconcile provider billing
 against actual usage before setting a spending target.
+The `generation_attempts` table keeps reported input/output tokens and whether
+the result passed the gateway's output limit for each reserved application attempt.
+A rejected overlength response still records its reported usage. Missing usage
+means the call failed before a valid usage report or predates this accounting
+change; it does not prove that the provider charged zero. Transport retries share
+one application attempt, so their separate usage is not observable here.
 
 The provider adapter accepts an operator-selected HTTPS endpoint compatible with
 Chat Completions. No service, model ID, endpoint or key is selected for this pilot.
@@ -48,7 +54,8 @@ held PDFs are not approved for user excerpts or provider transfer.
 Before activating a real provider, record its exact endpoint/model and terms,
 set the key through the deployment secret channel, approve provider transfer on
 specific reviewed revisions, and run a synthetic request through the same-origin
-chat API. Inspect the resulting citation and metadata-only logs; verify that the
-browser bundle and network traffic contain no provider key or direct provider
-request. A real API request and provider-specific response parsing remain
+chat API. Inspect the resulting citation, metadata-only logs and per-attempt
+token record; verify that the browser bundle and network traffic contain no
+provider key or direct provider request. A real API request and provider-specific
+response parsing remain
 unverified until those inputs are supplied.

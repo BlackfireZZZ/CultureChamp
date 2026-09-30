@@ -26,7 +26,8 @@ class AllowQuota:
         return True
 
     async def finish(
-        self, subject_id: str, idempotency_key: str, result: ModelResult | None
+        self, subject_id: str, idempotency_key: str, result: ModelResult | None,
+        *, accepted: bool = True,
     ) -> None:
         pass
 
@@ -36,19 +37,21 @@ class DenyQuota:
         return False
 
     async def finish(
-        self, subject_id: str, idempotency_key: str, result: ModelResult | None
+        self, subject_id: str, idempotency_key: str, result: ModelResult | None,
+        *, accepted: bool = True,
     ) -> None:
         pass
 
 
 class RecordingQuota(AllowQuota):
     def __init__(self) -> None:
-        self.finished: list[ModelResult | None] = []
+        self.finished: list[tuple[ModelResult | None, bool]] = []
 
     async def finish(
-        self, subject_id: str, idempotency_key: str, result: ModelResult | None
+        self, subject_id: str, idempotency_key: str, result: ModelResult | None,
+        *, accepted: bool = True,
     ) -> None:
-        self.finished.append(result)
+        self.finished.append((result, accepted))
 
 
 class SlowProvider:
@@ -123,7 +126,7 @@ def test_over_limit_response_finishes_reservation_as_failed(
                 await ModelGateway(OverLimitProvider(), quota).generate(
                     ModelRequest("user-1", "Write a brief", "turn-1", max_output_tokens=3)
                 )
-        assert quota.finished == [None]
+        assert quota.finished == [(ModelResult("too long", 3, 4), False)]
 
     asyncio.run(check())
     assert "model_call outcome=provider_unavailable" in caplog.text
@@ -277,7 +280,7 @@ def test_http_provider_rejects_incomplete_or_nontext_completion(
                 await ModelGateway(provider, quota).generate(ModelRequest(
                     "user-1", "Write a brief", "turn-1", provider_transfer_permitted=True
                 ))
-            assert quota.finished == [None]
+            assert quota.finished == [(None, False)]
 
     asyncio.run(check())
 

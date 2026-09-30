@@ -1,5 +1,44 @@
 # Corpus/backend integration handoff — 2026-09-30
 
+## Per-attempt reported model usage — 2026-10-01
+
+Objective and actual status: retain a provider's reported token usage when the
+gateway rejects an overlength response, and preserve it across a later retry of
+the same request ID. `generation_attempts` now records accepted/rejected status
+and nullable input/output counts per reserved application attempt. Missing counts
+do not mean zero billable usage. Provider transport retries still share one
+application attempt and require invoice reconciliation.
+
+Worktree / branch / base SHA: the isolated integration checkout at
+`/mnt/BlackfireZZZ/Hackatons/CultureChamp-integration-backend`, branch
+`agent/integration-backend`, clean at `991a508` before this slice.
+Owner of changed files: this agent owns the model gateway and quota, additive
+database migration, focused tests, provider runbook and tracker/handoff updates.
+Changed contracts and files: `Quota.finish` receives the observed result and an
+explicit acceptance flag; a failed response with valid usage is recorded without
+marking the request ID complete. Migration `ab83f0c214d7` adds three nullable
+columns to `generation_attempts`, leaving prior rows as unknown.
+
+Decisions and supporting evidence: the existing reservation table stored usage
+only for accepted responses and cleared it on retry. The OpenAI usage API
+distinguishes token totals from request counts, but this provider-neutral adapter
+cannot infer billing for errors or timeouts; the operator must reconcile actual
+provider records ([usage API](https://platform.openai.com/docs/api-reference/usage)).
+Verification commands and observed results: a clean isolated PostgreSQL database
+upgraded through `ab83f0c214d7`; `alembic check` reported no drift. Focused
+model adapter tests passed 21/21 and PostgreSQL quota tests passed 2/2. The
+first full `make check` found an outdated test quota stub; after updating it,
+the full gate passed architecture, Ruff, mypy, 106 backend tests, 21 frontend
+tests and build, 20 ML tests, OpenAPI contract and Compose configuration.
+
+What remains unverified and why: no real provider is selected, so billed usage,
+pricing, transport-retry behavior and pilot cost cannot be checked. Risks and
+open questions: counts are provider-reported, and the table cannot distinguish
+an unbilled failure from a timeout with billable provider work. Exact next step:
+select endpoint/model and transfer-eligible sources, then run the documented
+synthetic request and compare provider billing. Cleanup completed or retention
+reason: keep the isolated integration checkout for subsequent goal work.
+
 ## Audited segment exclusion — 2026-10-01
 
 Objective and actual status: an administrator can exclude extracted passage IDs

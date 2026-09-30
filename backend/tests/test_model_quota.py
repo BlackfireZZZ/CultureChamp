@@ -1,7 +1,7 @@
 import asyncio
 import os
 from datetime import UTC, datetime, time
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
 from sqlalchemy import delete, func, select
@@ -98,8 +98,33 @@ async def _check_quota(url: str) -> None:
         await quota.finish(subject, first, None)
         assert await quota.reserve(subject, first)
         await quota.finish(subject, first, ModelResult("ok", 5, 2))
+        async with factory() as session:
+            first_attempts = (
+                await session.scalars(
+                    select(GenerationAttempt)
+                    .where(GenerationAttempt.reservation_id == UUID(first))
+                    .order_by(GenerationAttempt.id)
+                )
+            ).all()
+            assert [(attempt.accepted, attempt.input_tokens, attempt.output_tokens)
+                    for attempt in first_attempts] == [(False, None, None), (True, 5, 2)]
+        rejected = str(uuid4())
+        assert await quota.reserve(subject, rejected)
+        await quota.finish(subject, rejected, ModelResult("too long", 7, 4), accepted=False)
+        assert await quota.reserve(subject, rejected)
+        await quota.finish(subject, rejected, None)
+        async with factory() as session:
+            rejected_attempts = (
+                await session.scalars(
+                    select(GenerationAttempt)
+                    .where(GenerationAttempt.reservation_id == UUID(rejected))
+                    .order_by(GenerationAttempt.id)
+                )
+            ).all()
+            assert [(attempt.accepted, attempt.input_tokens, attempt.output_tokens)
+                    for attempt in rejected_attempts] == [(False, 7, 4), (False, None, None)]
         assert not await quota.reserve(subject, first)
-        for _ in range(18):
+        for _ in range(16):
             key = str(uuid4())
             assert await quota.reserve(subject, key)
             await quota.finish(subject, key, ModelResult("ok", 5, 2))

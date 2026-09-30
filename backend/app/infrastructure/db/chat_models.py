@@ -4,6 +4,7 @@ from datetime import datetime
 from uuid import UUID, uuid4
 
 from sqlalchemy import (
+    Boolean,
     CheckConstraint,
     DateTime,
     ForeignKey,
@@ -111,3 +112,6 @@ class GenerationAttempt(Base):
     )
     subject_id: Mapped[UUID] = mapped_column(ForeignKey("accounts.id", ondelete="RESTRICT"))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    accepted: Mapped[bool | None] = mapped_column(Boolean)
+    input_tokens: Mapped[int | None]
+    output_tokens: Mapped[int | None]

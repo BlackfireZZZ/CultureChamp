@@ -42,7 +42,8 @@ class Quota(Protocol):
     async def reserve(self, subject_id: str, idempotency_key: str) -> bool: ...
 
     async def finish(
-        self, subject_id: str, idempotency_key: str, result: ModelResult | None
+        self, subject_id: str, idempotency_key: str, result: ModelResult | None,
+        *, accepted: bool = True,
     ) -> None: ...
 
 
@@ -138,7 +139,8 @@ class ModelGateway:
         finally:
             try:
                 await self.quota.finish(
-                    request.subject_id, request.idempotency_key, accepted_result
+                    request.subject_id, request.idempotency_key, observed_result,
+                    accepted=accepted_result is not None,
                 )
             except Exception:
                 outcome = "quota_failure"
