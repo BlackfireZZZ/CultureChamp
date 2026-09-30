@@ -80,6 +80,10 @@ h1 { margin: 0; font: 600 clamp(38px, 5vw, 56px)/1 var(--font-display); letter-s
 .material-list span, .material-detail > p, .material-meta dt { color: var(--color-text-muted); }
 .material-detail { min-width: 0; padding: 24px; border: 1px solid var(--color-border); background: var(--color-surface); }
 .material-detail h2:focus { outline: 2px solid var(--color-accent); outline-offset: 3px; }
+.admin-filters { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 24px; }
+.admin-filters label { display: flex; flex-direction: column; gap: 6px; min-width: min(100%, 220px); font-weight: 600; }
+.admin-filters select { min-height: 44px; padding: 8px 12px; border: 1px solid var(--color-border); background: var(--color-surface); color: var(--color-text); font: inherit; }
+.admin-filters select:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 3px; }
 .material-meta { display: grid; grid-template-columns: minmax(90px, 130px) minmax(0, 1fr); gap: 8px 16px; overflow-wrap: anywhere; }
 .material-meta dd { margin: 0; }
 .segment-list li { padding: 16px 0; border-top: 1px solid var(--color-border); }

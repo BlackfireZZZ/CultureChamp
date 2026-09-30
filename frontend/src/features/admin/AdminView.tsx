@@ -2,19 +2,24 @@ import { useQuery } from "@tanstack/react-query"
 import { useState } from "react"
 
 import { getAdminRevision, getAdminSources } from "../../api/admin"
+import type { AdminFilters } from "../../api/admin"
 
 export function AdminView({ onBack }: { onBack: () => void }) {
   const [revisionId, setRevisionId] = useState<string | null>(null)
-  const sources = useQuery({ queryKey: ["admin", "sources"], queryFn: ({ signal }) => getAdminSources(signal), retry: false })
+  const [status, setStatus] = useState<NonNullable<AdminFilters["status"]> | "">("")
+  const [decision, setDecision] = useState<NonNullable<AdminFilters["decision"]> | "">("")
+  const filters: AdminFilters = { status: status || undefined, decision: decision || undefined, limit: 100 }
+  const sources = useQuery({ queryKey: ["admin", "sources", status, decision], queryFn: ({ signal }) => getAdminSources(filters, signal), retry: false })
   const revision = useQuery({ queryKey: ["admin", "revision", revisionId], queryFn: ({ signal }) => getAdminRevision(revisionId!, signal), enabled: revisionId !== null, retry: false })
 
   return <main className="simple-page materials-page">
     <p className="eyebrow">Администрация · только просмотр</p>
     <h1>Кандидаты и ревизии</h1>
     <p>Статус обработки и решение по каждой ревизии приходят с сервера. Одобрение требует проверки прав, точности и чувствительности материала.</p>
+    <div className="admin-filters"><label>Обработка<select value={status} onChange={(event) => { setStatus(event.target.value as typeof status); setRevisionId(null) }}><option value="">Все статусы</option><option value="candidate">Кандидат</option><option value="processing">Обработка</option><option value="review_pending">Ожидает проверки</option><option value="failed">Ошибка</option></select></label><label>Решение<select value={decision} onChange={(event) => { setDecision(event.target.value as typeof decision); setRevisionId(null) }}><option value="">Все решения</option><option value="approve">Одобрено</option><option value="revoke">Отозвано</option><option value="none">Без решения</option></select></label></div>
     {sources.isPending && <p role="status">Загружаем инвентарь…</p>}
     {sources.isError && <div role="alert"><p>Не удалось загрузить инвентарь.</p><button type="button" onClick={() => void sources.refetch()}>Повторить</button></div>}
-    {sources.isSuccess && sources.data.length === 0 && <div className="empty-panel"><h2>Источников пока нет</h2><p>Инвентарь появится после загрузки и обработки кандидатов.</p><button type="button" onClick={onBack}>Вернуться к чату</button></div>}
+    {sources.isSuccess && sources.data.length === 0 && <div className="empty-panel"><h2>Ревизий не найдено</h2><p>Измените фильтры или проверьте, были ли загружены кандидаты.</p><button type="button" onClick={onBack}>Вернуться к чату</button></div>}
     {sources.isSuccess && sources.data.length > 0 && <div className="materials-layout">
       <section aria-label="Инвентарь кандидатов"><h2>Ревизии</h2><ul className="material-list">{sources.data.map((item) => <li key={item.revision_id}><button type="button" aria-current={revisionId === item.revision_id ? "true" : undefined} onClick={() => setRevisionId(item.revision_id)}><strong>{item.title}</strong><span>Обработка: {item.status} · Решение: {item.decision || "нет"}</span></button></li>)}</ul></section>
       <section aria-label="Детали ревизии" className="material-detail">
