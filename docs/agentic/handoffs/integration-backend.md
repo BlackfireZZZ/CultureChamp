@@ -769,6 +769,41 @@ HTTP upload to the built worker also reached `review_pending`, retained the
 three exact sheet/row/column coordinates and returned matching original bytes.
 CI remains to be checked after the commit.
 
-What remains: Inspect the final diff for secrets and contract drift, run the
-Compose browser journey is complete; stop isolated stacks, commit/push and
-verify CI.
+What remained at this handoff: Diff review, isolated-stack cleanup, commit,
+push and CI verification. Commit `7c65921` passed GitHub CI.
+
+## 2026-09-30 generation evidence boundary
+
+Objective and actual status: Explicit assistant-control text in a retrieved
+passage or catalogue metadata is withheld from model context. If screening
+leaves no usable evidence, generation returns an insufficient-evidence answer
+without a model call. A model fact matching only a numeric prefix of a cited
+passage is rejected. Table evidence carries its complete locator into the
+model payload. This is a narrow, reversible guard, not a proof that cultural
+interpretations or creative output are safe or correct.
+
+Worktree / branch / base SHA: The isolated integration worktree on
+`agent/integration-backend` was clean at `7c65921` before this slice. The
+integration agent owns the application service, screening helper, focused tests,
+ADR 0007, tracker and handoff. Other worktrees remain untouched. The falsifying
+checks were a model call containing a known explicit source instruction or an
+accepted `Count: 7` fact from `Count: 70`/`Count: 7.0`.
+
+Decision and comparable evidence: OWASP LLM01 and the BIPIA study support
+separating external text from instructions, output validation and adversarial
+tests while warning that these controls are incomplete. The first focused
+generation run failed both newly added challenge cases (4 passed, 2 failed).
+After the change the focused suite passed 11 tests, Ruff passed and mypy
+passed 62 application modules. A clean PostgreSQL/Qdrant stack upgraded to
+head and `make check` passed architecture, 73 backend, 19 frontend and 20 ML
+tests, static checks, generated contract and Compose configuration. Four
+mocked browser paths passed. A separate built Compose stack passed liveness,
+readiness and frontend smoke; its synthetic CSV browser journey completed
+chat, citation, original and revocation checks in 37.4 seconds. The screen
+does not change stored source text or user materials and can reject legitimate
+writing that quotes prompt-control phrases; an obfuscated attack can evade its
+small pattern set. Provider-specific adversarial testing and qualified cultural
+review remain open under G05/Q02.
+
+Exact next step: Review the diff, stop the isolated test stacks, commit, push
+and verify CI.

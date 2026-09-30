@@ -1,11 +1,13 @@
 """Compose bounded, labelled creative text from currently permitted evidence."""
 
 import json
-from dataclasses import dataclass
+import re
+from dataclasses import asdict, dataclass
 from typing import Protocol, cast
 from uuid import UUID
 
 from app.application.access import Actor, Role, require_role
+from app.application.evidence_hygiene import has_explicit_prompt_control
 from app.application.retrieval import EvidenceSegment, RetrievalService
 from app.domain.sources import Citation
 
@@ -19,7 +21,8 @@ SYSTEM_INSTRUCTION = (
     "invent cultural facts, names, traditions, symbols, or permissions."
 )
 NO_EVIDENCE = (
-    "There is no approved source evidence for this brief. I cannot make a verified "
+    "There is no approved source evidence I can safely use for this brief. "
+    "I cannot make a verified "
     "cultural claim or citation from the available materials. You can refine the "
     "task or ask an administrator to review relevant sources."
 )
@@ -75,7 +78,13 @@ class GenerationService:
         require_role(actor, Role.USER)
         if not brief.strip() or len(brief) > 2_000 or not request_id.strip():
             raise ValueError("Invalid brief or request ID")
-        evidence = await self.retrieval.search(actor, brief, for_provider=self.external)
+        retrieved = await self.retrieval.search(actor, brief, for_provider=self.external)
+        evidence = tuple(
+            item for item in retrieved
+            if not any(has_explicit_prompt_control(part) for part in (
+                item.text, item.title, item.creator or ""
+            ))
+        )
         if not evidence:
             return GeneratedAnswer(NO_EVIDENCE, (), "insufficient")
         by_id = {str(item.segment_id): item for item in evidence}
@@ -87,7 +96,7 @@ class GenerationService:
                     "title": item.title,
                     "creator": item.creator,
                     "revision_id": str(item.revision_id),
-                    "locator": {"page": item.locator.page, "section": item.locator.section},
+                    "locator": asdict(item.locator),
                     "excerpt": item.text[:2_000],
                 }
                 for item in evidence
@@ -125,8 +134,15 @@ class GenerationService:
                     raise ValueError("citation no longer visible")
                 validated.append(current)
             fact = " ".join(cast(str, fields[0]).split()).casefold()
+            left_guard = r"(?<!\d[.,])" if fact[0].isdigit() else ""
+            right_guard = r"(?![.,]\d)" if fact[-1].isdigit() else ""
+            fact_pattern = re.compile(
+                rf"(?<!\w){left_guard}{re.escape(fact)}(?!\w){right_guard}"
+            )
             if not any(
-                fact in " ".join(by_id[segment_id].text[:2_000].split()).casefold()
+                fact_pattern.search(
+                    " ".join(by_id[segment_id].text[:2_000].split()).casefold()
+                )
                 for segment_id in ids
             ):
                 raise ValueError("fact is not a span of cited evidence")
