@@ -123,6 +123,21 @@ test("a material without original-file rights keeps the locator but offers no PD
   expect(screen.queryByRole("link", { name: /Открыть страницу/ })).not.toBeInTheDocument()
 })
 
+test("a table cell keeps its sheet locator without inventing a PDF page", async () => {
+  const material = { revision_id: "rev-table", title: "Synthetic table", creator: null, origin_url: "https://example.invalid/table", rights_usage_note: "Synthetic", media_type: "text/csv" }
+  vi.stubGlobal("fetch", vi.fn((input: string) => {
+    if (input === "/api/v1/auth/me") return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ user: { id: "test-user", username: "tester", role: "user" }, csrf_token: "test-csrf" }) })
+    if (input === "/api/v1/materials") return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve([material]) })
+    if (input === "/api/v1/materials/rev-table") return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ ...material, original_available: true, segments: [{ segment_id: "cell-1", locator: { kind: "table", page: null, sheet: "Synthetic", table: null, row_start: 3, row_end: 3, column_start: 2, column_end: 2 }, text: "Row 3, column 2: seven" }] }) })
+    throw new Error("Unexpected request")
+  }))
+  renderApp()
+  fireEvent.click(await screen.findByRole("button", { name: "Материалы" }))
+  fireEvent.click(await screen.findByRole("button", { name: /Synthetic table/ }))
+  expect(await screen.findByRole("heading", { name: "Таблица Synthetic, строка 3, столбец 2" })).toBeInTheDocument()
+  expect(screen.queryByRole("link", { name: /Открыть страницу/ })).not.toBeInTheDocument()
+})
+
 test("materials error can be retried without showing candidates", async () => {
   let attempts = 0
   vi.stubGlobal("fetch", vi.fn((input: string) => {

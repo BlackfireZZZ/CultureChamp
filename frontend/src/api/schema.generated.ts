@@ -536,13 +536,27 @@ export interface components {
         };
         /** LocatorView */
         readonly LocatorView: {
+            /** Column End */
+            readonly column_end: number | null;
+            /** Column Start */
+            readonly column_start: number | null;
             /**
              * Kind
-             * @default page
+             * @enum {string}
              */
-            readonly kind: string;
+            readonly kind: "page" | "table";
             /** Page */
-            readonly page: number;
+            readonly page: number | null;
+            /** Row End */
+            readonly row_end: number | null;
+            /** Row Start */
+            readonly row_start: number | null;
+            /** Section */
+            readonly section: string | null;
+            /** Sheet */
+            readonly sheet: string | null;
+            /** Table */
+            readonly table: string | null;
         };
         /** LoginInput */
         readonly LoginInput: {

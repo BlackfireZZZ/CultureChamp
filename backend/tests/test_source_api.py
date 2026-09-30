@@ -11,8 +11,11 @@ from pypdf.generic import DecodedStreamObject, DictionaryObject, NameObject
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlalchemy.pool import NullPool
 
+from app.api.routes.sources import _detail_view
 from app.application.access import Role
 from app.application.identity import IdentityService
+from app.application.source_management import MaterialData, SegmentData
+from app.domain.sources import Locator
 from app.infrastructure.db.identity_store import SqlIdentityStore
 from app.infrastructure.ingestion.processing import process_one
 from app.infrastructure.ingestion.storage import PrivatePdfStore
@@ -20,6 +23,33 @@ from app.infrastructure.passwords import Argon2PasswordCodec
 from app.main import create_app
 
 PASSWORD = "fixture-account-password-2026"
+
+
+def test_table_locator_is_not_rewritten_as_pdf_page() -> None:
+    revision_id, segment_id = uuid4(), uuid4()
+    detail = _detail_view(
+        MaterialData(
+            revision_id=revision_id,
+            title="Self-authored synthetic table",
+            creator=None,
+            origin_url="https://example.invalid/table",
+            rights_usage_note="Synthetic contract fixture",
+            media_type="text/csv",
+            segments=(
+                SegmentData(
+                    segment_id,
+                    Locator(
+                        sheet="Synthetic", row_start=3, row_end=3, column_start=2, column_end=2
+                    ),
+                    "Row 3, column 2: seven",
+                ),
+            ),
+        )
+    )
+    locator = detail.segments[0].locator
+    assert locator.kind == "table"
+    assert locator.page is None
+    assert (locator.sheet, locator.row_start, locator.column_start) == ("Synthetic", 3, 2)
 
 
 def _self_authored_pdf(text: str = "Self authored permitted fixture") -> bytes:
@@ -124,7 +154,8 @@ def test_admin_upload_review_approval_user_visibility_and_revocation(tmp_path: P
         assert review.status_code == 200
         assert review.json()["status"] == "review_pending"
         assert review.json()["tags"] == [{"kind": "region", "value": "Primorye"}]
-        assert review.json()["segments"][0]["locator"] == {"kind": "page", "page": 1}
+        assert review.json()["segments"][0]["locator"]["kind"] == "page"
+        assert review.json()["segments"][0]["locator"]["page"] == 1
         assert "Self authored" in review.json()["segments"][0]["text"]
         assert user.get("/api/v1/materials").json() == []
         approval = {

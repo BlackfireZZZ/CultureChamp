@@ -20,7 +20,7 @@ from app.application.source_management import (
     SourceNotFound,
     TagData,
 )
-from app.domain.sources import DecisionKind, RevisionDecision, RightsScopes
+from app.domain.sources import DecisionKind, Locator, RevisionDecision, RightsScopes
 from app.infrastructure.db.source_models import (
     Source,
     SourceDecision,
@@ -118,7 +118,23 @@ class SqlSourceGateway:
             origin_url=source.origin_url,
             rights_usage_note=revision.rights_note,
             media_type=revision.media_type,
-            segments=tuple(SegmentData(s.id, s.page or 1, s.text) for s in segments),
+            segments=tuple(
+                SegmentData(
+                    s.id,
+                    Locator(
+                        page=s.page,
+                        section=s.section,
+                        sheet=s.sheet,
+                        table=s.table_name,
+                        row_start=s.row_start,
+                        row_end=s.row_end,
+                        column_start=s.column_start,
+                        column_end=s.column_end,
+                    ),
+                    s.text,
+                )
+                for s in segments
+            ),
             original_available=bool(
                 latest
                 and latest.kind == "approve"

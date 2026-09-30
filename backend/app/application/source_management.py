@@ -6,6 +6,7 @@ from urllib.parse import urlsplit
 from uuid import UUID
 
 from app.application.access import Actor, Role, require_role
+from app.domain.sources import Locator
 
 
 class SourceNotFound(Exception):
@@ -23,7 +24,7 @@ class SourceInputError(Exception):
 @dataclass(frozen=True)
 class SegmentData:
     segment_id: UUID
-    page: int
+    locator: Locator
     text: str
 
 

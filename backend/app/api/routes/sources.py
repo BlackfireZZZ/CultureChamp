@@ -42,8 +42,15 @@ class IntakeView(BaseModel):
 
 
 class LocatorView(BaseModel):
-    kind: str = "page"
-    page: int
+    kind: Literal["page", "table"]
+    page: int | None
+    section: str | None
+    sheet: str | None
+    table: str | None
+    row_start: int | None
+    row_end: int | None
+    column_start: int | None
+    column_end: int | None
 
 
 class SegmentView(BaseModel):
@@ -122,7 +129,21 @@ def _detail_view(material: MaterialData) -> MaterialDetail:
         **view.model_dump(),
         original_available=material.original_available,
         segments=[
-            SegmentView(segment_id=s.segment_id, locator=LocatorView(page=s.page), text=s.text)
+            SegmentView(
+                segment_id=s.segment_id,
+                locator=LocatorView(
+                    kind="table" if s.locator.row_start is not None else "page",
+                    page=s.locator.page,
+                    section=s.locator.section,
+                    sheet=s.locator.sheet,
+                    table=s.locator.table,
+                    row_start=s.locator.row_start,
+                    row_end=s.locator.row_end,
+                    column_start=s.locator.column_start,
+                    column_end=s.locator.column_end,
+                ),
+                text=s.text,
+            )
             for s in material.segments
         ],
     )

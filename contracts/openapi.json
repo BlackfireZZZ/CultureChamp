@@ -659,18 +659,113 @@
       },
       "LocatorView": {
         "properties": {
+          "column_end": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Column End"
+          },
+          "column_start": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Column Start"
+          },
           "kind": {
-            "default": "page",
+            "enum": [
+              "page",
+              "table"
+            ],
             "title": "Kind",
             "type": "string"
           },
           "page": {
-            "title": "Page",
-            "type": "integer"
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Page"
+          },
+          "row_end": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Row End"
+          },
+          "row_start": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Row Start"
+          },
+          "section": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Section"
+          },
+          "sheet": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sheet"
+          },
+          "table": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Table"
           }
         },
         "required": [
-          "page"
+          "kind",
+          "page",
+          "section",
+          "sheet",
+          "table",
+          "row_start",
+          "row_end",
+          "column_start",
+          "column_end"
         ],
         "title": "LocatorView",
         "type": "object"

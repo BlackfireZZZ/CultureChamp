@@ -142,7 +142,7 @@ gate. Each row is intended as one cohesive review.
 | C06 | ready · integration agent · — | C04 | Table extraction adapters retaining sheet/table, row/column, headers and cell meaning; `backend/app/infrastructure/ingestion/` | A queryable table fact maps back to its original sheet/table and cell range; merged/empty cells and encoding errors have fixture checks. |
 | C07 | in_progress · integration agent · [handoff](../../agentic/handoffs/integration-backend.md) | C03, C05, C06, S02 | Background processing, revision lifecycle, review and exact-revision approval/revocation; `backend/app/application/ingestion/` | Retried processing is idempotent; only an approved revision appears in user retrieval, and revocation removes it without destroying provenance. |
 | C08 | done · integration agent · [handoff](../../agentic/handoffs/integration-backend.md) | C02, C03, C07 | Admin inventory/detail/filter API and generated OpenAPI client contract; `backend/app/api/`, `contracts/` | Admin sees tags, structure, state and errors; user receives denial for the same unpublished detail; success/error/schema checks pass. |
-| C09 | in_progress · integration agent · [handoff](../../agentic/handoffs/integration-backend.md) | C02, C03, C07 | User materials list/detail and authorized original/locator API; `backend/app/api/materials/`, `contracts/` | User sees approved revisions only; section/page/sheet/row links resolve to the same revision, and forbidden originals cannot be fetched. |
+| C09 | in_progress · integration agent · [handoff](../../agentic/handoffs/integration-backend.md) | C02, C03, C07 | User materials list/detail and authorized original/locator API; `backend/app/api/materials/`, `contracts/` | Page and sheet/row/cell locators survive the API contract without invented pages; user sees approved revisions only; a real extracted table and authorized non-PDF original still need end-to-end proof. |
 | C10 | done · integration agent · [handoff](../../agentic/handoffs/integration-backend.md) | C02, C04, C07 | Admin import/status and approval/revocation command API; `backend/app/api/admin/`, `contracts/` | Authorized import reaches a reviewable state; an admin can approve/revoke exact revisions; user and malformed commands are denied. |
 
 ### M2 — Retrieval and evaluation
@@ -270,6 +270,13 @@ path, evaluation cases, and data-handling constraints exist.
   collection check passes; recovery of missing individual points still needs a
   separate drill. The complete live-service `make check` passed 49 backend,
   14 frontend and six ML tests.
+- **2026-09-30, locator contract:** material details now carry the complete
+  page/section/sheet/table/row/column locator. The previous adapter fabricated
+  page 1 for a table-only segment; the API and frontend now preserve a missing
+  page and display the sheet/cell location. Synthetic contract checks cover this
+  path. C06 remains open because no table extractor or source format has been
+  accepted yet. The live-service `make check` passes 50 backend, 15 frontend
+  and six ML tests with synced OpenAPI.
 - **2026-09-30, UI continuation:** removed the local demo chat adapter. User
   chats now use the persisted API for list, detail, send and delete; a failed
   send keeps the draft and request ID for retry. Citation buttons open the exact

@@ -17,14 +17,17 @@ withdrawal checks, bounded fake model calls and a frontend connected to those
 APIs. The admin UI can upload a PDF candidate, inspect extracted segments and
 errors, retry failed processing, explicitly grant rights on an exact revision,
 and revoke it. Original-file and provider-transfer grants default to false.
+Material detail now preserves table cell locators in its API and UI instead of
+coercing them to page 1; extraction and authorized serving of a real table
+original remain open.
 The three supplied PDFs have been used only in local retrieval diagnostics; no
 provided cultural source has been approved for user answers or sent to a model
 provider. User authorization covers this internal validation, not public use.
 
 A clean PostgreSQL database upgrade and Alembic check passed. With live
-PostgreSQL and Qdrant, 49 backend tests passed. The complete `make check` passed
-with Node 24: architecture, Ruff, mypy, 40 backend tests plus nine optional
-service skips, 14 frontend tests/lint/build, six ML tests, OpenAPI contract and
+PostgreSQL and Qdrant, 50 backend tests passed. The complete `make check` passed
+with Node 24: architecture, Ruff, mypy, 41 backend tests plus nine optional
+service skips, 15 frontend tests/lint/build, six ML tests, OpenAPI contract and
 Compose config. Four mocked Playwright scenarios passed. The rebuilt Compose
 stack reached healthy state and `BASE_URL=http://localhost:18036
 FRONTEND_URL=http://localhost:18081 make smoke` passed. These verify synthetic
