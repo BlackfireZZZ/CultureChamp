@@ -18,10 +18,10 @@ ground truth; the candidate PDFs have unknown user-corpus rights.
 - Branch: `agent/access-model-ui`; base: `f67a0586` (the shared scaffold).
 - Owner of writes: this agent, limited to `frontend/` and `ml/evals/`.
 - Integration contract snapshot: `agent/integration-backend` at
-  `4a9440f36be904747fdc563ae668dbdfc12684ef`.
+  `9266ee6038bcd1c7fe2e977ae247753aa5d7081d`.
 - Frontend schema was generated from that exact OpenAPI snapshot. HTTP remains
   in `frontend/src/api`, server state in query hooks. The fixed frontend commits
-  are `521a680`, `f02e812`, `238ce41`, and `1142cc5` in order.
+  are `521a680`, `f02e812`, `238ce41`, `1142cc5`, and `6030715` in order.
 - The integration agent owns backend and the canonical `contracts/openapi.json`.
   It has been sent the fixed frontend SHAs for cherry-pick and combined checks.
 
@@ -60,20 +60,37 @@ uv run --package culturechamp-ml --extra dev pytest ml/evals/test_retrieval_eval
                             -> 5 tests passed
 ```
 
-The combined `make check` must run on the integration branch after cherry-pick.
+On the combined integration branch at `5bddcf7` (which includes all frontend
+commits through `6030715`), with Node 24 on `PATH`:
+
+```text
+make check                 -> passed: architecture; backend Ruff/mypy;
+                              backend pytest 31 passed, 4 skipped (PostgreSQL
+                              dependent); frontend lint, 11 tests, build;
+                              ML Ruff/mypy, 6 tests; OpenAPI snapshot and
+                              generated schema checks; Compose config
+cd frontend && npm run test:e2e
+                           -> 3 Playwright tests passed
+```
+
+The integration agent separately observed the real PostgreSQL candidate to
+approval to user-visibility to revocation path, a user-to-admin 403 response,
+and clean-database migrations. This agent did not repeat those live checks.
 This worktree retains the old backend contract, while its generated frontend
-schema reflects the new integration snapshot. A contract check here would compare
-different commits and therefore cannot validate the combined tree.
+schema reflects the integration snapshot. A contract check here would compare
+different commits rather than validate a combined tree.
 
 ## Unverified risks and exact next step
 
-The frontend tests mock HTTP responses; a browser-to-live-backend run and the
-combined `make check` remain to be observed. The admin intake and approval
+The frontend browser tests mock HTTP responses; a browser-to-live-backend UI run
+remains to be observed. The admin intake and approval
 actions, persisted chat, source-cited generation, and expert review of qrels
 remain open. The tabular evaluation item is explicitly synthetic because a
 rights-cleared table fixture is unavailable.
 
-Cherry-pick the four frontend commits on the integration branch after the four
-`ml/evals/` commits, regenerate or check the OpenAPI client, run `make check` and
-Playwright against the combined tree, then record the resulting fixed SHA. Keep
-this worktree and branch until that integration is confirmed.
+Record a final fixed integration SHA after the tracker and integration handoff
+commits, then publish or review that branch as directed. For product progress,
+implement the backend chat and citation API before replacing the labelled local
+preview; obtain expert qrels, a rights-cleared table fixture and a measured
+retrieval run before claiming R01. Keep this worktree and branch until the
+integration handoff is acknowledged.
