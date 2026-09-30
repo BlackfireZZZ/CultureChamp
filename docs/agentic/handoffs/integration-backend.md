@@ -308,3 +308,65 @@ migration and live role/revocation checks for any contract or schema change.
 The isolated integration worktree and source branches are retained for follow-up
 and review. The isolated Compose volumes are retained for repeatable tests; no
 production database, source, provider or credential was touched.
+
+## 2026-09-30 live browser verification update
+
+Objective and actual status: Add a reproducible, clean-stack browser check for the
+two-role synthetic vertical path. The test passed once after correcting its
+ambiguous heading selector. It does not establish cultural answer or external
+provider quality.
+
+Worktree / branch / base SHA: `/mnt/BlackfireZZZ/Hackatons/CultureChamp-integration-backend`,
+`agent/integration-backend`, based on `d6804b7` for this slice. The initial
+`git status --short --branch` was clean.
+
+Owner of changed files: Integration agent owns `frontend/playwright.config.ts`,
+`frontend/e2e/live.e2e.ts`, this handoff, the live-check runbook, README and the
+task tracker. No concurrent writing agent contributed.
+
+Changed contracts and files: `LIVE_E2E_BASE_URL` selects an existing built
+frontend without starting Vite; the new Playwright test is opt-in through four
+environment variables and uses only self-authored CSV bytes. The runbook records
+an isolated Compose setup and first-admin bootstrap. No public API or schema
+contract changed.
+
+Decisions and supporting evidence: The existing `AdminView`, `MaterialsView`,
+chat UI and source API contracts supplied selectors and expected states. A failed
+rerun on a dirty stack showed that a previously approved synthetic table can
+match another table-shaped query; a fresh stack and best-effort test revocation
+remove that cross-run interference. This is a test-isolation finding, not a new
+retrieval ablation or relevance claim.
+
+Verification commands and observed results: `npm run lint` passed. `make up` on
+`culturechamp_livee2e` started healthy db, vector, migrate, backend, ingest-worker
+and frontend services from clean volumes. The first browser attempt reached cited
+navigation but failed on a strict locator matching both list title and detail
+heading; the locator was fixed. The final
+`npm run test:e2e -- e2e/live.e2e.ts` with the four live environment variables
+passed 1 test in 42.7 seconds, covering candidate isolation, no-evidence,
+review, vector indexing, cited answer, exact CSV download and revocation.
+`make check` passed architecture, Ruff, mypy, 53 backend tests (7 live-vector
+tests skipped without a vector URL), 15 frontend tests/build, 20 ML tests,
+contracts and Compose config. The ordinary `npm run test:e2e` passed four mocked
+browser tests and skipped the live check. `make smoke` passed backend liveness,
+readiness and frontend checks against the isolated stack. A first focused live
+backend run had two failures because the running ingest worker claimed its test
+indexing jobs. After stopping that worker, creating and migrating a separate
+`culturechamp_tests` database and clearing the test Qdrant collection, the same
+focused suite passed 11 tests. `make migration-check` on the separate database
+reported no new upgrade operations.
+
+What remains unverified and why: Exact external provider/model/terms/key are not
+yet supplied. No eligible real cultural source has approved user/provider rights
+or expert cultural support labels. Other use cases, canonical widths, failure
+drills and recovery remain open in Q01–Q04.
+
+Risks and open questions: The fake answer checks orchestration only. The live
+test requires a running isolated stack and a one-time local embedding download;
+normal Playwright runs skip it.
+
+Exact next step: Inspect the diff, then commit and push this slice. Continue G05 and remaining
+release gates without reopening the owner-accepted retrieval experiments.
+
+Cleanup completed or retention reason: The isolated test stack was stopped after
+verification; its named volumes were retained for another local run.

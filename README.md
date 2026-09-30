@@ -53,6 +53,9 @@ backend-only settings for a future OpenAI-compatible text API. The default
 provider is the deterministic fake until an exact service, model and data policy
 are configured.
 
+The [live browser check](docs/operations/live-browser-check.md) runs the full
+two-role workflow on an isolated Compose stack with a self-authored CSV.
+
 Feature modules and MVP boundaries should be derived from `docs/product/CONCEPT.md`.
 `DESIGN.md` supplies the visual baseline; its optional map and archive patterns do
 not define the primary workflow. Existing ADRs are retained as engineering decisions,

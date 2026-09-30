@@ -78,9 +78,9 @@ evidence; ADR 0006 sets the vector storage direction.
 | M0 — Product slice and decisions | One narrow corpus/task slice, source policy, format matrix, identity/provider constraints and evaluable examples are recorded. | in_progress: policy and examples exist; real-source rights, reviewer and provider terms are external dependencies |
 | M1 — Governed corpus | An approved source revision can be ingested, inspected, cited, revoked, and excluded from user retrieval; text and table locations survive extraction. | in_progress: synthetic PDF and UTF-8 CSV vertical paths verified; real table fidelity and rights remain open |
 | M2 — Vector retrieval | Versioned embeddings are indexed in Qdrant; chat uses vector candidates with authoritative rights rechecks; measured retrieval meets agreed thresholds. | in_progress: synthetic vector and revocation checks pass; same-fixture provisional dense recall@5 1.00; expert relevance, replay and release thresholds remain |
-| M3 — Grounded chat | A text brief produces a persisted text conversation with validated source citations, no-evidence behavior, and bounded model API calls. | in_progress: synthetic backend path passes; UI, external provider and end-to-end checks remain |
-| M4 — Two-role product UI | User chat, starter guide, source browser/citation view and admin document inventory work at canonical widths and keyboard paths. | in_progress: persisted chat, exact citation links and admin review/write controls pass component checks; live browser and canonical-width checks remain |
-| M5 — MVP evidence and operations | End-to-end, security, quality, recovery, cost/latency and user/expert review evidence supports a narrow release decision. | todo |
+| M3 — Grounded chat | A text brief produces a persisted text conversation with validated source citations, no-evidence behavior, and bounded model API calls. | in_progress: a live synthetic browser journey passes with the fake provider; exact external provider activation and reviewed cultural answers remain |
+| M4 — Two-role product UI | User chat, starter guide, source browser/citation view and admin document inventory work at canonical widths and keyboard paths. | in_progress: live browser upload, review, cited answer, original download and revocation pass; canonical-width and full use-case checks remain |
+| M5 — MVP evidence and operations | End-to-end, security, quality, recovery, cost/latency and user/expert review evidence supports a narrow release decision. | in_progress: one clean-stack synthetic journey passes; remaining release gates are open |
 
 ## Task rules
 
@@ -180,7 +180,7 @@ gate. Each row is intended as one cohesive review.
 
 | ID | Status · owner · handoff | Depends | Deliverable and owned area | Acceptance and smallest falsifying check |
 |---|---|---|---|---|
-| Q01 | todo · integration agent · — | U02, U03, U05, U06, G05 | Compose-backed end-to-end journeys for both roles and source revocation; `frontend/e2e/`, `backend/tests/integration/` | UC-01, UC-06–UC-11 and admin approval/revocation work against a clean seeded stack; `make check`, migration and smoke pass. |
+| Q01 | in_progress · integration agent · — | U02, U03, U05, U06, G05 | Compose-backed end-to-end journeys for both roles and source revocation; `frontend/e2e/`, `backend/tests/integration/` | A clean seeded stack passes the self-authored CSV journey through candidate isolation, review, Qdrant indexing, cited chat, exact original download and revocation. UC-01, UC-06–UC-11, canonical-width paths and release-specific gates remain. |
 | Q02 | todo · integration agent · — | R01, R04, G05, Q01 | Offline retrieval/answer evaluation, expert review and release thresholds; `ml/evals/`, `docs/exec-plans/` | Report slice-level retrieval, groundedness, citation precision, unsupported-claim and refusal results against baseline; expert reviews sampled outputs. |
 | Q03 | todo · integration agent · — | G01, C07, Q01 | Operations runbook: secrets, backups, reindex/replay, deletion, cost/latency and failure alerts; `docs/operations/`, `scripts/` | A clean restore/reindex and provider-outage drill preserve approved-state isolation and give observable recovery evidence. |
 | Q04 | blocked · integration agent · — | Q02, U03 | Target-user test of starter tasks, chat usefulness and source trust; `docs/product/` | At least one professional and one occasional-user scenario are observed with the same rubric; findings change or confirm the next MVP backlog. |
@@ -203,9 +203,10 @@ same source identity, rights and citation rules as the text slice.
 | F08 | todo | Production object storage, index generation lifecycle, backups and scale tests. | Restore and full reindex reproduce approved search state; latency, cost and failure targets are measured on representative media collections. |
 
 The owner accepted the current retrieval diagnostics for MVP engineering progress
-and requested no further retrieval experiments. The next work is server-side
-external-model configuration, G05 guardrails, C06/U04 and a live synthetic
-end-to-end journey. Cultural answer release still needs eligible source rights,
+and requested no further retrieval experiments. Server-side external-model
+configuration and one live synthetic end-to-end journey are implemented. The
+next work is G05 guardrails, C06/U04 and remaining quality and operations gates.
+Cultural answer release still needs eligible source rights,
 provider terms and support review; provisional page labels do not prove those
 gates. F02–F08 are not silently discarded after M5; their product ordering
 follows the concept's coverage, creative-domain and institutional-participation
