@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from starlette.middleware.body_limit import RequestBodyLimitMiddleware
 from starlette.requests import Request
 
 from app.api.routes.health import router as health_router
@@ -14,7 +15,10 @@ from app.application.source_management import SourceConflict, SourceInputError, 
 from app.core.config import settings
 from app.infrastructure.db.identity_store import SqlIdentityStore
 from app.infrastructure.db.session import engine, session_factory
+from app.infrastructure.ingestion.storage import MAX_PDF_BYTES
 from app.infrastructure.passwords import Argon2PasswordCodec
+
+MAX_REQUEST_BYTES = MAX_PDF_BYTES + 256 * 1024
 
 
 @asynccontextmanager
@@ -50,6 +54,7 @@ def create_app() -> FastAPI:
         allow_methods=["GET", "POST"],
         allow_headers=["*"],
     )
+    app.add_middleware(RequestBodyLimitMiddleware, max_body_size=MAX_REQUEST_BYTES)
     app.include_router(health_router, prefix="/api/v1")
     app.include_router(auth_router, prefix="/api/v1")
     app.include_router(admin_account_router, prefix="/api/v1")

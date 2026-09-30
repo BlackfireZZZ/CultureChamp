@@ -33,7 +33,10 @@ Comparable design inputs:
 - [OWASP file-upload guidance](https://cheatsheetseries.owasp.org/cheatsheets/File_Upload_Cheat_Sheet.html)
   recommends size/type checks and private storage outside the webroot. Those
   controls reduce exposure but do not establish that an arbitrary PDF is safe to
-  parse; parser isolation and resource ceilings remain release work.
+  parse. [Starlette's request-body limit](https://www.starlette.io/middleware/#requestbodylimitmiddleware)
+  and [Caddy's request-body limit](https://caddyserver.com/docs/caddyfile/directives/request_body)
+  bound multipart ingress; [Python resource limits](https://docs.python.org/3/library/resource.html)
+  provide CPU, address-space and file-size ceilings to a separate parser process.
 
 ## Decision
 
@@ -80,6 +83,14 @@ Comparable design inputs:
    and [HTTP caching guidance](https://httpwg.org/specs/rfc9111.html#field.cache-control)
    inform the response headers. These headers are defense in depth; authorization
    remains the current database decision.
+9. The API rejects request bodies above the PDF limit plus bounded multipart
+   overhead before parsing the multipart form. The proxy also caps bodies.
+   The worker invokes the parser in a separate isolated Python process with a
+   wall timeout and CPU/address-space/file-size limits, no inherited environment
+   secrets, and no stderr returned to callers. Failure records a safe error code;
+   the worker and candidate remain available for retry. This is process and
+   resource isolation, not a hardened syscall or network sandbox. Untrusted bulk
+   intake remains a separate deployment gate.
 
 ## Alternatives and tradeoffs
 

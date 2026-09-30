@@ -6,6 +6,9 @@
 	}
 	@assets path /assets/*
 	header @assets Cache-Control "public, max-age=31536000, immutable"
+	request_body {
+		max_size 11MB
+	}
 	handle /api/* {
 		reverse_proxy backend:8000
 	}

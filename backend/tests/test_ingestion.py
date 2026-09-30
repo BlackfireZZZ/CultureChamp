@@ -1,11 +1,15 @@
 from io import BytesIO
 from pathlib import Path
+from subprocess import TimeoutExpired
 from uuid import uuid4
 
 import pytest
+from fastapi.testclient import TestClient
 
+from app.infrastructure.ingestion.isolated_pdf import extract_pdf_isolated
 from app.infrastructure.ingestion.pdf_text import ExtractionError, extract_pdf_pages
 from app.infrastructure.ingestion.storage import MAX_PDF_BYTES, IntakeError, PrivatePdfStore
+from app.main import MAX_REQUEST_BYTES, create_app
 
 FIXTURES = Path(__file__).parents[2] / "data" / "retrieval-fixtures" / "raw"
 
@@ -58,6 +62,16 @@ def test_store_rejects_oversized_stream(tmp_path: Path) -> None:
         )
 
 
+def test_request_body_is_rejected_before_multipart_spooling() -> None:
+    with TestClient(create_app()) as client:
+        response = client.post(
+            "/api/v1/admin/sources",
+            content=b"x" * (MAX_REQUEST_BYTES + 1),
+            headers={"content-type": "multipart/form-data; boundary=none"},
+        )
+    assert response.status_code == 413
+
+
 def test_store_rejects_public_root(tmp_path: Path) -> None:
     with pytest.raises(IntakeError):
         PrivatePdfStore(tmp_path / "public" / "uploads", public_root=tmp_path / "public")
@@ -84,3 +98,21 @@ def test_two_column_fixture_stays_in_column_order_on_sampled_page() -> None:
 def test_malformed_pdf_fails_without_partial_pages(data: bytes) -> None:
     with pytest.raises(ExtractionError):
         extract_pdf_pages(data)
+
+
+def test_isolated_parser_returns_physical_pages_and_safe_failure() -> None:
+    fixture = next(FIXTURES.glob("51-88-1-SM.pdf"))
+    pages = extract_pdf_isolated(fixture.read_bytes())
+    assert len(pages) == 15
+    assert pages[0].locator.page == 1
+    with pytest.raises(ExtractionError):
+        extract_pdf_isolated(b"%PDF-1.4\n%%EOF")
+
+
+def test_isolated_parser_timeout_is_bounded(monkeypatch: pytest.MonkeyPatch) -> None:
+    def timed_out(*args: object, **kwargs: object) -> None:
+        raise TimeoutExpired("parser", 0.01)
+
+    monkeypatch.setattr("app.infrastructure.ingestion.isolated_pdf.subprocess.run", timed_out)
+    with pytest.raises(ExtractionError, match="timed out"):
+        extract_pdf_isolated(b"%PDF-1.4\n%%EOF", timeout_seconds=0.01)
