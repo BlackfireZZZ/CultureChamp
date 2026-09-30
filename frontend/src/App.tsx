@@ -112,7 +112,7 @@ export function App() {
         {activeSession.user.role === "admin" && <button aria-current={view === "admin" ? "page" : undefined} type="button" onClick={() => setView("admin")}>Админка</button>}
       </nav>
       <button className="theme-toggle" type="button" onClick={toggleTheme}>{theme === "dark" ? "Светлая тема" : "Тёмная тема"}</button>
-      <button className="signout" type="button" onClick={() => auth.signOut.mutate(activeSession.csrf_token)} disabled={auth.signOut.isPending}>Выйти</button>
+      <button className="signout" type="button" onClick={() => auth.signOut.mutate(activeSession.csrf_token, { onSuccess: () => { setLocalChats([]); setSelectedId(null); setDraft(""); setView("chat") } })} disabled={auth.signOut.isPending}>Выйти</button>
     </header>
     {auth.signOut.isError && <p className="auth-error" role="alert">Не удалось выйти. Повторите попытку.</p>}
     <div className="preview-banner" role="status">Предпросмотр интерфейса · чаты не сохраняются · источники ещё не одобрены</div>
