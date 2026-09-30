@@ -7,6 +7,20 @@ const vectorURL = process.env.LIVE_E2E_VECTOR_URL
 const adminName = process.env.LIVE_E2E_ADMIN_USER
 const adminPassword = process.env.LIVE_E2E_ADMIN_PASSWORD
 
+async function expectNoHorizontalOverflow(page: import("@playwright/test").Page) {
+  for (const width of [360, 768, 1280, 1440]) {
+    await page.setViewportSize({ width, height: 900 })
+    const layout = await page.evaluate(() => ({
+      scrollWidth: document.documentElement.scrollWidth,
+      rightmost: [...document.querySelectorAll("body *")]
+        .filter((element) => element.getBoundingClientRect().right > window.innerWidth + 1)
+        .slice(0, 5)
+        .map((element) => `${element.tagName}.${element.className}: ${element.textContent?.slice(0, 50)}`),
+    }))
+    expect(layout.scrollWidth, layout.rightmost.join(" | ")).toBeLessThanOrEqual(width)
+  }
+}
+
 test.skip(!baseURL || !vectorURL || !adminName || !adminPassword, "requires an isolated live stack and pilot admin")
 test.setTimeout(360_000)
 
@@ -93,6 +107,7 @@ test("live synthetic source flows from admin review to cited chat and revocation
     await inventorySearch.getByRole("textbox", { name: "Значение метки" }).fill(region)
     await inventorySearch.getByRole("button", { name: "Найти" }).click()
     await adminPage.getByRole("button", { name: new RegExp(title) }).click()
+    await expectNoHorizontalOverflow(adminPage)
     const reviewOriginalPath = `/api/v1/admin/revisions/${intake.revision_id}/original`
     await expect(adminPage.getByRole("link", { name: "Открыть оригинал для проверки" })).toHaveAttribute("href", reviewOriginalPath)
     const reviewOriginal = await adminContext.request.get(reviewOriginalPath)
@@ -152,9 +167,11 @@ test("live synthetic source flows from admin review to cited chat and revocation
     await expect(userPage.getByText(/Source-supported:/)).toHaveCount(0)
     await userPage.getByRole("button", { name: approvedBrief, exact: true }).click()
     await expect(userPage.getByText(/Source-supported:/)).toBeVisible()
+    await expectNoHorizontalOverflow(userPage)
     await userPage.getByRole("button", { name: /Источник · таблица CSV, строка 2/ }).click()
     await expect(userPage.locator(`#segment-${segmentId}`)).toBeFocused()
     await expect(userPage.getByRole("heading", { name: title })).toBeVisible()
+    await expectNoHorizontalOverflow(userPage)
     const downloadPromise = userPage.waitForEvent("download")
     await userPage.getByRole("link", { name: "Скачать исходную таблицу CSV" }).click()
     const download = await downloadPromise

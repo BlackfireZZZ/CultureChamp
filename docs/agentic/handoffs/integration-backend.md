@@ -871,3 +871,17 @@ assertions. On a new migrated PostgreSQL/Qdrant project, `make check` passed
 build, API contract and Compose config. Re-running the entire backend suite
 against the same database passed all 76 tests, confirming the queue-order
 failure is resolved. No real source or external model was used.
+
+## 2026-09-30 live responsive paths
+
+Expected result: the built admin review, cited chat and source inspector fit
+360, 768, 1280 and 1440 px without horizontal document overflow. The source
+of truth is `DESIGN.md`; the existing mocked shell tests covered these widths
+without a long persisted chat title. A new assertion in the live synthetic
+browser journey failed at 360 px: the "Delete chat" control extended beyond
+the viewport (document width 459 px). The mobile dialogue heading now wraps,
+and long title/message text may break within the available width. After
+rebuilding the frontend in a separate Compose project, the full live journey
+passed at all four widths (one test, 6.2 s), as did four mocked shell browser
+tests against the built frontend. The fixture is self-authored and the default
+fake provider remained active; this does not establish cultural answer quality.

@@ -41,6 +41,9 @@ administrator can still inspect the withdrawn original for audit, while the
 user cannot retrieve it through either original route. A random marker and
 cleanup make repeat runs independent. A clean run downloads the embedding
 model into the private test volume once. The external model remains disabled.
+The same run checks the admin review, cited chat and source detail for document
+overflow at 360, 768, 1280 and 1440 px; it is a layout check on synthetic
+content, not a target-user usability review.
 
 Backend tests that call `ApprovedTextIndexer.index_one()` must use a separate
 database and vector index with no ingest worker. The worker claims the same
