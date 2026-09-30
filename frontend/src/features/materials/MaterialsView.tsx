@@ -1,23 +1,28 @@
 import { useEffect, useRef, useState } from "react"
 
 import { approvedPageUrl } from "../../api/materials"
+import type { ChatCitation } from "../../api/chats"
 import { useMaterial, useMaterials } from "./useMaterials"
 
-export function MaterialsView({ onBack }: { onBack: () => void }) {
-  const [revisionId, setRevisionId] = useState<string | null>(null)
+export function MaterialsView({ onBack, citationTarget = null }: { onBack: () => void; citationTarget?: ChatCitation | null }) {
+  const [revisionId, setRevisionId] = useState<string | null>(citationTarget?.revision_id ?? null)
   const list = useMaterials()
   const detail = useMaterial(revisionId)
   const headingRef = useRef<HTMLHeadingElement>(null)
 
   useEffect(() => {
-    if (detail.isSuccess && revisionId) headingRef.current?.focus()
-  }, [detail.isSuccess, revisionId])
+    if (!detail.isSuccess || !revisionId) return
+    if (citationTarget?.revision_id === revisionId) {
+      document.getElementById(`segment-${citationTarget.segment_id}`)?.focus()
+    } else headingRef.current?.focus()
+  }, [detail.isSuccess, revisionId, citationTarget])
 
   function choose(id: string) {
     setRevisionId(id)
   }
 
   return <main className="simple-page materials-page">
+    <button type="button" onClick={onBack}>Вернуться к чату</button>
     <p className="eyebrow">Материалы</p>
     <h1>Проверенные источники</h1>
     <p>Здесь видны только одобренные ревизии. Страница и текст каждого фрагмента относятся к указанной ревизии.</p>
@@ -36,7 +41,7 @@ export function MaterialsView({ onBack }: { onBack: () => void }) {
           {!detail.data.original_available && <p>Оригинальный файл недоступен по условиям использования. Проверьте страницу и текст фрагмента ниже.</p>}
           {detail.data.segments.length === 0 ? <p>В этой ревизии нет доступных фрагментов.</p> : <ol className="segment-list">{detail.data.segments.map((segment) => {
             const sourceUrl = approvedPageUrl(detail.data.revision_id, segment.locator.page, detail.data.original_available)
-            return <li key={segment.segment_id}><h3>Страница {segment.locator.page}</h3><p>{segment.text}</p>{sourceUrl && <a href={sourceUrl} target="_blank" rel="noopener noreferrer">Открыть страницу {segment.locator.page} в источнике</a>}</li>
+            return <li id={`segment-${segment.segment_id}`} tabIndex={-1} className={citationTarget?.segment_id === segment.segment_id ? "cited-segment" : undefined} key={segment.segment_id}><h3>Страница {segment.locator.page}</h3><p>{segment.text}</p>{sourceUrl && <a href={sourceUrl} target="_blank" rel="noopener noreferrer">Открыть страницу {segment.locator.page} в источнике</a>}</li>
           })}</ol>}
         </>}
       </section>

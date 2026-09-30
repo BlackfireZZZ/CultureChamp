@@ -158,6 +158,59 @@ export interface paths {
         readonly patch?: never;
         readonly trace?: never;
     };
+    readonly "/api/v1/chats": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        /** List Chats */
+        readonly get: operations["list_chats_api_v1_chats_get"];
+        readonly put?: never;
+        /** Create Chat */
+        readonly post: operations["create_chat_api_v1_chats_post"];
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
+    };
+    readonly "/api/v1/chats/{chat_id}": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        /** Chat Detail */
+        readonly get: operations["chat_detail_api_v1_chats__chat_id__get"];
+        readonly put?: never;
+        readonly post?: never;
+        /** Delete Chat */
+        readonly delete: operations["delete_chat_api_v1_chats__chat_id__delete"];
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
+    };
+    readonly "/api/v1/chats/{chat_id}/messages": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly get?: never;
+        readonly put?: never;
+        /** Send Message */
+        readonly post: operations["send_message_api_v1_chats__chat_id__messages_post"];
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
+    };
     readonly "/api/v1/health/live": {
         readonly parameters: {
             readonly query?: never;
@@ -342,6 +395,89 @@ export interface components {
             /** Title */
             readonly title: string;
         };
+        /** ChatCitationView */
+        readonly ChatCitationView: {
+            /** Available */
+            readonly available: boolean;
+            /** Column End */
+            readonly column_end: number | null;
+            /** Column Start */
+            readonly column_start: number | null;
+            /** Page */
+            readonly page: number | null;
+            /**
+             * Revision Id
+             * Format: uuid
+             */
+            readonly revision_id: string;
+            /** Row End */
+            readonly row_end: number | null;
+            /** Row Start */
+            readonly row_start: number | null;
+            /** Section */
+            readonly section: string | null;
+            /**
+             * Segment Id
+             * Format: uuid
+             */
+            readonly segment_id: string;
+            /** Sheet */
+            readonly sheet: string | null;
+            /** Table */
+            readonly table: string | null;
+        };
+        /** ChatDetailView */
+        readonly ChatDetailView: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            readonly id: string;
+            /** Title */
+            readonly title: string;
+            /** Turns */
+            readonly turns: readonly components["schemas"]["ChatTurnView"][];
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            readonly updated_at: string;
+        };
+        /** ChatSummaryView */
+        readonly ChatSummaryView: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            readonly id: string;
+            /** Title */
+            readonly title: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            readonly updated_at: string;
+        };
+        /** ChatTurnView */
+        readonly ChatTurnView: {
+            /** Assistant Text */
+            readonly assistant_text: string | null;
+            /** Citations */
+            readonly citations: readonly components["schemas"]["ChatCitationView"][];
+            /** Evidence Status */
+            readonly evidence_status: string | null;
+            /** Ordinal */
+            readonly ordinal: number;
+            /**
+             * Request Id
+             * Format: uuid
+             */
+            readonly request_id: string;
+            /** Status */
+            readonly status: string;
+            /** User Text */
+            readonly user_text: string;
+        };
         /** CreateAccountInput */
         readonly CreateAccountInput: {
             /** Password */
@@ -485,6 +621,16 @@ export interface components {
              * Format: uuid
              */
             readonly segment_id: string;
+            /** Text */
+            readonly text: string;
+        };
+        /** SendInput */
+        readonly SendInput: {
+            /**
+             * Request Id
+             * Format: uuid
+             */
+            readonly request_id: string;
             /** Text */
             readonly text: string;
         };
@@ -815,6 +961,141 @@ export interface operations {
                 };
                 content: {
                     readonly "application/json": components["schemas"]["AuthView"];
+                };
+            };
+        };
+    };
+    readonly list_chats_api_v1_chats_get: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly requestBody?: never;
+        readonly responses: {
+            /** @description Successful Response */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": readonly components["schemas"]["ChatSummaryView"][];
+                };
+            };
+        };
+    };
+    readonly create_chat_api_v1_chats_post: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly requestBody?: never;
+        readonly responses: {
+            /** @description Successful Response */
+            readonly 201: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["ChatSummaryView"];
+                };
+            };
+        };
+    };
+    readonly chat_detail_api_v1_chats__chat_id__get: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly chat_id: string;
+            };
+            readonly cookie?: never;
+        };
+        readonly requestBody?: never;
+        readonly responses: {
+            /** @description Successful Response */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["ChatDetailView"];
+                };
+            };
+            /** @description Validation Error */
+            readonly 422: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    readonly delete_chat_api_v1_chats__chat_id__delete: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly chat_id: string;
+            };
+            readonly cookie?: never;
+        };
+        readonly requestBody?: never;
+        readonly responses: {
+            /** @description Successful Response */
+            readonly 204: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            readonly 422: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    readonly send_message_api_v1_chats__chat_id__messages_post: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly chat_id: string;
+            };
+            readonly cookie?: never;
+        };
+        readonly requestBody: {
+            readonly content: {
+                readonly "application/json": components["schemas"]["SendInput"];
+            };
+        };
+        readonly responses: {
+            /** @description Successful Response */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["ChatTurnView"];
+                };
+            };
+            /** @description Validation Error */
+            readonly 422: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

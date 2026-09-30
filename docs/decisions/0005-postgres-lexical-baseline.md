@@ -1,6 +1,6 @@
 # ADR 0005: Provisional PostgreSQL lexical baseline
 
-Status: Provisional engineering default; relevance and release thresholds await expert judgements.
+Status: Superseded by ADR 0006. Historical measurement only; never a chat retrieval default.
 Date: 2026-09-30
 
 ## Context and falsifiable decision
@@ -22,9 +22,12 @@ or hybrid index was adopted.
 
 ## Decision
 
-Use a GIN expression index on `to_tsvector('russian', text)` for the pilot
-baseline. Normalize up to 24 distinct query terms, OR them, rank matching
-segments with `ts_rank_cd`, and break ties by revision, ordinal and segment ID.
+The GIN expression index on `to_tsvector('russian', text)` remains an offline
+comparison baseline. It must not be used as the product's RAG retrieval path.
+The earlier decision to make it the pilot default was incorrect for the intended
+semantic and multimodal product. Normalize up to 24 distinct query terms, OR
+them, rank matching segments with `ts_rank_cd`, and break ties by revision,
+ordinal and segment ID only when reproducing the historical measurement.
 The application service bounds the query and result count. The SQL joins the
 latest decision and requires review-pending processing, `approve`, `user_text`
 and sensitivity clearance before `ORDER BY` and `LIMIT`. An external provider

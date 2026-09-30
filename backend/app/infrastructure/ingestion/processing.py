@@ -2,15 +2,26 @@
 
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
+from time import monotonic
 from uuid import UUID
 
 from sqlalchemy import delete, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from app.core.config import settings
+from app.infrastructure.db.chat_store import SqlChatStore
+from app.infrastructure.db.model_quota import SqlModelQuota
 from app.infrastructure.db.source_models import SourceProcessing, SourceRevision, SourceSegment
+from app.infrastructure.ingestion.chunking import chunk_text
 from app.infrastructure.ingestion.isolated_pdf import extract_pdf_isolated
 from app.infrastructure.ingestion.pdf_text import ExtractionError
 from app.infrastructure.ingestion.storage import PrivatePdfStore
+from app.infrastructure.vector.indexing import ApprovedTextIndexer
+from app.infrastructure.vector.text_vectors import (
+    LocalTextEmbedder,
+    QdrantTextIndex,
+    VectorUnavailable,
+)
 
 
 async def process_one(
@@ -57,16 +68,19 @@ async def process_one(
         if record is None or record.state != "processing" or record.attempts != attempt:
             return revision_id
         await session.execute(delete(SourceSegment).where(SourceSegment.revision_id == revision_id))
+        ordinal = 0
         for page in pages:
-            session.add(
-                SourceSegment(
-                    revision_id=revision_id,
-                    ordinal=page.ordinal,
-                    kind="prose",
-                    text=page.text,
-                    page=page.locator.page,
+            for excerpt in chunk_text(page.text):
+                session.add(
+                    SourceSegment(
+                        revision_id=revision_id,
+                        ordinal=ordinal,
+                        kind="prose",
+                        text=excerpt,
+                        page=page.locator.page,
+                    )
                 )
-            )
+                ordinal += 1
         record.state = "review_pending"
         record.error_code = None
         record.lease_until = None
@@ -77,6 +91,20 @@ async def run_worker(factory: async_sessionmaker[AsyncSession], root: Path) -> N
     import asyncio
 
     store = PrivatePdfStore(root)
+    indexer = ApprovedTextIndexer(
+        factory, QdrantTextIndex(settings.vector_url, LocalTextEmbedder())
+    )
+    next_purge = 0.0
     while True:
-        if await process_one(factory, store) is None:
+        if monotonic() >= next_purge:
+            await SqlChatStore(factory).purge_expired()
+            await SqlModelQuota(factory).purge_old()
+            next_purge = monotonic() + 3600
+        processed = await process_one(factory, store)
+        try:
+            indexed = await indexer.index_one()
+            removed = await indexer.remove_revoked_one()
+        except VectorUnavailable:
+            indexed = removed = None
+        if processed is None and indexed is None and removed is None:
             await asyncio.sleep(2)

@@ -6,12 +6,22 @@ from uuid import uuid4
 import pytest
 from fastapi.testclient import TestClient
 
+from app.infrastructure.ingestion.chunking import chunk_text
 from app.infrastructure.ingestion.isolated_pdf import extract_pdf_isolated
 from app.infrastructure.ingestion.pdf_text import ExtractionError, extract_pdf_pages
 from app.infrastructure.ingestion.storage import MAX_PDF_BYTES, IntakeError, PrivatePdfStore
 from app.main import MAX_REQUEST_BYTES, create_app
 
 FIXTURES = Path(__file__).parents[2] / "data" / "retrieval-fixtures" / "raw"
+
+
+def test_long_page_keeps_searchable_tail_with_context_overlap() -> None:
+    text = " ".join([*(f"context{i}" for i in range(250)), "unique-tail-evidence"])
+    chunks = chunk_text(text)
+    assert len(chunks) > 1
+    assert "unique-tail-evidence" in chunks[-1]
+    assert set(chunks[0].split()) & set(chunks[1].split())
+    assert all(len(chunk.split()) <= 120 for chunk in chunks)
 
 
 def test_private_store_retains_exact_fixture_and_deduplicates_retry(tmp_path: Path) -> None:

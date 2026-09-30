@@ -6,17 +6,18 @@ practical creative task; the service generates a useful result and, where releva
 shows the cultural sources and context behind it.
 
 The full product source of truth is [`docs/product/CONCEPT.md`](docs/product/CONCEPT.md).
-Its MVP hypothesis and other assumptions still require validation. The previous
-product implementation has not been copied. The engineering scaffold is runnable
-and has no product domain tables or feature flows yet.
+Its MVP hypothesis and other assumptions still require validation. The integrated
+branch contains the governed-source backend and a text chat implementation in
+progress; it is not a released cultural product.
 
-The [MVP task tracker](docs/exec-plans/active/creative-rag-mvp.md) records the
-two-role chat and RAG delivery plan. The [use-case guide](docs/product/USE_CASES.md)
+The [delivery tracker](docs/exec-plans/active/creative-rag-mvp.md) records the
+first text release and full-concept backlog. The [use-case guide](docs/product/USE_CASES.md)
 defines starter tasks and the expected source-navigation behavior.
 
 ## Stack
 
-- Python 3.13, uv, FastAPI, SQLAlchemy, Alembic and PostgreSQL/PostGIS.
+- Python 3.13, uv, FastAPI, SQLAlchemy, Alembic, PostgreSQL/PostGIS, Qdrant
+  and local multilingual text embeddings.
 - React 19, TypeScript, Vite, Tailwind CSS and TanStack Query.
 - Docker Compose for local integration and Caddy for the built frontend.
 - An isolated `ml/` workspace for future offline experiments.
@@ -33,7 +34,10 @@ make smoke
 ```
 
 The frontend is at `http://localhost:8080`; the API is at
-`http://localhost:8000/api/v1/health/live`. `make down` stops the stack.
+`http://localhost:8000/api/v1/health/live`. The local Qdrant endpoint is bound
+to `127.0.0.1:6333`. The first approved text revision triggers a one-time
+download of the configured embedding model into the private Compose volume.
+`make down` stops the stack.
 
 ## Architecture
 

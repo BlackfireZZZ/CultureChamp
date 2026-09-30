@@ -18,6 +18,18 @@ services:
       timeout: 3s
       retries: 20
 
+  vector:
+    image: qdrant/qdrant:v1.16.3@sha256:0425e3e03e7fd9b3dc95c4214546afe19de2eb2e28ca621441a56663ac6e1f46
+    volumes:
+      - vector_data:/qdrant/storage
+    ports:
+      - "127.0.0.1:${VECTOR_PORT:-6333}:6333"
+    healthcheck:
+      test: ["CMD", "bash", "-c", "</dev/tcp/127.0.0.1/6333"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
   migrate:
     build:
       context: .
@@ -40,6 +52,8 @@ services:
       DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://culturechamp:culturechamp_local@db:5432/culturechamp}
       BACKEND_CORS_ORIGINS: '${BACKEND_CORS_ORIGINS:-["http://localhost:5173","http://localhost:8080"]}'
       SOURCE_STORAGE_ROOT: /workspace/.private/sources
+      VECTOR_URL: http://vector:6333
+      EMBEDDING_CACHE_ROOT: /workspace/.private/embedding-cache
     volumes:
       - source_private:/workspace/.private
     ports:
@@ -47,6 +61,8 @@ services:
     depends_on:
       migrate:
         condition: service_completed_successfully
+      vector:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health/ready')"]
       interval: 5s
@@ -61,11 +77,15 @@ services:
     environment:
       DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://culturechamp:culturechamp_local@db:5432/culturechamp}
       SOURCE_STORAGE_ROOT: /workspace/.private/sources
+      VECTOR_URL: http://vector:6333
+      EMBEDDING_CACHE_ROOT: /workspace/.private/embedding-cache
     volumes:
       - source_private:/workspace/.private
     depends_on:
       migrate:
         condition: service_completed_successfully
+      vector:
+        condition: service_healthy
 
   frontend:
     build:
@@ -84,3 +104,4 @@ services:
 volumes:
   postgres_data:
   source_private:
+  vector_data:

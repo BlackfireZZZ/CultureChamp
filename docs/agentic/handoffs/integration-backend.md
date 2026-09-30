@@ -1,5 +1,42 @@
 # Corpus/backend integration handoff — 2026-09-30
 
+## Current integration checkpoint (supersedes older status statements below)
+
+The integration branch now has a Qdrant text vector index with locally generated,
+snapshot-checked multilingual embeddings. PostgreSQL remains authoritative for
+source revisions, current rights and citations; original bytes remain in private
+file storage. ADR 0006 supersedes the PostgreSQL lexical retrieval decision in
+ADR 0005. Chat retrieval no longer calls the lexical adapter. The ingestion
+worker indexes approved text revisions and removes revoked points; every candidate
+is rechecked against current PostgreSQL decisions before model context. This is
+the text implementation of a modality-aware architecture, with image and audio
+work retained in F02–F05 of the active tracker.
+
+The same branch now has persisted, owned chat turns with retry IDs, citation
+withdrawal checks, bounded fake model calls and a frontend connected to those
+APIs. The admin UI can upload a PDF candidate, inspect extracted segments and
+errors, retry failed processing, explicitly grant rights on an exact revision,
+and revoke it. Original-file and provider-transfer grants default to false.
+The three supplied PDFs have been used only in local retrieval diagnostics; no
+provided cultural source has been approved for user answers or sent to a model
+provider. User authorization covers this internal validation, not public use.
+
+A clean PostgreSQL database upgrade and Alembic check passed. With live
+PostgreSQL and Qdrant, 49 backend tests passed. The complete `make check` passed
+with Node 24: architecture, Ruff, mypy, 40 backend tests plus nine optional
+service skips, 14 frontend tests/lint/build, six ML tests, OpenAPI contract and
+Compose config. Four mocked Playwright scenarios passed. The rebuilt Compose
+stack reached healthy state and `BASE_URL=http://localhost:18036
+FRONTEND_URL=http://localhost:18081 make smoke` passed. These verify synthetic
+mechanics; an expert-labelled relevance set, rights-cleared real corpus, table
+extractor, live browser journey, index-loss recovery drill and provider contract
+remain open. The full acceptance state and implementation order live in
+`docs/exec-plans/active/creative-rag-mvp.md`.
+
+The sections below preserve the earlier corpus/access checkpoint and its
+historical test results. Statements there that say chat or admin writes are
+absent no longer describe the current branch.
+
 ## Objective and actual status
 
 The corpus and access/UI branches are integrated in a separate worktree. The

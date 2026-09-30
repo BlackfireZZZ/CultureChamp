@@ -19,6 +19,7 @@ dependencies = [
   "uvicorn[standard]==0.53.0",
   "argon2-cffi==25.1.0",
   "python-multipart==0.0.32",
+  "fastembed>=0.7,<1",
 ]
 
 [project.optional-dependencies]

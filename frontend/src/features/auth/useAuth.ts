@@ -19,7 +19,7 @@ export function useAuth() {
   })
   const signOut = useMutation({
     mutationFn: (csrfToken: string) => logout(csrfToken),
-    onSuccess: () => { queryClient.removeQueries({ queryKey: ["materials"] }); queryClient.removeQueries({ queryKey: ["admin"] }); queryClient.setQueryData(authQueryKey, null) },
+    onSuccess: () => { queryClient.removeQueries({ queryKey: ["materials"] }); queryClient.removeQueries({ queryKey: ["admin"] }); queryClient.removeQueries({ queryKey: ["chats"] }); queryClient.setQueryData(authQueryKey, null) },
   })
   return { session, signIn, signOut }
 }

@@ -161,3 +161,15 @@ class SourceProcessing(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
     )
+
+
+class SourceVectorIndex(Base):
+    __tablename__ = "source_vector_indexes"
+
+    revision_id: Mapped[UUID] = mapped_column(
+        ForeignKey("source_revisions.id", ondelete="RESTRICT"), primary_key=True
+    )
+    model_id: Mapped[str] = mapped_column(Text, nullable=False)
+    indexed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )

@@ -74,8 +74,17 @@ the same eight provisional cases. The runner loads held PDF text into a temporar
 local table; no source becomes user-visible or reaches a model provider. Their
 recall@5 values are 0.40 and 0.80 respectively, while no-evidence false-positive
 rates are 0.667 and 1.000. See [ADR 0005](../../docs/decisions/0005-postgres-lexical-baseline.md)
-for method and limits. Thresholds for a production path cannot be fixed
-until an expert reviews qrels and a real lexical run is available. The smallest
+for method and limits. The Qdrant dense run uses the same fixture hashes and
+cases, with overlapping 120-word text windows and page-level maximum-score
+aggregation. Its raw recall@5 is 1.00, MRR@5 is 0.84 and nDCG@5 is 0.848;
+raw no-evidence false-positive rate is 1.00. An internal cosine gate of 0.84
+leaves recall@5 at 1.00 and lowers the observed no-evidence false-positive
+rate to 0.00 on these eight cases. The gate was selected on the very set
+reported here and is **not held-out validation**. Similarity does not prove
+claim support. The held PDFs remain local evaluation-only material; the runner
+deletes its temporary Qdrant collection and writes locator keys only.
+Thresholds for release cannot be fixed until an expert reviews qrels and a
+real permitted corpus is available. The smallest
 mechanical gate requires every provisionally labelled relevant page to occur by
 `k=5` in this oracle run. Its failure case is tested by removing one relevant key.
 Do not train or tune on these same labels and report the result as held-out quality.
@@ -93,6 +102,8 @@ uv run --package culturechamp-ml --extra dev pytest ml/evals/test_retrieval_eval
 uv run --package culturechamp-ml --extra dev python ml/evals/retrieval_eval.py ml/evals/qrels.jsonl ml/evals/runs/oracle_smoke.jsonl --k 5 --require-all
 CORPUS_TEST_DATABASE_URL=postgresql+asyncpg://culturechamp:culturechamp_local@localhost:15436/culturechamp_verify3 uv run --package culturechamp-backend --extra dev python ml/evals/run_postgres_lexical.py --config russian --output ml/evals/runs/postgres_russian_provisional.jsonl
 uv run --package culturechamp-ml --extra dev python ml/evals/retrieval_eval.py ml/evals/qrels.jsonl ml/evals/runs/postgres_russian_provisional.jsonl --k 5
+CORPUS_TEST_VECTOR_URL=http://127.0.0.1:16333 uv run --package culturechamp-backend --extra dev python ml/evals/run_qdrant_dense.py --output ml/evals/runs/qdrant_dense_provisional.jsonl
+CORPUS_TEST_VECTOR_URL=http://127.0.0.1:16333 uv run --package culturechamp-backend --extra dev python ml/evals/run_qdrant_dense.py --min-score 0.84 --output ml/evals/runs/qdrant_dense_threshold_provisional.jsonl
 ```
 
 The second command proves the harness mechanics only. The later commands need

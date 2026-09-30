@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     )
     backend_cors_origins: list[str] = ["http://localhost:5173", "http://localhost:8080"]
     source_storage_root: str = "/workspace/.private/sources"
+    vector_url: str = "http://localhost:6333"
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 

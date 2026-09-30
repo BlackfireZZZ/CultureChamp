@@ -19,8 +19,9 @@ claims that any particular cultural fact is present in the approved corpus.
 - Administration includes a structured document inventory with tags, source
   metadata, ingestion/approval state, and processing errors. Ingestion and approval
   are planned separately from browsing the inventory.
-- Image, audio, music, and video input or generation are outside the MVP. The source
-  model may be extensible, but these modalities must not be implied to work now.
+- Image, audio, music, and video input or generation follow the first text release.
+  They are part of the full-concept backlog, with modality-specific source
+  representations, embeddings and rights review. They must not be implied to work now.
 
 ## Primary user journey
 

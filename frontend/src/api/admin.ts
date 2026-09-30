@@ -5,6 +5,11 @@ export type AdminSource = components["schemas"]["AdminSourceView"]
 export type AdminRevision = components["schemas"]["AdminRevisionView"]
 export type AdminFilters = NonNullable<operations["admin_sources_api_v1_admin_sources_get"]["parameters"]["query"]>
 
+async function readJson<T>(response: Response): Promise<T> {
+  if (!response.ok) throw new ApiError(response.status)
+  return (await response.json()) as T
+}
+
 export async function getAdminSources(filters: AdminFilters, signal?: AbortSignal): Promise<readonly AdminSource[]> {
   const params = new URLSearchParams()
   if (filters.status) params.set("status", filters.status)
@@ -20,4 +25,32 @@ export async function getAdminRevision(revisionId: string, signal?: AbortSignal)
   const response = await fetch(`/api/v1/admin/revisions/${encodeURIComponent(revisionId)}`, { credentials: "same-origin", signal })
   if (!response.ok) throw new ApiError(response.status)
   return (await response.json()) as AdminRevision
+}
+
+export async function uploadAdminSource(form: FormData, csrfToken: string): Promise<components["schemas"]["IntakeView"]> {
+  return readJson(await fetch("/api/v1/admin/sources", {
+    method: "POST", credentials: "same-origin", headers: { "x-csrf-token": csrfToken }, body: form,
+  }))
+}
+
+export async function approveAdminRevision(revisionId: string, data: components["schemas"]["DecisionInput"], csrfToken: string): Promise<AdminRevision> {
+  return readJson(await fetch(`/api/v1/admin/revisions/${encodeURIComponent(revisionId)}/approve`, {
+    method: "POST", credentials: "same-origin",
+    headers: { "content-type": "application/json", "x-csrf-token": csrfToken },
+    body: JSON.stringify(data),
+  }))
+}
+
+export async function revokeAdminRevision(revisionId: string, reason: string, csrfToken: string): Promise<AdminRevision> {
+  return readJson(await fetch(`/api/v1/admin/revisions/${encodeURIComponent(revisionId)}/revoke`, {
+    method: "POST", credentials: "same-origin",
+    headers: { "content-type": "application/json", "x-csrf-token": csrfToken },
+    body: JSON.stringify({ reason }),
+  }))
+}
+
+export async function retryAdminRevision(revisionId: string, csrfToken: string): Promise<AdminRevision> {
+  return readJson(await fetch(`/api/v1/admin/revisions/${encodeURIComponent(revisionId)}/retry`, {
+    method: "POST", credentials: "same-origin", headers: { "x-csrf-token": csrfToken },
+  }))
 }

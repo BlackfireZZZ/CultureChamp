@@ -4,6 +4,8 @@ The engineering baseline is a modular monolith: `api → application → domain`
 `infrastructure` implements external ports. The web frontend and offline ML workspace
 remain separate from the runtime backend. The product source is
 [`docs/product/CONCEPT.md`](../product/CONCEPT.md): a creative task produces a result
-grounded in curated cultural sources. Concrete bounded contexts, data contracts and
-generation safeguards will be defined in subsequent decisions and implementation
-plans; the concept alone does not specify them.
+grounded in curated cultural sources. PostgreSQL governs exact source revisions
+and rights, private storage holds original files, and Qdrant indexes versioned
+embeddings. Retrieval rechecks current PostgreSQL authority after vector candidate
+search. The first slice indexes text; [ADR 0006](../decisions/0006-vector-retrieval-and-media.md)
+defines the extension for visual and audio representations.

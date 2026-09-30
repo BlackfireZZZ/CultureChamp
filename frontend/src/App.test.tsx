@@ -3,16 +3,30 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-li
 import { afterEach, expect, test, vi } from "vitest"
 
 import { App } from "./App"
-import * as demo from "./api/demo"
 
 function renderApp() {
   render(<QueryClientProvider client={new QueryClient()}><App /></QueryClientProvider>)
 }
 
-function mockSession(role: "user" | "admin" = "user") {
-  vi.stubGlobal("fetch", vi.fn((input: string) => {
+function mockSession(role: "user" | "admin" = "user", failSend = false) {
+  let chat: { id: string; title: string; turns: unknown[] } | null = null
+  vi.stubGlobal("fetch", vi.fn((input: string, options?: RequestInit) => {
     if (input === "/api/v1/auth/me") return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ user: { id: "test-user", username: "tester", role }, csrf_token: "test-csrf" }) })
     if (input === "/api/v1/materials") return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve([]) })
+    if (input === "/api/v1/chats" && !options?.method) return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(chat ? [{ id: chat.id, title: chat.title, updated_at: "2026-09-30T00:00:00Z" }] : []) })
+    if (input === "/api/v1/chats" && options?.method === "POST") {
+      chat = { id: "chat-1", title: "Новый чат", turns: [] }
+      return Promise.resolve({ ok: true, status: 201, json: () => Promise.resolve({ id: chat!.id, title: chat!.title, updated_at: "2026-09-30T00:00:00Z" }) })
+    }
+    if (input === "/api/v1/chats/chat-1" && !options?.method) return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ ...chat, updated_at: "2026-09-30T00:00:00Z" }) })
+    if (input === "/api/v1/chats/chat-1/messages" && options?.method === "POST") {
+      if (failSend) return Promise.resolve({ ok: false, status: 503 })
+      const payload = JSON.parse(options.body as string) as { text: string; request_id: string }
+      const turn = { request_id: payload.request_id, ordinal: 0, user_text: payload.text, assistant_text: "Нет одобренных источников для культурного утверждения.", evidence_status: "insufficient", status: "complete", citations: [] }
+      chat!.turns.push(turn)
+      chat!.title = payload.text.slice(0, 38)
+      return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(turn) })
+    }
     throw new Error("Unexpected request")
   }))
 }
@@ -34,7 +48,7 @@ test("each starter fills an editable composer without sending", async () => {
   expect(screen.queryByText("Демонстрационный ответ. Серверная генерация и проверенные ссылки пока не подключены.")).not.toBeInTheDocument()
 })
 
-test("guide is reachable before a chat; demo send is labelled and not persisted", async () => {
+test("guide sends a persisted brief and shows an honest no-evidence answer", async () => {
   mockSession()
   renderApp()
   await screen.findByRole("heading", { name: "Идея с культурным контекстом" })
@@ -43,8 +57,8 @@ test("guide is reachable before a chat; demo send is labelled and not persisted"
   fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: /UC-06/ }))
   expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
   fireEvent.click(screen.getByRole("button", { name: "Отправить" }))
-  await waitFor(() => expect(screen.getByText("Демонстрационный ответ. Серверная генерация и проверенные ссылки пока не подключены.")).toBeInTheDocument())
-  expect(screen.getByRole("status", { name: "" }).textContent).toContain("чаты не сохраняются")
+  await waitFor(() => expect(screen.getByText("Нет одобренных источников для культурного утверждения.")).toBeInTheDocument())
+  expect(screen.getByRole("status", { name: "" }).textContent).toContain("Пилотный чат")
 })
 
 test("materials show no unapproved candidates", async () => {
@@ -70,6 +84,27 @@ test("approved material opens its exact revision and page", async () => {
   fireEvent.click(await screen.findByRole("button", { name: /Источник Приморья/ }))
   expect(await screen.findByText("Проверяемый фрагмент.")).toBeInTheDocument()
   expect(screen.getByRole("link", { name: "Открыть страницу 7 в источнике" })).toHaveAttribute("href", "/api/v1/materials/rev-2/original#page=7")
+})
+
+test("a chat citation opens the exact approved segment and returns to chat", async () => {
+  const revisionId = "rev-cited"
+  const segmentId = "segment-cited"
+  const material = { revision_id: revisionId, title: "Учебный синтетический источник", creator: null, origin_url: "https://example.invalid/synthetic", rights_usage_note: "Synthetic", media_type: "application/pdf" }
+  vi.stubGlobal("fetch", vi.fn((input: string) => {
+    if (input === "/api/v1/auth/me") return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ user: { id: "test-user", username: "tester", role: "user" }, csrf_token: "test-csrf" }) })
+    if (input === "/api/v1/chats") return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve([{ id: "chat-cited", title: "Синтетический бриф", updated_at: "2026-09-30T00:00:00Z" }]) })
+    if (input === "/api/v1/chats/chat-cited") return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ id: "chat-cited", title: "Синтетический бриф", updated_at: "2026-09-30T00:00:00Z", turns: [{ request_id: "turn-1", ordinal: 0, user_text: "Бриф", assistant_text: "Source-supported: Synthetic fact", evidence_status: "grounded", status: "complete", citations: [{ revision_id: revisionId, segment_id: segmentId, page: 7, section: null, sheet: null, table: null, row_start: null, row_end: null, column_start: null, column_end: null, available: true }] }] }) })
+    if (input === "/api/v1/materials") return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve([material]) })
+    if (input === `/api/v1/materials/${revisionId}`) return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ ...material, original_available: false, segments: [{ segment_id: segmentId, locator: { kind: "page", page: 7 }, text: "Точный синтетический фрагмент." }] }) })
+    throw new Error("Unexpected request")
+  }))
+  renderApp()
+  fireEvent.click(await screen.findByRole("button", { name: "Синтетический бриф" }))
+  fireEvent.click(await screen.findByRole("button", { name: "Источник · страница 7" }))
+  const excerpt = await screen.findByText("Точный синтетический фрагмент.")
+  expect(excerpt.closest("li")).toHaveFocus()
+  fireEvent.click(screen.getByRole("button", { name: "Вернуться к чату" }))
+  expect(await screen.findByText("Source-supported: Synthetic fact")).toBeInTheDocument()
 })
 
 test("a material without original-file rights keeps the locator but offers no PDF link", async () => {
@@ -108,16 +143,14 @@ test("materials error can be retried without showing candidates", async () => {
   expect(attempts).toBe(2)
 })
 
-test("a failed demo send keeps the editable brief", async () => {
-  mockSession()
-  vi.spyOn(demo, "createDemoReply").mockRejectedValueOnce(new Error("provider secret must stay hidden"))
+test("a failed API send keeps the editable brief", async () => {
+  mockSession("user", true)
   renderApp()
   await screen.findByRole("heading", { name: "Идея с культурным контекстом" })
   fireEvent.change(screen.getByRole("textbox", { name: "Ваш творческий бриф" }), { target: { value: "Мой бриф" } })
   fireEvent.click(screen.getByRole("button", { name: "Отправить" }))
   expect(await screen.findByRole("alert")).toHaveTextContent("Текст сохранён")
   expect(screen.getByRole<HTMLTextAreaElement>("textbox", { name: "Ваш творческий бриф" }).value).toBe("Мой бриф")
-  expect(screen.queryByText("provider secret must stay hidden")).not.toBeInTheDocument()
 })
 
 test("unauthenticated visitors see login and no protected navigation", async () => {
@@ -131,13 +164,14 @@ test("session failure has a retry path and never reveals protected content", asy
   const fetchMock = vi.fn()
     .mockResolvedValueOnce({ ok: false, status: 503 })
     .mockResolvedValueOnce({ ok: true, status: 200, json: () => Promise.resolve({ user: { id: "test-user", username: "tester", role: "user" }, csrf_token: "test-csrf" }) })
+    .mockResolvedValueOnce({ ok: true, status: 200, json: () => Promise.resolve([]) })
   vi.stubGlobal("fetch", fetchMock)
   renderApp()
   expect(await screen.findByRole("alert")).toHaveTextContent("Не удалось проверить сессию")
   expect(screen.queryByRole("button", { name: "Материалы" })).not.toBeInTheDocument()
   fireEvent.click(screen.getByRole("button", { name: "Повторить" }))
   expect(await screen.findByRole("heading", { name: "Идея с культурным контекстом" })).toBeInTheDocument()
-  expect(fetchMock).toHaveBeenCalledTimes(2)
+  expect(fetchMock).toHaveBeenCalledTimes(3)
 })
 
 test("admin navigation is visible only for an admin session", async () => {
@@ -165,6 +199,39 @@ test("admin inventory and exact revision come from admin API", async () => {
   fireEvent.change(screen.getByRole("combobox", { name: "Обработка" }), { target: { value: "failed" } })
   fireEvent.change(screen.getByRole("combobox", { name: "Решение" }), { target: { value: "none" } })
   expect(await screen.findByText("Ревизий не найдено")).toBeInTheDocument()
+})
+
+test("admin review sends explicit rights scopes and can revoke the exact revision", async () => {
+  const revisionId = "00000000-0000-4000-8000-000000000009"
+  const source = { revision_id: revisionId, source_id: "source-9", title: "Синтетический кандидат", origin_url: "https://example.invalid/synthetic", status: "review_pending", decision: null }
+  let decision: string | null = null
+  const requests: { path: string; body: unknown; csrf: string | undefined }[] = []
+  vi.stubGlobal("fetch", vi.fn((input: string, options?: RequestInit) => {
+    if (input === "/api/v1/auth/me") return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ user: { id: "admin", username: "admin", role: "admin" }, csrf_token: "review-csrf" }) })
+    if (input === "/api/v1/admin/sources?limit=100") return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve([{ ...source, decision }]) })
+    if (input === `/api/v1/admin/revisions/${revisionId}`) return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ ...source, decision, sha256: "hash", creator: null, rights_usage_note: null, media_type: "application/pdf", tags: [], segments: [], error_code: null }) })
+    if (input.endsWith("/approve") || input.endsWith("/revoke")) {
+      requests.push({ path: input, body: JSON.parse(options?.body as string) as unknown, csrf: (options?.headers as Record<string, string>)["x-csrf-token"] })
+      decision = input.endsWith("/approve") ? "approve" : "revoke"
+      return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ ...source, decision }) })
+    }
+    throw new Error("Unexpected request")
+  }))
+  renderApp()
+  fireEvent.click(await screen.findByRole("button", { name: /Синтетический кандидат/ }))
+  const approval = await screen.findByRole("form", { name: "Одобрение ревизии" })
+  fireEvent.change(within(approval).getByRole("textbox", { name: "Основание и ограничения" }), { target: { value: "Self-authored synthetic fixture" } })
+  fireEvent.change(within(approval).getByRole("textbox", { name: "HTTPS-ссылка на доказательство прав" }), { target: { value: "https://example.invalid/synthetic/rights" } })
+  fireEvent.click(within(approval).getByRole("checkbox", { name: "Показ текстовых фрагментов пользователям разрешён" }))
+  fireEvent.click(within(approval).getByRole("checkbox", { name: "Чувствительность материала проверена" }))
+  fireEvent.click(within(approval).getByRole("button", { name: "Одобрить эту ревизию" }))
+  await screen.findByRole("form", { name: "Отзыв ревизии" })
+  expect(requests[0]).toEqual({ path: `/api/v1/admin/revisions/${revisionId}/approve`, csrf: "review-csrf", body: { reason: "Self-authored synthetic fixture", evidence_url: "https://example.invalid/synthetic/rights", user_text: true, original_file: false, provider_transfer: false, sensitivity_cleared: true } })
+  const revocation = screen.getByRole("form", { name: "Отзыв ревизии" })
+  fireEvent.change(within(revocation).getByRole("textbox", { name: "Причина отзыва" }), { target: { value: "Synthetic review withdrawn" } })
+  fireEvent.click(within(revocation).getByRole("button", { name: "Отозвать эту ревизию" }))
+  await waitFor(() => expect(requests).toHaveLength(2))
+  expect(requests[1]).toEqual({ path: `/api/v1/admin/revisions/${revisionId}/revoke`, csrf: "review-csrf", body: { reason: "Synthetic review withdrawn" } })
 })
 
 test("logout sends CSRF and clears local chat before another login", async () => {

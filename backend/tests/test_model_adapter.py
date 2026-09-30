@@ -18,10 +18,20 @@ class AllowQuota:
     async def reserve(self, subject_id: str, idempotency_key: str) -> bool:
         return True
 
+    async def finish(
+        self, subject_id: str, idempotency_key: str, result: ModelResult | None
+    ) -> None:
+        pass
+
 
 class DenyQuota:
     async def reserve(self, subject_id: str, idempotency_key: str) -> bool:
         return False
+
+    async def finish(
+        self, subject_id: str, idempotency_key: str, result: ModelResult | None
+    ) -> None:
+        pass
 
 
 class SlowProvider:

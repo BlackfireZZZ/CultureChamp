@@ -1,22 +1,26 @@
-# Creative RAG MVP — master plan and task tracker
+# CultureChamp delivery — MVP and full-concept task baseline
 
 Status: **integration in progress** · Integration base: `790564e2fa8aa3c7307c5a8df3c633829c2745aa` ·
 Integration owner: **Codex integration agent** · Last updated: 2026-09-30
 
 ## Purpose and observable result
 
-Build a text-only MVP in which a **user** starts with a creative task in a familiar
+Build a first text-output slice in which a **user** starts with a creative task in a familiar
 chat interface, receives a useful answer grounded in approved cultural sources,
 and can inspect each cited original. A secondary materials tab supports source
 exploration. An **administrator** can inspect a structured, tagged document corpus
 and control which exact source revisions are eligible for user retrieval. The answer
-model is accessed through a server-side API adapter.
+model is accessed through a server-side API adapter. The architecture must also
+support the full concept: additional cultural collections, image and audio source
+material, more creative domains, and institutional review workflows. A narrow
+first release does not remove these product requirements.
 
 The [concept](../../product/CONCEPT.md) defines product intent, the
 [use-case guide](../../product/USE_CASES.md) defines scenarios and starter prompts,
 and [`DESIGN.md`](../../../DESIGN.md) defines visual rules. This plan is the task
 tracker and execution source of truth. The integrated branch has working identity,
-PDF intake, review, and materials APIs; retrieval and live chat remain unfinished.
+PDF intake, review and materials APIs. Vector retrieval and persisted chat have
+synthetic backend checks; UI and release evidence remain unfinished.
 
 ## Scope and boundaries
 
@@ -27,10 +31,11 @@ admin document inventory, structure, tags, processing/approval states; common te
 and table ingestion; measured retrieval; an external model API; safety, evaluation,
 and operations gates.
 
-**Outside MVP:** image, audio, music, video, OCR for scans unless the first corpus
-requires it, multimedia generation, autonomous tool actions, a map-first interface,
-public document contribution, nationwide source coverage, and a claim that all
-model output is verified. Keep extension seams without building these capabilities.
+**After the first release:** image, audio, music and video source understanding;
+OCR for scans; visual and audio output generation; larger cultural and creative
+coverage; and institutional participation. These are tracked in the full-concept
+backlog below. Autonomous actions, a map-first interface, indiscriminate public
+contribution and a claim that all model output is verified are not concept goals.
 
 The phrase "arbitrary text and tables" is a design goal, not an acceptance claim.
 The first fixtures will define supported formats and failure behavior. Candidate
@@ -46,10 +51,11 @@ XLSX; HTML and scanned PDFs require separate evidence and decisions.
 2. **Ingestion:** authorized intake → file validation/storage → isolated parsing →
    structure normalization → review → exact-revision approval → indexing. Revisions,
    failures, retries, deletion and revocation are auditable and idempotent.
-3. **Retrieval:** start with a PostgreSQL lexical baseline. Compare dense and hybrid
-   retrieval on a labelled corpus before choosing an embedding model, vector index,
-   reranker, or external search service. PostGIS is present in the scaffold; pgvector
-   availability and operational fit are **unverified**.
+3. **Retrieval:** generate versioned embeddings and search a dedicated vector
+   database for the first text slice. PostgreSQL remains authoritative for source
+   rights, exact revisions and locators. Compare vector-only and hybrid relevance
+   on the same labelled corpus. The lexical SQL path is an offline baseline, not
+   the chat retrieval implementation. See [ADR 0006](../../decisions/0006-vector-retrieval-and-media.md).
 4. **Generation:** retrieval returns approved source segments with locators. A
    provider-neutral model adapter applies timeouts, quotas and cost limits. The
    orchestration layer treats retrieved text as untrusted data, builds a bounded
@@ -61,9 +67,9 @@ XLSX; HTML and scanned PDFs require separate evidence and decisions.
    checks. Desktop uses a chat list and main dialogue; mobile uses an accessible
    drawer or equivalent, without losing the composer or citation navigation.
 
-Record irreversible choices in ADRs before implementation. The initial format,
-provider, identity, vector storage, and retention decisions remain open until their
-tasks produce evidence.
+Record irreversible choices in ADRs before implementation. Source formats,
+provider, embedding quality, media storage and retention limits require further
+evidence; ADR 0006 sets the vector storage direction.
 
 ## Milestones and gates
 
@@ -71,9 +77,9 @@ tasks produce evidence.
 |---|---|---|
 | M0 — Product slice and decisions | One narrow corpus/task slice, source policy, format matrix, identity/provider constraints and evaluable examples are recorded. | in_progress: policy and examples exist; real-source rights, reviewer and provider terms are external dependencies |
 | M1 — Governed corpus | An approved source revision can be ingested, inspected, cited, revoked, and excluded from user retrieval; text and table locations survive extraction. | in_progress: synthetic PDF vertical path verified; table extraction absent |
-| M2 — Measured retrieval | Labelled queries exist; lexical baseline and at least one alternative are compared by source format and language; the selected path meets agreed thresholds. | in_progress: two PostgreSQL lexical configurations measured on provisional labels; expert labels, table source and thresholds absent |
-| M3 — Grounded chat | A text brief produces a persisted or explicitly temporary text conversation with validated source citations, no-evidence behavior, and bounded model API calls. | todo |
-| M4 — Two-role product UI | User chat, starter guide, source browser/citation view and admin document inventory work at canonical widths and keyboard paths. | in_progress: real auth/materials/admin read path; chat remains local preview |
+| M2 — Vector retrieval | Versioned embeddings are indexed in Qdrant; chat uses vector candidates with authoritative rights rechecks; measured retrieval meets agreed thresholds. | in_progress: synthetic vector and revocation checks pass; same-fixture provisional dense recall@5 1.00; expert relevance, replay and release thresholds remain |
+| M3 — Grounded chat | A text brief produces a persisted text conversation with validated source citations, no-evidence behavior, and bounded model API calls. | in_progress: synthetic backend path passes; UI, external provider and end-to-end checks remain |
+| M4 — Two-role product UI | User chat, starter guide, source browser/citation view and admin document inventory work at canonical widths and keyboard paths. | in_progress: persisted chat, exact citation links and admin review/write controls pass component checks; live browser and canonical-width checks remain |
 | M5 — MVP evidence and operations | End-to-end, security, quality, recovery, cost/latency and user/expert review evidence supports a narrow release decision. | todo |
 
 ## Task rules
@@ -144,19 +150,19 @@ gate. Each row is intended as one cohesive review.
 | ID | Status · owner · handoff | Depends | Deliverable and owned area | Acceptance and smallest falsifying check |
 |---|---|---|---|---|
 | R01 | in_progress · integration agent · — | S05, C05, C06 | Gold query-to-source/locator judgements and retrieval harness; `ml/evals/` | Evaluation reports recall@k and ranking metrics by language, format and table/prose slice; a missing relevant source fails a labelled case. |
-| R02 | in_progress · integration agent · — | C07, R01 | PostgreSQL lexical indexing/search baseline with metadata and approval filters; `backend/app/infrastructure/db/lexical_search.py` | Relevant exact names and table values are found; an unapproved revision is absent before ranking; query plan and R01 metrics are recorded. |
-| R03 | todo · integration agent · — | R01, R02, S03 | Dense/hybrid retrieval experiment, embedding/provider and index compatibility check; `ml/evals/`, `docs/decisions/` | Compare same gold set with cost/latency and relevant-source recall; test pgvector availability before adopting it. No production index is implied by the experiment. |
-| R04 | todo · integration agent · — | R02, R03 | ADR selecting retrieval, chunking, fusion/reranking and thresholds; `docs/decisions/` | Chosen configuration beats or justifies retaining the lexical baseline on agreed slices; regressions and tradeoffs are explicit. |
-| R05 | in_progress · integration agent · — | R04, C07 | Application retrieval port/service with filters, bounded context and stable evidence IDs; `backend/app/application/retrieval.py` | Same query/approved corpus yields traceable segments; revoked/restricted text never returns; integration tests cover prose and tables. |
+| R02 | done · integration agent · — | C07 | Historical PostgreSQL lexical baseline; `backend/app/infrastructure/db/lexical_search.py` | Reproducible provisional metrics and rights-filter test are retained for comparison only; ADR 0005 is superseded. |
+| R03 | in_progress · integration agent · — | C07, S03 | Versioned multilingual text embeddings, dedicated Qdrant collection, ingestion/reindex jobs and index health; `backend/app/infrastructure/vector/` | A paraphrased synthetic query finds its passage; retries are idempotent; clean Compose replay rebuilds the index; no chat request uses SQL lexical ranking. |
+| R04 | in_progress · integration agent · — | R03, R01 | ADR 0006 and measured retrieval selection, chunking, fusion/reranking and thresholds; `docs/decisions/`, `ml/evals/` | Same frozen corpus and query set compare vector-only and lexical/hybrid by language, format, latency and cost; expert-reviewed regressions and tradeoffs are explicit. |
+| R05 | in_progress · integration agent · — | R03, C07 | Application retrieval port/service with current-authority filters, bounded context and stable evidence IDs; `backend/app/application/retrieval.py` | Same query/approved corpus yields traceable vector candidates; revoked/restricted text never returns even with stale vector points; integration tests cover prose and tables. |
 
 ### M3 — Model API and grounded conversation
 
 | ID | Status · owner · handoff | Depends | Deliverable and owned area | Acceptance and smallest falsifying check |
 |---|---|---|---|---|
-| G01 | ready · integration agent · — | S03 | Server-side model API adapter with secret isolation, timeout, retry, rate/cost limits and fake provider; `backend/app/infrastructure/model/` | A timeout or provider error yields a bounded safe failure; tests show no key or raw prompt in logs and no browser-side provider call. |
-| G02 | todo · integration agent · — | R05, G01, S02 | Text-only orchestration: task prompt, approved evidence context, uncertainty and fact/interpretation/creation framing; `backend/app/application/generation/` | A supplied source supports the answer; an empty evidence set cannot become a sourced cultural claim; deterministic fake-model cases pass. |
-| G03 | todo · integration agent · — | G02, C01 | Citation validation and source-location resolution; `backend/app/application/citations/` | Every displayed citation maps to a retrieved approved revision/locator; fabricated IDs are removed or cause a safe failure. |
-| G04 | todo · integration agent · — | C02, G03, S03 | Conversation/message model and chat API (list, create, send, continue, delete per retention decision); `backend/app/api/`, `backend/app/infrastructure/db/` | One user cannot read another's chat; a retry does not duplicate a turn; API errors and generated schema are tested. |
+| G01 | in_progress · integration agent · — | S03 | Server-side model API adapter with secret isolation, timeout, retry, rate/cost limits and fake provider; `backend/app/infrastructure/model/` | Fake and failure paths pass; external provider activation, measured cost and secret-handling review remain. |
+| G02 | in_progress · integration agent · — | R05, G01, S02 | Text orchestration: task prompt, approved evidence context, uncertainty and fact/interpretation/creation framing; `backend/app/application/generation/` | Synthetic fake-model cases pass; expert support review and full vector-backed journey remain. |
+| G03 | in_progress · integration agent · — | G02, C01 | Citation validation and source-location resolution; `backend/app/application/citations/` | Synthetic exact-revision checks pass; mixed format and source withdrawal UI checks remain. |
+| G04 | in_progress · integration agent · — | C02, G03, S03 | Conversation/message model and chat API (list, create, send, continue, delete per retention decision); `backend/app/api/`, `backend/app/infrastructure/db/` | PostgreSQL ownership/retry/citation test passes; client and end-to-end checks remain. |
 | G05 | todo · integration agent · — | G02, G03, S02 | Prompt-injection and sensitive/no-evidence guardrails; `backend/app/application/generation/`, `ml/evals/` | Retrieved instructions cannot change role/secret policy; UC-07–UC-11 return safe, accurately labelled behavior in adversarial fixtures. |
 
 ### M4 — User and administrator interfaces
@@ -164,11 +170,11 @@ gate. Each row is intended as one cohesive review.
 | ID | Status · owner · handoff | Depends | Deliverable and owned area | Acceptance and smallest falsifying check |
 |---|---|---|---|---|
 | U01 | ready · integration agent · — | S01, S03 | Responsive information architecture and reviewed wireframes for two roles; `docs/product/`, `DESIGN.md` | Default chat, secondary materials, admin inventory and source navigation are demonstrated at 360/768/1280/1440 px with keyboard paths. |
-| U02 | todo · integration agent · — | U01, G04 | Chat list, dialogue, composer and request states; `frontend/src/features/chat/` | Start/continue/switch chats, send with keyboard, recover from timeout without losing draft; component and e2e checks pass. |
+| U02 | in_progress · integration agent · — | U01, G04 | Chat list, dialogue, composer and request states; `frontend/src/features/chat/` | Component checks pass for persisted send and failure draft; live browser, switching, deletion and retry paths remain to be observed. |
 | U03 | ready · integration agent · — | U01, S01 | Editable starter prompts and in-app use-case help sourced from `USE_CASES.md`; `frontend/src/features/onboarding/` | Each UC-01–UC-06 starter fills the composer with an editable task; users can reach the guide without starting a chat. |
 | U04 | todo · integration agent · — | U01, C09 | Approved materials list, filters and document detail; `frontend/src/features/materials/` | User can find and inspect an approved prose and table source; unpublished items never appear; empty/error/keyboard paths pass. |
-| U05 | todo · integration agent · — | U02, U04, G03 | Citation cards/links and exact-location inspector with return-to-chat navigation; `frontend/src/features/citations/` | Clicking a citation opens the cited revision at its section/page or sheet/row; withdrawn/unavailable locations show an honest state. |
-| U06 | todo · integration agent · — | U01, C08, C10 | Admin document inventory/detail UI with structure, tags, status and explicit review actions; `frontend/src/features/admin/` | Admin can filter, inspect errors and approve/revoke an exact revision; user cannot enter the route or fetch its data. |
+| U05 | in_progress · integration agent · — | U02, U04, G03 | Citation cards/links and exact-location inspector with return-to-chat navigation; `frontend/src/features/chat/`, `frontend/src/features/materials/` | A component check opens an exact cited text segment and returns to chat; table locators and live withdrawal remain. |
+| U06 | in_progress · integration agent · — | U01, C08, C10 | Admin document inventory/detail UI with structure, tags, status and explicit review actions; `frontend/src/features/admin/` | Admin component checks cover filter and exact approval/revocation with explicit rights; upload, live browser and role navigation checks remain. |
 
 ### M5 — Integration, quality and release evidence
 
@@ -179,9 +185,31 @@ gate. Each row is intended as one cohesive review.
 | Q03 | todo · integration agent · — | G01, C07, Q01 | Operations runbook: secrets, backups, reindex/replay, deletion, cost/latency and failure alerts; `docs/operations/`, `scripts/` | A clean restore/reindex and provider-outage drill preserve approved-state isolation and give observable recovery evidence. |
 | Q04 | blocked · integration agent · — | Q02, U03 | Target-user test of starter tasks, chat usefulness and source trust; `docs/product/` | At least one professional and one occasional-user scenario are observed with the same rubric; findings change or confirm the next MVP backlog. |
 
+## Full-concept backlog after the first text release
+
+These items are product commitments to plan and validate, not claims that a
+specific model or provider already meets quality requirements. Each keeps the
+same source identity, rights and citation rules as the text slice.
+
+| ID | Status | Deliverable | Acceptance evidence |
+|---|---|---|---|
+| F01 | todo | Expand governed collections across communities, regions and periods with institutional and community review. | Each added slice has provenance, accountable review, rights scopes, conflict handling and expert-labelled tasks. |
+| F02 | todo | Ingest images and scanned pages into private media storage with image regions, OCR/layout text and stable visual locators. | Authorized image queries return the correct image/region; a revoked image disappears; captions and OCR are distinguished from source facts. |
+| F03 | todo | Ingest recordings and music with transcript, time ranges, performer/recording rights and audio embeddings. | A query opens the cited recording at the correct time span; transcript and audio similarity are evaluated separately; restricted recordings never leak. |
+| F04 | todo | Add modality-aware and cross-modal retrieval with separately versioned text, visual and audio encoders. | Text-to-image and text-to-audio tasks pass expert-labelled recall and cultural-context checks; incompatible vector spaces cannot be compared. |
+| F05 | todo | Generate and edit visual and audio creative outputs where rights and cultural review permit. | Generated work is marked creative, has inspectable cultural references, respects source and output rights, and passes user and expert review. |
+| F06 | todo | Expand professional creative workflows, output formats and collaborative revision. | Target professionals complete recurring briefs with usable deliverables and traceable source context; user research validates priority. |
+| F07 | todo | Institutional source submission, review, correction and revocation workflows. | A provider can submit and correct an exact revision; independent reviewers decide visibility and sensitive use; audit and withdrawal propagate to every modality index. |
+| F08 | todo | Production object storage, index generation lifecycle, backups and scale tests. | Restore and full reindex reproduce approved search state; latency, cost and failure targets are measured on representative media collections. |
+
+The next implementation order is R03 recovery → R05/G05 → C06/U04 → R01/R04/Q02,
+while corpus and UI work proceed against the same contracts. F02–F08 are not
+silently discarded after M5; their product ordering follows the concept's
+coverage, creative-domain and institutional-participation axes.
+
 ## Integration order and parallelism
 
-The first vertical slice should use a small approved fixture, lexical retrieval, a
+The first vertical slice should use a small approved fixture, vector retrieval, a
 fake model adapter, and one chat/citation path. It should prove source permissions
 and exact citation navigation before optimizing relevance. UI contracts may be
 developed against deterministic fixtures while ingestion runs. Frontend and backend
@@ -196,9 +224,14 @@ path, evaluation cases, and data-handling constraints exist.
 - [PostgreSQL full-text search](https://www.postgresql.org/docs/17/textsearch.html)
   supplies a local lexical baseline and ranking. Its Russian/multilingual and table
   performance must be measured on the actual corpus.
-- [pgvector](https://github.com/pgvector/pgvector#hybrid-search) documents exact,
-  approximate and hybrid options. Approximate indexes trade recall for speed; use
-  only after an evaluation and runtime compatibility check.
+- [Qdrant named vectors](https://qdrant.tech/documentation/manage-data/vectors/)
+  support modality-specific spaces, while its
+  [filtering](https://qdrant.tech/documentation/search/filtering/) supports
+  candidate selection. Current rights remain authoritative in PostgreSQL.
+- [FastEmbed](https://github.com/qdrant/fastembed) provides local embedding
+  inference; the chosen multilingual model remains a quality hypothesis.
+- [pgvector](https://github.com/pgvector/pgvector#hybrid-search) is a considered
+  vector alternative. This branch uses a dedicated Qdrant service.
 - [BEIR](https://arxiv.org/abs/2104.08663) shows why retrieval needs heterogeneous
   evaluation; a project-specific labelled set remains necessary.
 - [OWASP RAG Security](https://cheatsheetseries.owasp.org/cheatsheets/RAG_Security_Cheat_Sheet.html)
@@ -209,6 +242,45 @@ path, evaluation cases, and data-handling constraints exist.
 
 ## Progress and decisions
 
+- **2026-09-30, concept correction:** ADR 0006 superseded the SQL lexical
+  retrieval default. Chat now requests locally generated multilingual embeddings,
+  obtains Qdrant candidates and rechecks current exact-revision rights in
+  PostgreSQL. A worker indexes approved revisions and cleans revoked points.
+  A clean database upgrade and Alembic check passed. The live PostgreSQL/Qdrant
+  suite passed 49 backend tests, including a paraphrased Russian query, stale
+  held/revoked points, chat ownership and citation withdrawal. `make check`
+  passed with Node 24: 40 backend tests without optional services, 14 frontend
+  and six ML tests; Compose build, packaged model inference and smoke passed.
+  This proves mechanics only. A frozen expert-labelled relevance comparison,
+  representative corpus, robust index recovery drill, production security and
+  media encoders remain open. The [index runbook](../../operations/vector-index.md)
+  records replay and failure behavior.
+- **2026-09-30, dense comparison:** the same three locally held PDFs and one
+  explicitly synthetic table cell were run through Qdrant with local embeddings.
+  Full-page embeddings recalled 0.70 of provisional relevant pages at k=5.
+  Overlapping 120-word windows with page aggregation recalled 1.00, MRR@5 0.84
+  and nDCG@5 0.848, compared with the earlier Russian SQL baseline recall 0.80.
+  Raw dense no-evidence false-positive rate was 1.00. A cosine gate of 0.84
+  selected on these same eight cases yielded observed 0.00 false positives and
+  recall 1.00; this is training-set calibration, not expert or held-out quality.
+  The gate is provisional and claim support remains a separate release check.
+- **2026-09-30, missing-index recovery:** a missing Qdrant collection now fails
+  chat search closed with HTTP 503. The worker clears stale completion markers,
+  recreates that collection and replays approved revisions. A live missing-
+  collection check passes; recovery of missing individual points still needs a
+  separate drill. The complete live-service `make check` passed 49 backend,
+  14 frontend and six ML tests.
+- **2026-09-30, UI continuation:** removed the local demo chat adapter. User
+  chats now use the persisted API for list, detail, send and delete; a failed
+  send keeps the draft and request ID for retry. Citation buttons open the exact
+  approved revision and segment with keyboard focus, and return to the chat.
+  Frontend lint, build and 14 component tests pass. A live browser run against
+  the rebuilt backend remains open.
+- **2026-09-30, admin continuation:** admin upload, error/retry, exact revision
+  review, explicit rights-scope approval and revocation controls now use the
+  server API. A component check covers approval and withdrawal payloads with
+  original-file and provider-transfer rights false by default. Live Compose
+  review and upload remain open.
 - **2026-09-30, retrieval baseline:** a clean PostgreSQL migration added the
   `russian` GIN expression index. The application retrieval service and SQL
   adapter apply current exact-revision, rights and sensitivity filters before
@@ -216,7 +288,7 @@ path, evaluation cases, and data-handling constraints exist.
   synthetic corpus. A temporary local PostgreSQL evaluation compared `simple`
   and `russian` against the same eight provisional qrels. Recall@5 was 0.40 and
   0.80; no-evidence false-positive rates were 0.667 and 1.000. The Russian
-  configuration is a provisional engineering default, not a release threshold.
+  configuration was an interim engineering default, now superseded by ADR 0006.
   Clean migration and Alembic check passed; a forced-index plan used the GIN
   index and applied current-decision filtering before sort. A fresh migrated
   PostgreSQL database and `make check` passed all 40 backend, 12 frontend and

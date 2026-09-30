@@ -55,7 +55,14 @@ class HttpModelProvider:
                 },
                 json={
                     "model": self.model,
-                    "messages": [{"role": "user", "content": request.prompt}],
+                    "messages": [
+                        *(
+                            [{"role": "system", "content": request.system_prompt}]
+                            if request.system_prompt
+                            else []
+                        ),
+                        {"role": "user", "content": request.prompt},
+                    ],
                     "max_tokens": request.max_output_tokens,
                 },
             ) as response:
