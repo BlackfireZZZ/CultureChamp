@@ -58,6 +58,9 @@ test("guide sends a persisted task and shows an honest no-evidence answer", asyn
   expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
   fireEvent.click(screen.getByRole("button", { name: "Отправить" }))
   await waitFor(() => expect(screen.getByText("Нет одобренных источников для культурного утверждения.")).toBeInTheDocument())
+  const calls = vi.mocked(fetch).mock.calls
+  const sent = calls.find(([url, options]) => url === "/api/v1/chats/chat-1/messages" && options?.method === "POST")
+  expect(JSON.parse(sent?.[1]?.body as string)).toMatchObject({ starter_id: "UC-06" })
   expect(screen.getByRole("status", { name: "" }).textContent).toContain("Пилотный чат")
 })
 
@@ -68,6 +71,22 @@ test("materials show no unapproved candidates", async () => {
   fireEvent.click(screen.getByRole("button", { name: "Материалы" }))
   expect(await screen.findByText("Одобренных материалов пока нет")).toBeInTheDocument()
   expect(screen.queryByText(/PDF-02/)).not.toBeInTheDocument()
+})
+
+test("visual match opens the exact approved PDF page", async () => {
+  vi.stubGlobal("fetch", vi.fn((input: string) => {
+    if (input === "/api/v1/auth/me") return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ user: { id: "test-user", username: "tester", role: "user" }, csrf_token: "test-csrf" }) })
+    if (input === "/api/v1/chats" || input === "/api/v1/materials") return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve([]) })
+    if (input === "/api/v1/materials/visual-search?q=red+circle") return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve([{ revision_id: "rev-visual", image_id: "image-1", page: 3, title: "Synthetic visual PDF", creator: null, score: 0.4 }]) })
+    throw new Error("Unexpected request")
+  }))
+  renderApp()
+  fireEvent.click(await screen.findByRole("button", { name: "Материалы" }))
+  const form = screen.getByRole("form", { name: "Поиск по изображениям PDF" })
+  fireEvent.change(within(form).getByRole("textbox"), { target: { value: "red circle" } })
+  fireEvent.click(within(form).getByRole("button", { name: "Найти изображения" }))
+  expect(await screen.findByRole("link", { name: "Открыть страницу 3 в одобренном PDF" })).toHaveAttribute("href", "/api/v1/materials/rev-visual/original#page=3")
+  expect(screen.getByText(/не подтверждает культурный факт/)).toBeInTheDocument()
 })
 
 test("materials search uses approved-only server filters and can be reset", async () => {

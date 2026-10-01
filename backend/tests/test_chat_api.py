@@ -153,6 +153,16 @@ async def _check_chat(url: str, tmp_path: Path) -> None:
                 login(other, names[1]),
                 login(admin, names[2]),
             )
+            assert owner.get("/api/v1/admin/request-statistics").status_code == 403
+            assert (
+                admin.get("/api/v1/admin/request-statistics", params={"days": 0}).status_code
+                == 422
+            )
+            before = admin.get("/api/v1/admin/request-statistics")
+            assert before.status_code == 200
+            assert before.headers["cache-control"] == "no-store"
+            initial_total = sum(row["count"] for row in before.json()["daily_requests"])
+            initial_starters = sum(row["count"] for row in before.json()["starter_requests"])
             assert admin.post("/api/v1/chats", headers=admin_headers).status_code == 403
             created = owner.post("/api/v1/chats", headers=owner_headers)
             assert created.status_code == 201, created.text
@@ -191,7 +201,9 @@ async def _check_chat(url: str, tmp_path: Path) -> None:
             assert owner.get("/api/v1/materials", params={"q": hidden_marker}).json() == []
 
             no_evidence_id = str(uuid4())
-            no_evidence = {"request_id": no_evidence_id, "text": hidden_marker}
+            no_evidence = {
+                "request_id": no_evidence_id, "text": hidden_marker, "starter_id": "UC-01"
+            }
             first = owner.post(
                 f"/api/v1/chats/{chat_id}/messages", headers=owner_headers, json=no_evidence
             )
@@ -204,6 +216,28 @@ async def _check_chat(url: str, tmp_path: Path) -> None:
             )
             assert repeated.status_code == 200
             assert repeated.json() == first.json()
+            statistics = admin.get("/api/v1/admin/request-statistics")
+            assert statistics.status_code == 200
+            assert (
+                sum(row["count"] for row in statistics.json()["daily_requests"])
+                == initial_total + 1
+            )
+            assert (
+                sum(row["count"] for row in statistics.json()["starter_requests"])
+                == initial_starters + 1
+            )
+            assert (
+                owner.post(
+                    f"/api/v1/chats/{chat_id}/messages", headers=owner_headers,
+                    json={**no_evidence, "starter_id": "UC-02"},
+                ).status_code == 409
+            )
+            assert (
+                owner.post(
+                    f"/api/v1/chats/{chat_id}/messages", headers=owner_headers,
+                    json={"request_id": str(uuid4()), "text": "new task", "starter_id": "UC-99"},
+                ).status_code == 422
+            )
             assert (
                 owner.post(
                     f"/api/v1/chats/{chat_id}/messages",

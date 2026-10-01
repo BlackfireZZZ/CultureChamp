@@ -3,6 +3,27 @@
 Status: **integration in progress** · Integration base: `790564e2fa8aa3c7307c5a8df3c633829c2745aa` ·
 Integration owner: **Codex integration agent** · Last updated: 2026-09-30
 
+## 2026-10-02 engineering pilot update
+
+The isolated `agent/engineering-visual-gaps` worktree started at `3a837aa` with
+a clean status. The primary checkout retained its independently edited concept,
+roadmap and environment example. The present task tests three falsifiable
+hypotheses: exact starter metadata can support aggregate admin counts without
+prompt analysis; YandexGPT can satisfy the existing grounded JSON/citation
+contract on self-authored text; and an embedded PDF image can be found in a
+separate visual space without granting a stale or revoked revision access.
+
+The first two hypotheses passed synthetic API, migration, provider and
+PostgreSQL/Qdrant checks. The visual hypothesis passed a synthetic PDF API
+integration test covering preapproval denial, exact physical page, original
+access, lost-point replay and immediate revocation. An actual pinned CLIP model
+also embedded one image and query into 512-dimensional vectors and found the
+test point in Qdrant. The UI now has a separate experimental image search mode.
+The six-page benchmark and limitations are recorded in
+[ADR 0008](../../decisions/0008-document-visual-search.md). These results do
+not change the blocked real-source rights, cultural-expert review and target-user
+gates. No real cultural PDF was transferred to YandexGPT.
+
 ## Purpose and observable result
 
 Build a first text-output slice in which a **user** starts with a creative task in a familiar

@@ -14,8 +14,11 @@ def configured_provider(settings: Settings) -> ModelProvider:
         raise ValueError("external model policy is not approved")
     if not settings.model_api_endpoint or not settings.model_api_name or not settings.model_api_key:
         raise ValueError("external model configuration is incomplete")
+    endpoint = settings.model_api_endpoint.rstrip("/")
+    if endpoint.endswith("/v1"):
+        endpoint += "/chat/completions"
     return HttpModelProvider(
-        endpoint=settings.model_api_endpoint,
+        endpoint=endpoint,
         model=settings.model_api_name,
         api_key=settings.model_api_key.get_secret_value(),
         policy_approved=True,

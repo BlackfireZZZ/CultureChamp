@@ -1,4 +1,5 @@
 import asyncio
+import json
 
 import httpx
 import pytest
@@ -88,6 +89,10 @@ def test_external_provider_configuration_fails_closed_and_keeps_key_private() ->
     provider = configured_provider(ready)
     assert isinstance(provider, HttpModelProvider)
     assert provider.requires_provider_transfer is True
+    base_url = ready.model_copy(update={"model_api_endpoint": "https://approved.example/v1"})
+    normalized = configured_provider(base_url)
+    assert isinstance(normalized, HttpModelProvider)
+    assert normalized.endpoint == "https://approved.example/v1/chat/completions"
     assert "secret-canary" not in repr(ready)
     assert "secret-canary" not in repr(provider)
 
@@ -233,6 +238,7 @@ def test_http_provider_parses_bounded_response() -> None:
 async def _http_provider_parses_bounded_response() -> None:
     def handler(outgoing: httpx.Request) -> httpx.Response:
         assert outgoing.headers["idempotency-key"] == "turn-1"
+        assert json.loads(outgoing.content)["response_format"] == {"type": "json_object"}
         return httpx.Response(
             200,
             json={

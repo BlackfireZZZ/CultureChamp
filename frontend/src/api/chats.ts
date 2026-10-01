@@ -25,11 +25,11 @@ export async function createChat(csrfToken: string): Promise<ChatSummary> {
   }))
 }
 
-export async function sendChatMessage(chatId: string, text: string, requestId: string, csrfToken: string): Promise<ChatTurn> {
+export async function sendChatMessage(chatId: string, text: string, requestId: string, csrfToken: string, starterId?: string): Promise<ChatTurn> {
   return readJson<ChatTurn>(await fetch(`/api/v1/chats/${encodeURIComponent(chatId)}/messages`, {
     method: "POST", credentials: "same-origin",
     headers: { "content-type": "application/json", "x-csrf-token": csrfToken },
-    body: JSON.stringify({ request_id: requestId, text }),
+    body: JSON.stringify({ request_id: requestId, text, starter_id: starterId ?? null }),
   }))
 }
 

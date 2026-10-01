@@ -12,6 +12,7 @@ from app.api.routes.chats import router as chats_router
 from app.api.routes.health import router as health_router
 from app.api.routes.identity import admin_account_router, auth_router
 from app.api.routes.sources import admin_router, materials_router
+from app.api.routes.statistics import router as statistics_router
 from app.application.chat import ChatConflict, ChatNotFound
 from app.application.generation import GenerationRateLimited, GenerationUnavailable
 from app.application.identity import IdentityService
@@ -86,6 +87,7 @@ def create_app() -> FastAPI:
     app.include_router(auth_router, prefix="/api/v1")
     app.include_router(admin_account_router, prefix="/api/v1")
     app.include_router(admin_router, prefix="/api/v1")
+    app.include_router(statistics_router, prefix="/api/v1")
     app.include_router(materials_router, prefix="/api/v1")
     app.include_router(chats_router, prefix="/api/v1")
     app.middleware("http")(http_telemetry)

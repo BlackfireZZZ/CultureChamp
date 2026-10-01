@@ -26,11 +26,12 @@ export function App() {
   const actions = useChatActions(auth.session.data?.csrf_token ?? "")
   const [citationTarget, setCitationTarget] = useState<ChatCitation | null>(null)
   const [draft, setDraft] = useState("")
+  const [starterId, setStarterId] = useState<string | null>(null)
   const [guideOpen, setGuideOpen] = useState(false)
   const [listOpen, setListOpen] = useState(false)
   const [pending, setPending] = useState(false)
   const [sendError, setSendError] = useState(false)
-  const [pendingRequest, setPendingRequest] = useState<{ text: string; id: string; chatId: string | null } | null>(null)
+  const [pendingRequest, setPendingRequest] = useState<{ text: string; id: string; chatId: string | null; starterId: string | null } | null>(null)
   const composerRef = useRef<HTMLTextAreaElement>(null)
   const guideTriggerRef = useRef<HTMLButtonElement>(null)
   const listTriggerRef = useRef<HTMLButtonElement>(null)
@@ -68,6 +69,7 @@ export function App() {
   function chooseStarter(prompt: string) {
     setView("chat")
     setDraft(prompt)
+    setStarterId(starters.find((item) => item.prompt === prompt)?.id ?? null)
     setGuideOpen(false)
     window.setTimeout(() => composerRef.current?.focus(), 0)
   }
@@ -80,13 +82,14 @@ export function App() {
     setSendError(false)
     try {
       const request = pendingRequest?.text === text && pendingRequest.chatId === selectedId
-        ? pendingRequest : { text, id: crypto.randomUUID(), chatId: selectedId }
+        ? pendingRequest : { text, id: crypto.randomUUID(), chatId: selectedId, starterId }
       setPendingRequest(request)
       const chatId = request.chatId ?? (await actions.create.mutateAsync()).id
       setSelectedId(chatId)
       setPendingRequest({ ...request, chatId })
-      await actions.send.mutateAsync({ chatId, text, requestId: request.id })
+      await actions.send.mutateAsync({ chatId, text, requestId: request.id, starterId: request.starterId ?? undefined })
       setDraft("")
+      setStarterId(null)
       setPendingRequest(null)
     } catch {
       setSendError(true)

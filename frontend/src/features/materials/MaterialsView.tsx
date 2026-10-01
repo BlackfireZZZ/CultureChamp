@@ -5,7 +5,7 @@ import { approvedPageUrl } from "../../api/materials"
 import { sourceLocationLabel } from "../../api/locators"
 import type { MaterialFilters } from "../../api/materials"
 import type { ChatCitation } from "../../api/chats"
-import { useMaterial, useMaterials } from "./useMaterials"
+import { useMaterial, useMaterials, useVisualSearch } from "./useMaterials"
 
 const xlsxMediaType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 function safeOriginUrl(value: string): string | null {
@@ -25,7 +25,10 @@ const formatLabel = (mediaType: string) => {
 export function MaterialsView({ onBack, citationTarget = null }: { onBack: () => void; citationTarget?: ChatCitation | null }) {
   const [revisionId, setRevisionId] = useState<string | null>(citationTarget?.revision_id ?? null)
   const [filters, setFilters] = useState<MaterialFilters>({})
+  const [visualDraft, setVisualDraft] = useState("")
+  const [visualQuery, setVisualQuery] = useState("")
   const list = useMaterials(filters)
+  const visuals = useVisualSearch(visualQuery)
   const detail = useMaterial(revisionId)
   const headingRef = useRef<HTMLHeadingElement>(null)
 
@@ -73,6 +76,18 @@ export function MaterialsView({ onBack, citationTarget = null }: { onBack: () =>
       <label>Тип документа<select name="media_type"><option value="">Все типы</option><option value="application/pdf">PDF</option><option value="text/plain">TXT</option><option value="text/csv">CSV</option><option value={xlsxMediaType}>XLSX</option></select></label>
       <div className="material-filter-actions"><button type="submit">Найти</button><button type="reset" onClick={() => { setFilters({}); setRevisionId(null) }}>Сбросить</button></div>
     </form>
+    <form className="material-filters" onSubmit={(event) => { event.preventDefault(); setVisualQuery(visualDraft.trim()) }} aria-label="Поиск по изображениям PDF">
+      <label>Поиск по изображениям PDF<input value={visualDraft} onChange={(event) => setVisualDraft(event.target.value)} minLength={2} maxLength={200} placeholder="Например: красный круг и синие полосы" /></label>
+      <div className="material-filter-actions"><button type="submit" disabled={visualDraft.trim().length < 2}>Найти изображения</button></div>
+    </form>
+    {visualQuery && <section aria-label="Найденные изображения">
+      <h2>Совпадения по изображению</h2>
+      <p>Экспериментальный поиск: совпадение изображения не подтверждает культурный факт. Проверьте страницу и контекст оригинала.</p>
+      {visuals.isPending && <p role="status">Ищем изображения…</p>}
+      {visuals.isError && <div role="alert"><p>Поиск изображений сейчас недоступен.</p><button type="button" onClick={() => void visuals.refetch()}>Повторить</button></div>}
+      {visuals.isSuccess && visuals.data.length === 0 && <p>Изображений по запросу не найдено.</p>}
+      {visuals.isSuccess && visuals.data.length > 0 && <ol className="segment-list">{visuals.data.map((item) => <li key={item.image_id}><h3>{item.title} · страница {item.page}</h3><p>{item.creator || "Автор не указан"}</p><a href={approvedPageUrl(item.revision_id, item.page, true)!} target="_blank" rel="noopener noreferrer">Открыть страницу {item.page} в одобренном PDF</a></li>)}</ol>}
+    </section>}
     {list.isPending && <p role="status">Загружаем материалы…</p>}
     {list.isError && <div role="alert"><p>Не удалось загрузить материалы.</p><button type="button" onClick={() => void list.refetch()}>Повторить</button></div>}
     {list.isSuccess && list.data.length === 0 && <div className="empty-panel"><h2>{hasFilters ? "Материалов по запросу не найдено" : "Одобренных материалов пока нет"}</h2><p>{hasFilters ? "Уточните поиск или сбросьте фильтры." : "Кандидатные источники не показываются до проверки прав, контекста и точной ревизии."}</p><button type="button" onClick={onBack}>Вернуться к чату</button></div>}

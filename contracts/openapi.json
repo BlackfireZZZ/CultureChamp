@@ -610,6 +610,25 @@
         "title": "CreateAccountInput",
         "type": "object"
       },
+      "DailyCountView": {
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "date": {
+            "format": "date",
+            "title": "Date",
+            "type": "string"
+          }
+        },
+        "required": [
+          "date",
+          "count"
+        ],
+        "title": "DailyCountView",
+        "type": "object"
+      },
       "DecisionInput": {
         "properties": {
           "evidence_url": {
@@ -1141,6 +1160,42 @@
         "title": "MetadataInput",
         "type": "object"
       },
+      "RequestStatisticsView": {
+        "properties": {
+          "daily_requests": {
+            "items": {
+              "$ref": "#/components/schemas/DailyCountView"
+            },
+            "title": "Daily Requests",
+            "type": "array"
+          },
+          "period_end": {
+            "format": "date",
+            "title": "Period End",
+            "type": "string"
+          },
+          "period_start": {
+            "format": "date",
+            "title": "Period Start",
+            "type": "string"
+          },
+          "starter_requests": {
+            "items": {
+              "$ref": "#/components/schemas/StarterCountView"
+            },
+            "title": "Starter Requests",
+            "type": "array"
+          }
+        },
+        "required": [
+          "period_start",
+          "period_end",
+          "daily_requests",
+          "starter_requests"
+        ],
+        "title": "RequestStatisticsView",
+        "type": "object"
+      },
       "RevokeInput": {
         "properties": {
           "reason": {
@@ -1268,6 +1323,25 @@
             "title": "Request Id",
             "type": "string"
           },
+          "starter_id": {
+            "anyOf": [
+              {
+                "enum": [
+                  "UC-01",
+                  "UC-02",
+                  "UC-03",
+                  "UC-04",
+                  "UC-05",
+                  "UC-06"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Starter Id"
+          },
           "text": {
             "maxLength": 2000,
             "minLength": 1,
@@ -1280,6 +1354,24 @@
           "text"
         ],
         "title": "SendInput",
+        "type": "object"
+      },
+      "StarterCountView": {
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "starter_id": {
+            "title": "Starter Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "starter_id",
+          "count"
+        ],
+        "title": "StarterCountView",
         "type": "object"
       },
       "TagView": {
@@ -1339,6 +1431,53 @@
         ],
         "title": "ValidationError",
         "type": "object"
+      },
+      "VisualResultView": {
+        "properties": {
+          "creator": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Creator"
+          },
+          "image_id": {
+            "format": "uuid",
+            "title": "Image Id",
+            "type": "string"
+          },
+          "page": {
+            "title": "Page",
+            "type": "integer"
+          },
+          "revision_id": {
+            "format": "uuid",
+            "title": "Revision Id",
+            "type": "string"
+          },
+          "score": {
+            "title": "Score",
+            "type": "number"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "revision_id",
+          "image_id",
+          "page",
+          "title",
+          "creator",
+          "score"
+        ],
+        "title": "VisualResultView",
+        "type": "object"
       }
     }
   },
@@ -1384,6 +1523,51 @@
           }
         },
         "summary": "Create Account",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/request-statistics": {
+      "get": {
+        "operationId": "request_statistics_api_v1_admin_request_statistics_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "days",
+            "required": false,
+            "schema": {
+              "default": 30,
+              "maximum": 90,
+              "minimum": 1,
+              "title": "Days",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RequestStatisticsView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Request Statistics",
         "tags": [
           "admin"
         ]
@@ -2449,6 +2633,88 @@
           }
         },
         "summary": "Materials List",
+        "tags": [
+          "materials"
+        ]
+      }
+    },
+    "/api/v1/materials/visual-search": {
+      "get": {
+        "operationId": "visual_search_api_v1_materials_visual_search_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "required": true,
+            "schema": {
+              "maxLength": 200,
+              "minLength": 2,
+              "title": "Q",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "region",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 100,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Region"
+            }
+          },
+          {
+            "in": "query",
+            "name": "people",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 100,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "People"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/VisualResultView"
+                  },
+                  "title": "Response Visual Search Api V1 Materials Visual Search Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Visual Search",
         "tags": [
           "materials"
         ]

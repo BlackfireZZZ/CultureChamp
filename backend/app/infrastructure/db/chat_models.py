@@ -42,7 +42,13 @@ class ChatTurn(Base):
         CheckConstraint("ordinal >= 0", name="ordinal"),
         CheckConstraint("attempt >= 1", name="attempt"),
         CheckConstraint("status IN ('pending', 'complete', 'failed')", name="status"),
+        CheckConstraint(
+            "starter_id IS NULL OR starter_id IN "
+            "('UC-01', 'UC-02', 'UC-03', 'UC-04', 'UC-05', 'UC-06')",
+            name="starter_id",
+        ),
         Index("ix_chat_turns_conversation", "conversation_id"),
+        Index("ix_chat_turns_created_at", "created_at"),
     )
 
     id: Mapped[UUID] = mapped_column(primary_key=True)
@@ -51,6 +57,7 @@ class ChatTurn(Base):
     )
     ordinal: Mapped[int] = mapped_column(Integer, nullable=False)
     user_text: Mapped[str] = mapped_column(Text, nullable=False)
+    starter_id: Mapped[str | None] = mapped_column(String(5))
     assistant_text: Mapped[str | None] = mapped_column(Text)
     evidence_status: Mapped[str | None] = mapped_column(String(32))
     status: Mapped[str] = mapped_column(String(16), nullable=False)

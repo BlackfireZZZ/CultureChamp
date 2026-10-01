@@ -66,6 +66,7 @@ class HttpModelProvider:
                         {"role": "user", "content": request.prompt},
                     ],
                     "max_tokens": request.max_output_tokens,
+                    "response_format": {"type": "json_object"},
                 },
             ) as response:
                 if response.status_code in {429, 503}:

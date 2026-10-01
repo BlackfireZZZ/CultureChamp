@@ -227,3 +227,37 @@ class SourceVectorIndex(Base):
     indexed_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
+
+
+class SourceVisual(Base):
+    """One private embedded image located on an immutable source revision page."""
+
+    __tablename__ = "source_visuals"
+    __table_args__ = (
+        UniqueConstraint("revision_id", "page", "ordinal", name="uq_source_visual_locator"),
+        CheckConstraint("page >= 1", name="page_positive"),
+        CheckConstraint("ordinal >= 0", name="ordinal_nonnegative"),
+        CheckConstraint("length(sha256) = 64", name="sha256_length"),
+        Index("ix_source_visuals_revision", "revision_id"),
+    )
+
+    id: Mapped[UUID] = mapped_column(primary_key=True)
+    revision_id: Mapped[UUID] = mapped_column(
+        ForeignKey("source_revisions.id", ondelete="RESTRICT"), nullable=False
+    )
+    page: Mapped[int] = mapped_column(nullable=False)
+    ordinal: Mapped[int] = mapped_column(nullable=False)
+    sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    storage_key: Mapped[str] = mapped_column(Text, nullable=False)
+
+
+class SourceVisualIndex(Base):
+    __tablename__ = "source_visual_indexes"
+
+    revision_id: Mapped[UUID] = mapped_column(
+        ForeignKey("source_revisions.id", ondelete="RESTRICT"), primary_key=True
+    )
+    model_id: Mapped[str] = mapped_column(Text, nullable=False)
+    indexed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )

@@ -60,7 +60,9 @@ class ChatPort(Protocol):
 
     async def delete(self, owner: str, chat_id: UUID) -> None: ...
 
-    async def claim(self, owner: str, chat_id: UUID, request_id: UUID, text: str) -> TurnClaim: ...
+    async def claim(
+        self, owner: str, chat_id: UUID, request_id: UUID, text: str, starter_id: str | None
+    ) -> TurnClaim: ...
 
     async def finish(
         self, owner: str, chat_id: UUID, request_id: UUID, attempt: int, answer: GeneratedAnswer
@@ -90,11 +92,16 @@ class ChatService:
         require_role(actor, Role.USER)
         await self.store.delete(actor.subject_id, chat_id)
 
-    async def send(self, actor: Actor, chat_id: UUID, request_id: UUID, text: str) -> ChatTurnData:
+    async def send(
+        self, actor: Actor, chat_id: UUID, request_id: UUID, text: str,
+        starter_id: str | None = None,
+    ) -> ChatTurnData:
         require_role(actor, Role.USER)
         if not text.strip() or len(text) > 2_000:
             raise ValueError("Invalid chat message")
-        claim = await self.store.claim(actor.subject_id, chat_id, request_id, text.strip())
+        claim = await self.store.claim(
+            actor.subject_id, chat_id, request_id, text.strip(), starter_id
+        )
         if claim.completed is not None:
             return claim.completed
         if claim.attempt is None:

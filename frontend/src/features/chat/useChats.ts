@@ -23,7 +23,7 @@ export function useChatActions(csrfToken: string) {
   }
   const create = useMutation({ mutationFn: () => createChat(csrfToken), onSuccess: async () => refresh() })
   const send = useMutation({
-    mutationFn: ({ chatId, text, requestId }: { chatId: string; text: string; requestId: string }) => sendChatMessage(chatId, text, requestId, csrfToken),
+    mutationFn: ({ chatId, text, requestId, starterId }: { chatId: string; text: string; requestId: string; starterId?: string }) => sendChatMessage(chatId, text, requestId, csrfToken, starterId),
     onSuccess: async (_turn, variables) => refresh(variables.chatId),
   })
   const remove = useMutation({ mutationFn: (chatId: string) => deleteChat(chatId, csrfToken), onSuccess: async () => refresh() })

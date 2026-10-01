@@ -21,12 +21,15 @@ from app.infrastructure.ingestion.isolated_xlsx import extract_xlsx_isolated
 from app.infrastructure.ingestion.pdf_text import ExtractionError
 from app.infrastructure.ingestion.storage import PrivateOriginalStore
 from app.infrastructure.ingestion.text_plain import ExtractedTextSection
+from app.infrastructure.ingestion.visual_storage import PrivateVisualStore
 from app.infrastructure.vector.indexing import ApprovedTextIndexer
 from app.infrastructure.vector.text_vectors import (
     LocalTextEmbedder,
     QdrantTextIndex,
     VectorUnavailable,
 )
+from app.infrastructure.vector.visual_indexing import ApprovedVisualIndexer
+from app.infrastructure.vector.visual_vectors import LocalVisualEmbedder, QdrantVisualIndex
 
 
 async def process_one(
@@ -149,6 +152,12 @@ async def run_worker(factory: async_sessionmaker[AsyncSession], root: Path) -> N
     indexer = ApprovedTextIndexer(
         factory, QdrantTextIndex(settings.vector_url, LocalTextEmbedder())
     )
+    visual_indexer = ApprovedVisualIndexer(
+        factory,
+        QdrantVisualIndex(settings.vector_url, LocalVisualEmbedder()),
+        store,
+        PrivateVisualStore(root),
+    )
     next_purge = 0.0
     while True:
         if monotonic() >= next_purge:
@@ -164,5 +173,23 @@ async def run_worker(factory: async_sessionmaker[AsyncSession], root: Path) -> N
                 audited = await indexer.audit_one()
         except VectorUnavailable:
             indexed = removed = None
-        if processed is None and indexed is None and removed is None and audited is None:
+        try:
+            visual_indexed = await visual_indexer.index_one()
+            visual_removed = await visual_indexer.remove_revoked_one()
+            visual_audited = (
+                await visual_indexer.audit_one()
+                if visual_indexed is None and visual_removed is None
+                else None
+            )
+        except VectorUnavailable:
+            visual_indexed = visual_removed = visual_audited = None
+        if (
+            processed is None
+            and indexed is None
+            and removed is None
+            and audited is None
+            and visual_indexed is None
+            and visual_removed is None
+            and visual_audited is None
+        ):
             await asyncio.sleep(2)

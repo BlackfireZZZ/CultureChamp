@@ -1,7 +1,7 @@
 """Transport contracts for owned, persisted text chats."""
 
 from datetime import datetime
-from typing import Annotated
+from typing import Annotated, Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
@@ -86,6 +86,7 @@ class ChatDetailView(ChatSummaryView):
 class SendInput(BaseModel):
     request_id: UUID
     text: str = Field(min_length=1, max_length=2_000)
+    starter_id: Literal["UC-01", "UC-02", "UC-03", "UC-04", "UC-05", "UC-06"] | None = None
 
 
 def _summary(data: ChatData) -> ChatSummaryView:
@@ -173,4 +174,4 @@ async def send_message(
     if not data.text.strip():
         raise HTTPException(status_code=422, detail="Chat message must contain text")
     response.headers["Cache-Control"] = "no-store"
-    return _turn(await service.send(actor, chat_id, data.request_id, data.text))
+    return _turn(await service.send(actor, chat_id, data.request_id, data.text, data.starter_id))

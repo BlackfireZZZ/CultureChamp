@@ -129,13 +129,18 @@ class SqlChatStore:
             chat = await self._owned(session, owner, chat_id, lock=True)
             await session.delete(chat)
 
-    async def claim(self, owner: str, chat_id: UUID, request_id: UUID, text: str) -> TurnClaim:
+    async def claim(
+        self, owner: str, chat_id: UUID, request_id: UUID, text: str, starter_id: str | None
+    ) -> TurnClaim:
         now = datetime.now(UTC)
         async with self.factory.begin() as session:
             chat = await self._owned(session, owner, chat_id, lock=True)
             existing = await session.get(ChatTurn, request_id, with_for_update=True)
             if existing is not None:
-                if existing.conversation_id != chat_id or existing.user_text != text:
+                if (
+                    existing.conversation_id != chat_id or existing.user_text != text
+                    or existing.starter_id != starter_id
+                ):
                     raise ChatConflict("Request ID already belongs to another message")
                 if existing.status == "complete":
                     return TurnClaim(None, await self._turn_data(session, existing))
@@ -166,6 +171,7 @@ class SqlChatStore:
                     conversation_id=chat_id,
                     ordinal=(highest if highest is not None else -1) + 1,
                     user_text=text,
+                    starter_id=starter_id,
                     status="pending",
                     attempt=1,
                     lease_until=now + TURN_LEASE,

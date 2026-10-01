@@ -21,6 +21,23 @@ export interface paths {
         readonly patch?: never;
         readonly trace?: never;
     };
+    readonly "/api/v1/admin/request-statistics": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        /** Request Statistics */
+        readonly get: operations["request_statistics_api_v1_admin_request_statistics_get"];
+        readonly put?: never;
+        readonly post?: never;
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
+    };
     readonly "/api/v1/admin/revisions/{revision_id}": {
         readonly parameters: {
             readonly query?: never;
@@ -381,6 +398,23 @@ export interface paths {
         readonly patch?: never;
         readonly trace?: never;
     };
+    readonly "/api/v1/materials/visual-search": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        /** Visual Search */
+        readonly get: operations["visual_search_api_v1_materials_visual_search_get"];
+        readonly put?: never;
+        readonly post?: never;
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -583,6 +617,16 @@ export interface components {
             /** Username */
             readonly username: string;
         };
+        /** DailyCountView */
+        readonly DailyCountView: {
+            /** Count */
+            readonly count: number;
+            /**
+             * Date
+             * Format: date
+             */
+            readonly date: string;
+        };
         /** DecisionInput */
         readonly DecisionInput: {
             /** Evidence Url */
@@ -750,6 +794,23 @@ export interface components {
             /** Tags */
             readonly tags: readonly components["schemas"]["TagView"][];
         };
+        /** RequestStatisticsView */
+        readonly RequestStatisticsView: {
+            /** Daily Requests */
+            readonly daily_requests: readonly components["schemas"]["DailyCountView"][];
+            /**
+             * Period End
+             * Format: date
+             */
+            readonly period_end: string;
+            /**
+             * Period Start
+             * Format: date
+             */
+            readonly period_start: string;
+            /** Starter Requests */
+            readonly starter_requests: readonly components["schemas"]["StarterCountView"][];
+        };
         /** RevokeInput */
         readonly RevokeInput: {
             /** Reason */
@@ -808,8 +869,17 @@ export interface components {
              * Format: uuid
              */
             readonly request_id: string;
+            /** Starter Id */
+            readonly starter_id?: ("UC-01" | "UC-02" | "UC-03" | "UC-04" | "UC-05" | "UC-06") | null;
             /** Text */
             readonly text: string;
+        };
+        /** StarterCountView */
+        readonly StarterCountView: {
+            /** Count */
+            readonly count: number;
+            /** Starter Id */
+            readonly starter_id: string;
         };
         /** TagView */
         readonly TagView: {
@@ -830,6 +900,27 @@ export interface components {
             readonly msg: string;
             /** Error Type */
             readonly type: string;
+        };
+        /** VisualResultView */
+        readonly VisualResultView: {
+            /** Creator */
+            readonly creator: string | null;
+            /**
+             * Image Id
+             * Format: uuid
+             */
+            readonly image_id: string;
+            /** Page */
+            readonly page: number;
+            /**
+             * Revision Id
+             * Format: uuid
+             */
+            readonly revision_id: string;
+            /** Score */
+            readonly score: number;
+            /** Title */
+            readonly title: string;
         };
     };
     responses: never;
@@ -860,6 +951,37 @@ export interface operations {
                 };
                 content: {
                     readonly "application/json": components["schemas"]["AccountView"];
+                };
+            };
+            /** @description Validation Error */
+            readonly 422: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    readonly request_statistics_api_v1_admin_request_statistics_get: {
+        readonly parameters: {
+            readonly query?: {
+                readonly days?: number;
+            };
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly requestBody?: never;
+        readonly responses: {
+            /** @description Successful Response */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["RequestStatisticsView"];
                 };
             };
             /** @description Validation Error */
@@ -1573,6 +1695,39 @@ export interface operations {
                     readonly "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": string;
                     readonly "text/csv": string;
                     readonly "text/plain": string;
+                };
+            };
+            /** @description Validation Error */
+            readonly 422: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    readonly visual_search_api_v1_materials_visual_search_get: {
+        readonly parameters: {
+            readonly query: {
+                readonly people?: string | null;
+                readonly q: string;
+                readonly region?: string | null;
+            };
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly requestBody?: never;
+        readonly responses: {
+            /** @description Successful Response */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": readonly components["schemas"]["VisualResultView"][];
                 };
             };
             /** @description Validation Error */

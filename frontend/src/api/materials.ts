@@ -3,6 +3,7 @@ import type { components } from "./schema.generated"
 
 export type MaterialSummary = components["schemas"]["MaterialView"]
 export type MaterialDetail = components["schemas"]["MaterialDetail"]
+export type VisualResult = { revision_id: string; image_id: string; page: number; title: string; creator: string | null; score: number }
 export type MaterialFilters = {
   q?: string
   region?: string
@@ -27,6 +28,12 @@ export async function getMaterials(filters: MaterialFilters = {}, signal?: Abort
 export async function getMaterial(revisionId: string, signal?: AbortSignal): Promise<MaterialDetail> {
   const response = await fetch(`/api/v1/materials/${encodeURIComponent(revisionId)}`, { credentials: "same-origin", signal })
   return readJson<MaterialDetail>(response)
+}
+
+export async function searchVisuals(q: string, signal?: AbortSignal): Promise<readonly VisualResult[]> {
+  const params = new URLSearchParams({ q })
+  const response = await fetch(`/api/v1/materials/visual-search?${params}`, { credentials: "same-origin", signal })
+  return readJson<readonly VisualResult[]>(response)
 }
 
 export function approvedPageUrl(revisionId: string, page: number, originalAvailable: boolean): string | null {

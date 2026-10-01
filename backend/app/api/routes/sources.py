@@ -1,5 +1,6 @@
 """Transport contracts for governed candidate and visible materials."""
 
+from dataclasses import asdict
 from datetime import datetime
 from pathlib import Path
 from typing import Annotated, Literal
@@ -26,11 +27,22 @@ from app.application.source_management import (
 from app.core.config import settings
 from app.infrastructure.db.governed_sources import SqlSourceGateway
 from app.infrastructure.db.session import session_factory
+from app.infrastructure.db.visual_search import SqlVisualSearch
 from app.infrastructure.ingestion.storage import PrivateOriginalStore
+from app.infrastructure.vector.visual_vectors import LocalVisualEmbedder, QdrantVisualIndex
 
 admin_router = APIRouter(prefix="/admin", tags=["admin-sources"])
 materials_router = APIRouter(prefix="/materials", tags=["materials"])
 XLSX_MEDIA_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+
+
+class VisualResultView(BaseModel):
+    revision_id: UUID
+    image_id: UUID
+    page: int
+    title: str
+    creator: str | None
+    score: float
 
 
 def get_source_service(request: Request) -> SourceService:
@@ -436,6 +448,25 @@ async def materials_list(
     filters = MaterialFilters(q=q, region=region, people=people, period=period,
                               media_type=media_type)
     return [_material_view(item) for item in await service.visible_list(actor, filters)]
+
+
+@materials_router.get("/visual-search", response_model=list[VisualResultView])
+async def visual_search(
+    request: Request,
+    response: Response,
+    actor: Annotated[Actor, Depends(current_user)],
+    q: Annotated[str, Query(min_length=2, max_length=200)],
+    region: Annotated[str | None, Query(max_length=100)] = None,
+    people: Annotated[str | None, Query(max_length=100)] = None,
+) -> list[VisualResultView]:
+    del actor
+    response.headers["Cache-Control"] = "no-store"
+    factory = getattr(request.app.state, "source_session_factory", session_factory)
+    index = getattr(request.app.state, "visual_index", None) or QdrantVisualIndex(
+        settings.vector_url, LocalVisualEmbedder())
+    results = await SqlVisualSearch(factory, index).search(
+        q, region=region or None, people=people or None)
+    return [VisualResultView(**asdict(item)) for item in results]
 
 
 @materials_router.get("/{revision_id}", response_model=MaterialDetail)
