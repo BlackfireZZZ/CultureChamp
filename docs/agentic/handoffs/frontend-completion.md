@@ -85,7 +85,13 @@ operations. The final live Playwright journey passed (45.8 seconds) through
 candidate intake, review, approval, citation, revocation, retry, and exact
 original access with synthetic fixtures. `git diff --check` passed.
 
-Main-branch integration verification is reported in the final task response.
+The primary `main` checkout fast-forwarded to `a24b65d` from this branch while
+preserving its uncommitted concept edit and untracked post-MVP roadmap. In that
+checkout, `make check` passed with the same backend/frontend/ML/contract/Compose
+results, and `npm run test:e2e` passed six tests with the environment-gated live
+test skipped. The live journey passed separately against the clean isolated
+Compose project on the same commit. The integration method was a fast-forward;
+there were no conflict resolutions or copied artifacts.
 
 ## What remains unverified and why
 
