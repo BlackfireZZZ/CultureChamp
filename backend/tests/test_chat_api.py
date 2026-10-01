@@ -60,7 +60,10 @@ def test_persisted_chat_ownership_retry_citation_revocation_and_purge(tmp_path: 
 
 
 async def _seed_source(
-    factory: async_sessionmaker, marker: str, *, provider_transfer: bool = False,
+    factory: async_sessionmaker,
+    marker: str,
+    *,
+    provider_transfer: bool = False,
     approve: bool = True,
     context_tags: tuple[tuple[str, str], ...] = (),
 ) -> tuple[UUID, UUID]:
@@ -92,7 +95,8 @@ async def _seed_source(
                     revision.id,
                     DecisionKind.APPROVE,
                     RightsScopes(
-                        user_text=True, original_file=False,
+                        user_text=True,
+                        original_file=False,
                         provider_transfer=provider_transfer,
                     ),
                     True,
@@ -155,14 +159,15 @@ async def _check_chat(url: str, tmp_path: Path) -> None:
             )
             assert owner.get("/api/v1/admin/request-statistics").status_code == 403
             assert (
-                admin.get("/api/v1/admin/request-statistics", params={"days": 0}).status_code
-                == 422
+                admin.get("/api/v1/admin/request-statistics", params={"days": 0}).status_code == 422
             )
             before = admin.get("/api/v1/admin/request-statistics")
             assert before.status_code == 200
             assert before.headers["cache-control"] == "no-store"
             initial_total = sum(row["count"] for row in before.json()["daily_requests"])
             initial_starters = sum(row["count"] for row in before.json()["starter_requests"])
+            initial_up = before.json()["rated_up"]
+            initial_down = before.json()["rated_down"]
             assert admin.post("/api/v1/chats", headers=admin_headers).status_code == 403
             created = owner.post("/api/v1/chats", headers=owner_headers)
             assert created.status_code == 201, created.text
@@ -202,7 +207,9 @@ async def _check_chat(url: str, tmp_path: Path) -> None:
 
             no_evidence_id = str(uuid4())
             no_evidence = {
-                "request_id": no_evidence_id, "text": hidden_marker, "starter_id": "UC-01"
+                "request_id": no_evidence_id,
+                "text": hidden_marker,
+                "starter_id": "UC-01",
             }
             first = owner.post(
                 f"/api/v1/chats/{chat_id}/messages", headers=owner_headers, json=no_evidence
@@ -216,6 +223,66 @@ async def _check_chat(url: str, tmp_path: Path) -> None:
             )
             assert repeated.status_code == 200
             assert repeated.json() == first.json()
+            feedback_url = f"/api/v1/chats/{chat_id}/messages/{no_evidence_id}/feedback"
+            assert (
+                other.put(feedback_url, headers=other_headers, json={"rating": "up"}).status_code
+                == 404
+            )
+            assert (
+                admin.put(feedback_url, headers=admin_headers, json={"rating": "up"}).status_code
+                == 403
+            )
+            assert owner.put(feedback_url, json={"rating": "up"}).status_code == 403
+            assert (
+                owner.put(feedback_url, headers=owner_headers, json={"rating": "bad"}).status_code
+                == 422
+            )
+            assert (
+                owner.put(
+                    feedback_url, headers=owner_headers, json={"rating": None, "comment": "text"}
+                ).status_code
+                == 422
+            )
+            assert (
+                owner.put(
+                    f"/api/v1/chats/{chat_id}/messages/{uuid4()}/feedback",
+                    headers=owner_headers,
+                    json={"rating": "up"},
+                ).status_code
+                == 404
+            )
+            rated = owner.put(
+                feedback_url,
+                headers=owner_headers,
+                json={"rating": "down", "comment": "  Synthetic problem  "},
+            )
+            assert rated.status_code == 200, rated.text
+            assert rated.json()["rating"] == "down"
+            assert rated.json()["feedback_comment"] == "Synthetic problem"
+            assert owner.get(f"/api/v1/chats/{chat_id}").json()["turns"][0]["rating"] == "down"
+            rated_statistics = admin.get("/api/v1/admin/request-statistics").json()
+            assert rated_statistics["rated_down"] == initial_down + 1
+            assert rated_statistics["feedback"][0]["comment"] == "Synthetic problem"
+            assert "user_text" not in rated_statistics["feedback"][0]
+            assert (
+                owner.put(feedback_url, headers=owner_headers, json={"rating": "up"}).json()[
+                    "rating"
+                ]
+                == "up"
+            )
+            changed_statistics = admin.get("/api/v1/admin/request-statistics").json()
+            assert changed_statistics["rated_up"] == initial_up + 1
+            assert changed_statistics["rated_down"] == initial_down
+            assert all(
+                item["request_id"] != no_evidence_id for item in changed_statistics["feedback"]
+            )
+            assert (
+                owner.put(feedback_url, headers=owner_headers, json={"rating": None}).json()[
+                    "rating"
+                ]
+                is None
+            )
+            assert admin.get("/api/v1/admin/request-statistics").json()["rated_up"] == initial_up
             statistics = admin.get("/api/v1/admin/request-statistics")
             assert statistics.status_code == 200
             assert (
@@ -228,15 +295,19 @@ async def _check_chat(url: str, tmp_path: Path) -> None:
             )
             assert (
                 owner.post(
-                    f"/api/v1/chats/{chat_id}/messages", headers=owner_headers,
+                    f"/api/v1/chats/{chat_id}/messages",
+                    headers=owner_headers,
                     json={**no_evidence, "starter_id": "UC-02"},
-                ).status_code == 409
+                ).status_code
+                == 409
             )
             assert (
                 owner.post(
-                    f"/api/v1/chats/{chat_id}/messages", headers=owner_headers,
+                    f"/api/v1/chats/{chat_id}/messages",
+                    headers=owner_headers,
                     json={"request_id": str(uuid4()), "text": "new task", "starter_id": "UC-99"},
-                ).status_code == 422
+                ).status_code
+                == 422
             )
             assert (
                 owner.post(
@@ -264,11 +335,14 @@ async def _check_chat(url: str, tmp_path: Path) -> None:
             async with httpx.AsyncClient(transport=httpx.MockTransport(external_handler)) as client:
                 app.state.model_provider = HttpModelProvider(
                     endpoint="https://approved.example/v1/chat/completions",
-                    model="pilot-model", api_key="synthetic-key", policy_approved=True,
+                    model="pilot-model",
+                    api_key="synthetic-key",
+                    policy_approved=True,
                     client=client,
                 )
                 held_from_provider = owner.post(
-                    f"/api/v1/chats/{chat_id}/messages", headers=owner_headers,
+                    f"/api/v1/chats/{chat_id}/messages",
+                    headers=owner_headers,
                     json={"request_id": str(uuid4()), "text": marker},
                 )
                 assert held_from_provider.status_code == 200, held_from_provider.text
@@ -278,10 +352,14 @@ async def _check_chat(url: str, tmp_path: Path) -> None:
 
             transferable_marker = f"transferprobe{uuid4().hex}"
             transferable_source, transferable_revision = await _seed_source(
-                factory, transferable_marker, provider_transfer=True,
-                context_tags=(("region", "Synthetic north"),
-                              ("people", "Synthetic community"),
-                              ("period", "Synthetic earlier period")),
+                factory,
+                transferable_marker,
+                provider_transfer=True,
+                context_tags=(
+                    ("region", "Synthetic north"),
+                    ("people", "Synthetic community"),
+                    ("period", "Synthetic earlier period"),
+                ),
             )
             seeded_sources.append((transferable_source, transferable_revision))
             assert await ApprovedTextIndexer(factory, index).index_one() == transferable_revision
@@ -295,12 +373,25 @@ async def _check_chat(url: str, tmp_path: Path) -> None:
                 return httpx.Response(
                     200,
                     json={
-                        "choices": [{"finish_reason": "stop", "message": {"content": json.dumps({
-                            "fact": evidence[0]["excerpt"],
-                            "interpretation": "The source describes only this synthetic count.",
-                            "creative": "Make a new labelled concept from this test brief.",
-                            "citations": [evidence[0]["id"]],
-                        })}}],
+                        "choices": [
+                            {
+                                "finish_reason": "stop",
+                                "message": {
+                                    "content": json.dumps(
+                                        {
+                                            "fact": evidence[0]["excerpt"],
+                                            "interpretation": (
+                                                "The source describes only this synthetic count."
+                                            ),
+                                            "creative": (
+                                                "Make a new labelled concept from this test brief."
+                                            ),
+                                            "citations": [evidence[0]["id"]],
+                                        }
+                                    )
+                                },
+                            }
+                        ],
                         "usage": {"prompt_tokens": 43, "completion_tokens": 17},
                     },
                 )
@@ -308,11 +399,14 @@ async def _check_chat(url: str, tmp_path: Path) -> None:
             async with httpx.AsyncClient(transport=httpx.MockTransport(transfer_handler)) as client:
                 app.state.model_provider = HttpModelProvider(
                     endpoint="https://approved.example/v1/chat/completions",
-                    model="pilot-model", api_key="synthetic-key", policy_approved=True,
+                    model="pilot-model",
+                    api_key="synthetic-key",
+                    policy_approved=True,
                     client=client,
                 )
                 transferred = owner.post(
-                    f"/api/v1/chats/{chat_id}/messages", headers=owner_headers,
+                    f"/api/v1/chats/{chat_id}/messages",
+                    headers=owner_headers,
                     json={"request_id": str(uuid4()), "text": transferable_marker},
                 )
                 assert transferred.status_code == 200, transferred.text
@@ -326,9 +420,7 @@ async def _check_chat(url: str, tmp_path: Path) -> None:
                 evidence = json.loads(wire["messages"][-1]["content"])["evidence"]
                 assert wire["model"] == "pilot-model"
                 assert transfer_calls[0].headers["authorization"] == "Bearer synthetic-key"
-                assert [item["revision_id"] for item in evidence] == [
-                    str(transferable_revision)
-                ]
+                assert [item["revision_id"] for item in evidence] == [str(transferable_revision)]
                 assert evidence[0]["context"] == [
                     {"kind": "people", "value": "Synthetic community"},
                     {"kind": "period", "value": "Synthetic earlier period"},
@@ -357,6 +449,14 @@ async def _check_chat(url: str, tmp_path: Path) -> None:
                 f"/api/v1/chats/{chat_id}/messages", headers=owner_headers, json=broken_payload
             )
             assert broken.status_code == 503, broken.text
+            assert (
+                owner.put(
+                    f"/api/v1/chats/{chat_id}/messages/{broken_id}/feedback",
+                    headers=owner_headers,
+                    json={"rating": "down"},
+                ).status_code
+                == 409
+            )
             app.state.model_provider = default_provider
             recovered = owner.post(
                 f"/api/v1/chats/{chat_id}/messages", headers=owner_headers, json=broken_payload
@@ -381,9 +481,21 @@ async def _check_chat(url: str, tmp_path: Path) -> None:
             assert owner.get(f"/api/v1/materials/{revision_id}").status_code == 404
             assert owner.get("/api/v1/materials", params={"q": marker}).json() == []
             assert (
+                owner.put(feedback_url, headers=owner_headers, json={"rating": "down"}).status_code
+                == 200
+            )
+            assert (
+                admin.get("/api/v1/admin/request-statistics").json()["rated_down"]
+                == initial_down + 1
+            )
+            assert (
                 owner.delete(f"/api/v1/chats/{chat_id}", headers=owner_headers).status_code == 204
             )
             assert owner.get(f"/api/v1/chats/{chat_id}").status_code == 404
+            assert (
+                admin.get("/api/v1/admin/request-statistics").json()["rated_down"]
+                == initial_down
+            )
 
             expiring = owner.post("/api/v1/chats", headers=owner_headers).json()["id"]
             async with factory.begin() as session:
@@ -413,9 +525,7 @@ async def _check_chat(url: str, tmp_path: Path) -> None:
                 await session.execute(
                     delete(SourceSegment).where(SourceSegment.revision_id == revision_id)
                 )
-                await session.execute(
-                    delete(SourceTag).where(SourceTag.revision_id == revision_id)
-                )
+                await session.execute(delete(SourceTag).where(SourceTag.revision_id == revision_id))
                 await session.execute(
                     delete(SourceVectorIndex).where(SourceVectorIndex.revision_id == revision_id)
                 )

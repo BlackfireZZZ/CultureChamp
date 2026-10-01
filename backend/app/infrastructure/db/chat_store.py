@@ -105,7 +105,26 @@ class SqlChatStore:
             turn.evidence_status,
             turn.status,
             tuple(citations),
+            turn.rating,
+            turn.feedback_comment,
         )
+
+    async def rate(
+        self, owner: str, chat_id: UUID, request_id: UUID,
+        rating: str | None, comment: str | None,
+    ) -> ChatTurnData:
+        async with self.factory.begin() as session:
+            await self._owned(session, owner, chat_id)
+            turn = await session.get(ChatTurn, request_id, with_for_update=True)
+            if turn is None or turn.conversation_id != chat_id:
+                raise ChatNotFound
+            if turn.status != "complete" or turn.assistant_text is None:
+                raise ChatConflict("Only completed answers can be rated")
+            turn.rating = rating
+            turn.feedback_comment = comment
+            turn.feedback_at = datetime.now(UTC) if rating is not None else None
+            await session.flush()
+            return await self._turn_data(session, turn)
 
     async def detail(self, owner: str, chat_id: UUID) -> ChatData:
         async with self.factory() as session:

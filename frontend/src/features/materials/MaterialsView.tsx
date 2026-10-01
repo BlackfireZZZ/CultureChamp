@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import type { FormEvent } from "react"
 
 import { approvedPageUrl } from "../../api/materials"
@@ -31,6 +31,9 @@ export function MaterialsView({ onBack, citationTarget = null }: { onBack: () =>
   const visuals = useVisualSearch(visualQuery)
   const detail = useMaterial(revisionId)
   const headingRef = useRef<HTMLHeadingElement>(null)
+  const citedSegmentRef = useCallback((node: HTMLLIElement | null) => {
+    if (node) window.requestAnimationFrame(() => { if (node.isConnected) node.focus() })
+  }, [])
 
   useEffect(() => {
     if (!detail.isSuccess || !revisionId) return
@@ -113,7 +116,7 @@ export function MaterialsView({ onBack, citationTarget = null }: { onBack: () =>
             const page = segment.locator.page
             const sourceUrl = page === null ? null : approvedPageUrl(detail.data.revision_id, page, detail.data.original_available)
             const location = sourceLocationLabel(segment.locator)
-            return <li id={`segment-${segment.segment_id}`} tabIndex={-1} className={citationTarget?.segment_id === segment.segment_id ? "cited-segment" : undefined} key={segment.segment_id}><h3>{location}</h3><p>{segment.text}</p>{sourceUrl && <a href={sourceUrl} target="_blank" rel="noopener noreferrer">Открыть страницу {page} в источнике</a>}</li>
+            return <li id={`segment-${segment.segment_id}`} tabIndex={-1} ref={citationTarget?.segment_id === segment.segment_id ? citedSegmentRef : undefined} className={citationTarget?.segment_id === segment.segment_id ? "cited-segment" : undefined} key={segment.segment_id}><h3>{location}</h3><p>{segment.text}</p>{sourceUrl && <a href={sourceUrl} target="_blank" rel="noopener noreferrer">Открыть страницу {page} в источнике</a>}</li>
           })}</ol>}
         </>}
       </section>

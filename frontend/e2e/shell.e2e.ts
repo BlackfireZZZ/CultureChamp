@@ -13,10 +13,15 @@ test("responsive persisted chat, starter keyboard path and theme", async ({ page
     if (path === "/api/v1/chats/chat-test" && request.method() === "GET") return route.fulfill({ json: { ...chat, updated_at: "2026-09-30T00:00:00Z" } })
     if (path === "/api/v1/chats/chat-test/messages" && request.method() === "POST") {
       const body = request.postDataJSON() as { text: string; request_id: string }
-      const turn = { request_id: body.request_id, ordinal: 0, user_text: body.text, assistant_text: "Нет одобренных источников для культурного утверждения.", evidence_status: "insufficient", status: "complete", citations: [] }
+      const turn = { request_id: body.request_id, ordinal: 0, user_text: body.text, assistant_text: "Нет одобренных источников для культурного утверждения.", evidence_status: "insufficient", status: "complete", citations: [], rating: null, feedback_comment: null }
       chat!.turns.push(turn)
       chat!.title = body.text
       return route.fulfill({ json: turn })
+    }
+    if (path.endsWith("/feedback") && request.method() === "PUT") {
+      const body = request.postDataJSON() as { rating: "up" | "down" | null; comment: string | null }
+      chat!.turns[0] = { ...(chat!.turns[0] as object), rating: body.rating, feedback_comment: body.comment }
+      return route.fulfill({ json: chat!.turns[0] })
     }
     return route.fulfill({ status: 404 })
   })
@@ -41,12 +46,23 @@ test("responsive persisted chat, starter keyboard path and theme", async ({ page
   await page.getByRole("textbox", { name: "Ваша задача" }).fill("Пробная задача")
   await page.keyboard.press("Enter")
   await expect(page.getByText("Нет одобренных источников для культурного утверждения.")).toBeVisible()
+  await page.getByRole("button", { name: "Не нравится ответ" }).focus()
+  await page.keyboard.press("Enter")
+  await expect(page.getByRole("button", { name: "Не нравится ответ" })).toHaveAttribute("aria-pressed", "true")
+  await page.getByRole("button", { name: "Комментарий" }).click()
+  await page.getByRole("textbox", { name: "Что стоит улучшить или сохранить?" }).fill("Синтетический отзыв")
+  await page.getByRole("button", { name: "Сохранить комментарий" }).click()
+  await expect(page.getByText("Ваш комментарий: Синтетический отзыв")).toBeVisible()
   await page.getByRole("button", { name: "Материалы" }).click()
   await expect(page.getByText("Одобренных материалов пока нет")).toBeVisible()
   await page.getByRole("button", { name: "Тёмная тема" }).click()
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark")
   await page.reload()
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark")
+  await page.getByRole("button", { name: "Чат", exact: true }).click()
+  await page.getByRole("button", { name: "Чаты", exact: true }).last().click()
+  await page.getByRole("complementary", { name: "Список чатов" }).getByRole("button", { name: "Пробная задача" }).click()
+  await expect(page.getByRole("button", { name: "Не нравится ответ" })).toHaveAttribute("aria-pressed", "true")
 })
 
 test("login is keyboard accessible and does not show protected views before authentication", async ({ page }) => {
@@ -130,6 +146,8 @@ test("admin statistics show only aggregate API values and recover from an error"
       period_start: "2026-10-01", period_end: "2026-10-02",
       daily_requests: [{ date: "2026-10-02", count: 7 }],
       starter_requests: [{ starter_id: "UC-01", count: 3 }],
+      rated_up: 2, rated_down: 1,
+      feedback: [{ request_id: "synthetic-turn", rated_at: "2026-10-02T12:00:00Z", rating: "down", comment: "Synthetic feedback", evidence_status: "grounded", starter_id: "UC-01" }],
     } })
   })
   await page.goto("/")
@@ -138,7 +156,14 @@ test("admin statistics show only aggregate API values and recover from an error"
   await page.getByRole("button", { name: "Повторить" }).click()
   await expect(page.getByRole("heading", { name: "Запросы по дням" })).toBeVisible()
   await expect(page.getByRole("listitem").filter({ hasText: "2026-10-02" })).toContainText("7")
-  await expect(page.getByRole("listitem").filter({ hasText: "Идея подарка" })).toContainText("3")
+  await expect(page.locator(".statistics-list").getByRole("listitem").filter({ hasText: "Идея подарка" })).toContainText("3")
   await expect(page.getByText("UC-01")).toHaveCount(0)
   await expect(page.getByText("prompt text secret")).toHaveCount(0)
+  await expect(page.getByRole("heading", { name: "Оценки ответов" })).toBeVisible()
+  await expect(page.getByText("Synthetic feedback")).toBeVisible()
+  await page.getByRole("combobox", { name: "Показать" }).selectOption("up")
+  await expect(page.getByText("Synthetic feedback")).toHaveCount(0)
+  const periodRequest = page.waitForRequest((request) => request.url().includes("/api/v1/admin/request-statistics?days=7"))
+  await page.getByRole("combobox", { name: "Период" }).selectOption("7")
+  await periodRequest
 })

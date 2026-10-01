@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 
-import { createChat, deleteChat, getChat, listChats, sendChatMessage } from "../../api/chats"
+import { createChat, deleteChat, getChat, listChats, rateChatMessage, sendChatMessage } from "../../api/chats"
 
 export function useChats(enabled: boolean) {
   return useQuery({ queryKey: ["chats"], queryFn: ({ signal }) => listChats(signal), enabled, retry: false })
@@ -27,5 +27,9 @@ export function useChatActions(csrfToken: string) {
     onSuccess: async (_turn, variables) => refresh(variables.chatId),
   })
   const remove = useMutation({ mutationFn: (chatId: string) => deleteChat(chatId, csrfToken), onSuccess: async () => refresh() })
-  return { create, send, remove }
+  const rate = useMutation({
+    mutationFn: ({ chatId, requestId, rating, comment }: { chatId: string; requestId: string; rating: "up" | "down" | null; comment: string | null }) => rateChatMessage(chatId, requestId, rating, comment, csrfToken),
+    onSuccess: async (_turn, variables) => refresh(variables.chatId),
+  })
+  return { create, send, remove, rate }
 }

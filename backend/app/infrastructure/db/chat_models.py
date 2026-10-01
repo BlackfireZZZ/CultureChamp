@@ -43,12 +43,20 @@ class ChatTurn(Base):
         CheckConstraint("attempt >= 1", name="attempt"),
         CheckConstraint("status IN ('pending', 'complete', 'failed')", name="status"),
         CheckConstraint(
+            "rating IS NULL OR (rating IN ('up', 'down') AND status = 'complete')", name="rating"
+        ),
+        CheckConstraint(
+            "feedback_comment IS NULL OR (rating IS NOT NULL AND "
+            "char_length(feedback_comment) <= 1000)", name="feedback_comment"
+        ),
+        CheckConstraint(
             "starter_id IS NULL OR starter_id IN "
             "('UC-01', 'UC-02', 'UC-03', 'UC-04', 'UC-05', 'UC-06')",
             name="starter_id",
         ),
         Index("ix_chat_turns_conversation", "conversation_id"),
         Index("ix_chat_turns_created_at", "created_at"),
+        Index("ix_chat_turns_feedback_at", "feedback_at"),
     )
 
     id: Mapped[UUID] = mapped_column(primary_key=True)
@@ -63,6 +71,9 @@ class ChatTurn(Base):
     status: Mapped[str] = mapped_column(String(16), nullable=False)
     attempt: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
     lease_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    rating: Mapped[str | None] = mapped_column(String(4))
+    feedback_comment: Mapped[str | None] = mapped_column(Text)
+    feedback_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 

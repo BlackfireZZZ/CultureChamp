@@ -75,6 +75,14 @@ h1 { margin: 0; font: 600 clamp(38px, 5vw, 56px)/1 var(--font-display); letter-s
 .message { margin-bottom: 16px; padding: 18px 20px; border: 1px solid var(--color-border); background: var(--color-surface); }
 .message.user { margin-left: 40px; background: var(--color-surface-raised); }
 .message p { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.response-feedback { margin-top: 18px; padding-top: 12px; border-top: 1px solid var(--color-border); }
+.feedback-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.feedback-actions button, .response-feedback form button { min-width: 36px; min-height: 36px; padding: 6px 10px; border: 1px solid var(--color-border); background: var(--color-bg); color: var(--color-text); }
+.feedback-actions button[aria-pressed="true"] { border-color: var(--color-accent-strong); outline: 2px solid var(--color-accent-strong); }
+.response-feedback form { margin-top: 12px; }
+.response-feedback label, .response-feedback textarea { display: block; width: 100%; }
+.response-feedback textarea { margin: 6px 0; padding: 8px; border: 1px solid var(--color-border); background: var(--color-bg); color: var(--color-text); }
+.response-feedback .feedback-saved { margin-top: 8px; color: var(--color-text-muted); }
 .answer-part + .answer-part { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--color-border); }
 .answer-part h2 { margin: 0 0 6px; font: 500 22px/1.2 var(--font-display); }
 .delete-confirm { margin: 0 0 20px; padding: 16px; border: 1px solid var(--color-border); background: var(--color-surface); }
@@ -91,12 +99,18 @@ h1 { margin: 0; font: 600 clamp(38px, 5vw, 56px)/1 var(--font-display); letter-s
 .admin-tabs { display: flex; gap: 8px; margin: 28px 0 18px; border-bottom: 1px solid var(--color-border); }
 .admin-tabs button { padding: 8px 16px; border: 0; border-bottom: 2px solid transparent; background: transparent; color: var(--color-text); }
 .admin-tabs button[aria-current] { border-color: var(--color-accent); color: var(--color-accent-strong); }
-.statistics-panel { max-width: 760px; }
+.statistics-panel { max-width: 960px; }
+.statistics-period { display: block; margin-top: 16px; }
+.statistics-period select, .feedback-report select { margin-left: 8px; padding: 7px; background: var(--color-surface); color: var(--color-text); border: 1px solid var(--color-border); }
 .statistics-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; margin-top: 28px; }
 .statistics-grid h2 { font: 500 24px/1.15 var(--font-display); }
 .statistics-grid > section { min-width: 0; padding: 20px; border: 1px solid var(--color-border); background: var(--color-surface); }
 .statistics-list { padding: 0; list-style: none; }
 .statistics-list li { display: flex; justify-content: space-between; gap: 16px; padding: 8px 0; border-top: 1px solid var(--color-border); }
+.feedback-report { margin-top: 24px; }
+.feedback-report ol { padding: 0; list-style: none; }
+.feedback-report li { display: flex; flex-wrap: wrap; gap: 6px 16px; padding: 14px 0; border-top: 1px solid var(--color-border); }
+.feedback-report li p { flex-basis: 100%; margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
 .empty-panel { max-width: 720px; margin-top: 32px; padding: 24px; border: 1px solid var(--color-border); background: var(--color-surface); }
 .empty-panel h2 { margin: 0; }.empty-panel p { color: var(--color-text-muted); }
 .materials-layout { display: grid; grid-template-columns: minmax(220px, 320px) minmax(0, 1fr); gap: 32px; margin-top: 32px; }
