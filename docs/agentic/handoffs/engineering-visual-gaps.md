@@ -65,5 +65,7 @@ Exact next step: Discuss user scenarios and LLM prompts with the owner. Real
 source and expert gates remain open before cultural release.
 
 Cleanup completed or retention reason: The branch and worktree are retained as
-the reproducible checked-out integration workspace. Disposable Compose
-resources used by the checks can be removed after final audit.
+the reproducible checked-out integration workspace. The `ccgaps` and
+`ccyandextest` disposable Compose projects and their test volumes were removed
+after the final audit. Local `main` and `origin/main` include the integration;
+the primary checkout's three pre-existing dirty files remain untouched.
