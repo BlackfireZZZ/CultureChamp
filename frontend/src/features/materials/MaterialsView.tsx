@@ -34,11 +34,14 @@ export function MaterialsView({ onBack, citationTarget = null }: { onBack: () =>
 
   useEffect(() => {
     if (!detail.isSuccess || !revisionId) return
-    if (citationTarget?.revision_id === revisionId) {
-      const segment = document.getElementById(`segment-${citationTarget.segment_id}`)
-      if (segment) segment.focus()
-      else headingRef.current?.focus()
-    } else headingRef.current?.focus()
+    const timer = window.setTimeout(() => {
+      if (citationTarget?.revision_id === revisionId) {
+        const segment = document.getElementById(`segment-${citationTarget.segment_id}`)
+        if (segment) segment.focus()
+        else headingRef.current?.focus()
+      } else headingRef.current?.focus()
+    }, 0)
+    return () => window.clearTimeout(timer)
   }, [detail.isSuccess, detail.dataUpdatedAt, revisionId, citationTarget])
 
   function choose(id: string) {

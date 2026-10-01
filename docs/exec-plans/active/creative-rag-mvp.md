@@ -18,7 +18,11 @@ PostgreSQL/Qdrant checks. The visual hypothesis passed a synthetic PDF API
 integration test covering preapproval denial, exact physical page, original
 access, lost-point replay and immediate revocation. An actual pinned CLIP model
 also embedded one image and query into 512-dimensional vectors and found the
-test point in Qdrant. The UI now has a separate experimental image search mode.
+test point in Qdrant. A live worker/API run indexed a self-authored PDF image,
+returned its physical page and denied it immediately after revocation. The UI
+now has a separate experimental image search mode. A full clean-database gate
+passed 112 backend, 24 frontend and 20 ML tests; the live browser journey
+passed after a cached-citation focus race was corrected.
 The six-page benchmark and limitations are recorded in
 [ADR 0008](../../decisions/0008-document-visual-search.md). These results do
 not change the blocked real-source rights, cultural-expert review and target-user
@@ -215,9 +219,9 @@ same source identity, rights and citation rules as the text slice.
 | ID | Status | Deliverable | Acceptance evidence |
 |---|---|---|---|
 | F01 | todo | Expand governed collections across communities, regions and periods with institutional and community review. | Each added slice has provenance, accountable review, rights scopes, conflict handling and expert-labelled tasks. |
-| F02 | todo | Ingest images and scanned pages into private media storage with image regions, OCR/layout text and stable visual locators. | Authorized image queries return the correct image/region; a revoked image disappears; captions and OCR are distinguished from source facts. |
+| F02 | in_progress | Ingest images and scanned pages into private media storage with image regions, OCR/layout text and stable visual locators. | A synthetic embedded PDF image now has private derived storage, an exact revision/page locator and immediate revocation. Scans, vector drawings, region boxes and OCR remain open; authorized source-like quality needs expert review. |
 | F03 | todo | Ingest recordings and music with transcript, time ranges, performer/recording rights and audio embeddings. | A query opens the cited recording at the correct time span; transcript and audio similarity are evaluated separately; restricted recordings never leak. |
-| F04 | todo | Add modality-aware and cross-modal retrieval with separately versioned text, visual and audio encoders. | Text-to-image and text-to-audio tasks pass expert-labelled recall and cultural-context checks; incompatible vector spaces cannot be compared. |
+| F04 | in_progress | Add modality-aware and cross-modal retrieval with separately versioned text, visual and audio encoders. | A separate CLIP text-to-embedded-image pilot and six-page synthetic comparison exist. Russian/source-like expert recall, abstention, fusion and text-to-audio remain open; incompatible vector spaces are not compared. |
 | F05 | todo | Generate and edit visual and audio creative outputs where rights and cultural review permit. | Generated work is marked creative, has inspectable cultural references, respects source and output rights, and passes user and expert review. |
 | F06 | todo | Expand professional creative workflows, output formats and collaborative revision. | Target professionals complete recurring briefs with usable deliverables and traceable source context; user research validates priority. |
 | F07 | todo | Institutional source submission, review, correction and revocation workflows. | A provider can submit and correct an exact revision; independent reviewers decide visibility and sensitive use; audit and withdrawal propagate to every modality index. |

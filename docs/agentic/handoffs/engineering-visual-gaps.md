@@ -38,6 +38,15 @@ that clean database: 112 backend, 24 frontend and 20 ML tests, Ruff, mypy,
 frontend build, architecture, OpenAPI and Compose configuration. A prior
 attempt against a reused synthetic database failed because unrelated approved
 fixture rows remained; the clean-database run resolved the test precondition.
+After merging the updated `main` into the branch, six mocked browser shell and
+visual checks passed, and the live browser source-to-citation/revocation journey
+passed against the current frontend, backend, worker, PostgreSQL and Qdrant.
+`make smoke` passed backend liveness/readiness and frontend. A separate live
+self-authored PDF check observed worker extraction, CLIP indexing, one
+page-1 visual result, authorized original access and immediate denial after
+revocation. Qdrant's six-point pilot collection occupied 688 KiB allocated
+when empty and 728 KiB after indexing. An initial live browser run exposed a
+cached-citation focus race; deferring focus until after the view switch fixed it.
 
 What remains unverified and why: Cultural relevance, Russian-language visual
 retrieval quality, real-source permissions, expert answer review, actual target
@@ -50,7 +59,7 @@ there is no calibrated abstention threshold. Large or malformed images are
 excluded by extraction limits. Query traffic and Qdrant storage cost on a
 representative corpus are unmeasured.
 
-Exact next step: Record merge and live smoke observations; then
+Exact next step: Record final main integration commit; then
 discuss user scenarios and LLM prompts with the owner.
 
 Cleanup completed or retention reason: The isolated branch and worktree remain

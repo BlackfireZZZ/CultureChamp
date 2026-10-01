@@ -62,6 +62,14 @@ visually simple, English-only and tuned by construction. The unsupported-hit
 rate means no path has an abstention rule. It cannot justify production
 deployment or a cultural assertion.
 
+An isolated Qdrant v1.16.3 collection with the pilot's 512-dimensional named
+vector and indexed revision ID occupied 688 KiB of allocated container storage
+when empty and 728 KiB after six synthetic points (`du -sk`), a 40 KiB delta.
+The vectors alone are 12 KiB. The empty-collection overhead dominates this
+small sample; sparse-file apparent size is much larger and was not treated as
+allocated storage. This is a point-in-time six-item cost observation, not a
+representative corpus forecast.
+
 ## Decision and implemented pilot
 
 Keep ADR 0006's separate representations and authoritative revision checks.
