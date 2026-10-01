@@ -4,7 +4,8 @@
 
 Remove internal use-case codes from visible UI, make administrative codes readable,
 and correct uneven spacing in the chat at phone, tablet and desktop widths. The
-isolated implementation is verified and ready for fast-forward integration.
+isolated implementation was verified, fast-forwarded into `main`, and pushed to
+`origin/main`.
 
 ## Worktree / branch / base SHA
 
@@ -64,8 +65,9 @@ the guide provides a complete list without scrolling the chat.
 
 ## Exact next step
 
-Commit the isolated slice, fast-forward `main`, push `origin/main`, and confirm
-the remote SHA while preserving the primary checkout's user-owned files.
+The integrated code commit is `6bbf3bc52999f0eda7fb230c1dd7cdb38901530c`.
+Continue review with target users. The primary checkout's user-owned changes to
+`.env.example`, the concept draft, and the roadmap draft were preserved.
 
 ## Cleanup completed or retention reason
 
