@@ -40,15 +40,15 @@ test("each starter fills an editable composer without sending", async () => {
   for (let index = 1; index <= 6; index += 1) {
     const id = `UC-0${index}`
     fireEvent.click(screen.getByRole("button", { name: new RegExp(id) }))
-    const composer = screen.getByRole<HTMLTextAreaElement>("textbox", { name: "Ваш творческий бриф" })
+    const composer = screen.getByRole<HTMLTextAreaElement>("textbox", { name: "Ваша задача" })
     expect(composer.value.length).toBeGreaterThan(20)
-    fireEvent.change(composer, { target: { value: "Мой изменённый бриф" } })
-    expect(composer.value).toBe("Мой изменённый бриф")
+    fireEvent.change(composer, { target: { value: "Моя изменённая задача" } })
+    expect(composer.value).toBe("Моя изменённая задача")
   }
   expect(screen.queryByText("Демонстрационный ответ. Серверная генерация и проверенные ссылки пока не подключены.")).not.toBeInTheDocument()
 })
 
-test("guide sends a persisted brief and shows an honest no-evidence answer", async () => {
+test("guide sends a persisted task and shows an honest no-evidence answer", async () => {
   mockSession()
   renderApp()
   await screen.findByRole("heading", { name: "Идея с культурным контекстом" })
@@ -116,14 +116,14 @@ test("a chat citation opens the exact approved segment and returns to chat", asy
   const material = { revision_id: revisionId, title: "Учебный синтетический источник", creator: null, origin_url: "https://example.invalid/synthetic", rights_usage_note: "Synthetic", media_type: "application/pdf", tags: [] }
   vi.stubGlobal("fetch", vi.fn((input: string) => {
     if (input === "/api/v1/auth/me") return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ user: { id: "test-user", username: "tester", role: "user" }, csrf_token: "test-csrf" }) })
-    if (input === "/api/v1/chats") return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve([{ id: "chat-cited", title: "Синтетический бриф", updated_at: "2026-09-30T00:00:00Z" }]) })
-    if (input === "/api/v1/chats/chat-cited") return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ id: "chat-cited", title: "Синтетический бриф", updated_at: "2026-09-30T00:00:00Z", turns: [{ request_id: "turn-1", ordinal: 0, user_text: "Бриф", assistant_text: "Source-supported: Synthetic fact", evidence_status: "grounded", status: "complete", citations: [{ revision_id: revisionId, segment_id: segmentId, page: 7, section: null, sheet: null, table: null, row_start: null, row_end: null, column_start: null, column_end: null, available: true }] }] }) })
+    if (input === "/api/v1/chats") return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve([{ id: "chat-cited", title: "Синтетическая задача", updated_at: "2026-09-30T00:00:00Z" }]) })
+    if (input === "/api/v1/chats/chat-cited") return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ id: "chat-cited", title: "Синтетическая задача", updated_at: "2026-09-30T00:00:00Z", turns: [{ request_id: "turn-1", ordinal: 0, user_text: "Задача", assistant_text: "Source-supported: Synthetic fact", evidence_status: "grounded", status: "complete", citations: [{ revision_id: revisionId, segment_id: segmentId, page: 7, section: null, sheet: null, table: null, row_start: null, row_end: null, column_start: null, column_end: null, available: true }] }] }) })
     if (input === "/api/v1/materials") return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve([material]) })
     if (input === `/api/v1/materials/${revisionId}`) return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ ...material, original_available: false, segments: [{ segment_id: segmentId, locator: { kind: "page", page: 7 }, text: "Точный синтетический фрагмент." }] }) })
     throw new Error("Unexpected request")
   }))
   renderApp()
-  fireEvent.click(await screen.findByRole("button", { name: "Синтетический бриф" }))
+  fireEvent.click(await screen.findByRole("button", { name: "Синтетическая задача" }))
   fireEvent.click(await screen.findByRole("button", { name: "Источник · страница 7" }))
   const excerpt = await screen.findByText("Точный синтетический фрагмент.")
   expect(excerpt.closest("li")).toHaveFocus()
@@ -153,14 +153,14 @@ test("a TXT citation opens its exact line section and original download", async 
   const material = { revision_id: revisionId, title: "Synthetic text", creator: null, origin_url: "https://example.invalid/text", rights_usage_note: "Self-authored", media_type: "text/plain", tags: [] }
   vi.stubGlobal("fetch", vi.fn((input: string) => {
     if (input === "/api/v1/auth/me") return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ user: { id: "test-user", username: "tester", role: "user" }, csrf_token: "test-csrf" }) })
-    if (input === "/api/v1/chats") return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve([{ id: "chat-text", title: "Synthetic brief", updated_at: "2026-10-01T00:00:00Z" }]) })
-    if (input === "/api/v1/chats/chat-text") return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ id: "chat-text", title: "Synthetic brief", updated_at: "2026-10-01T00:00:00Z", turns: [{ request_id: "turn-text", ordinal: 0, user_text: "Brief", assistant_text: "Source-supported: Synthetic fact", evidence_status: "grounded", status: "complete", citations: [{ revision_id: revisionId, segment_id: segmentId, page: null, section: "Lines 1–2", sheet: null, table: null, row_start: null, row_end: null, column_start: null, column_end: null, available: true }] }] }) })
+    if (input === "/api/v1/chats") return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve([{ id: "chat-text", title: "Synthetic task", updated_at: "2026-10-01T00:00:00Z" }]) })
+    if (input === "/api/v1/chats/chat-text") return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ id: "chat-text", title: "Synthetic task", updated_at: "2026-10-01T00:00:00Z", turns: [{ request_id: "turn-text", ordinal: 0, user_text: "Task", assistant_text: "Source-supported: Synthetic fact", evidence_status: "grounded", status: "complete", citations: [{ revision_id: revisionId, segment_id: segmentId, page: null, section: "Lines 1–2", sheet: null, table: null, row_start: null, row_end: null, column_start: null, column_end: null, available: true }] }] }) })
     if (input === "/api/v1/materials") return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve([material]) })
     if (input === `/api/v1/materials/${revisionId}`) return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ ...material, original_available: true, segments: [{ segment_id: segmentId, locator: { kind: "section", page: null, section: "Lines 1–2", row_start: null }, text: "Synthetic fact" }] }) })
     throw new Error("Unexpected request")
   }))
   renderApp()
-  fireEvent.click(await screen.findByRole("button", { name: "Synthetic brief" }))
+  fireEvent.click(await screen.findByRole("button", { name: "Synthetic task" }))
   fireEvent.click(await screen.findByRole("button", { name: "Источник · строки 1–2" }))
   expect(await screen.findByRole("heading", { name: "Строки 1–2" })).toBeInTheDocument()
   expect(screen.getByRole("link", { name: "Скачать исходный текст TXT" })).toHaveAttribute("href", `/api/v1/materials/${revisionId}/original`)
@@ -206,14 +206,14 @@ test("materials error can be retried without showing candidates", async () => {
   expect(attempts).toBe(2)
 })
 
-test("a failed API send keeps the editable brief", async () => {
+test("a failed API send keeps the editable task", async () => {
   mockSession("user", true)
   renderApp()
   await screen.findByRole("heading", { name: "Идея с культурным контекстом" })
-  fireEvent.change(screen.getByRole("textbox", { name: "Ваш творческий бриф" }), { target: { value: "Мой бриф" } })
+  fireEvent.change(screen.getByRole("textbox", { name: "Ваша задача" }), { target: { value: "Моя задача" } })
   fireEvent.click(screen.getByRole("button", { name: "Отправить" }))
   expect(await screen.findByRole("alert")).toHaveTextContent("Текст сохранён")
-  expect(screen.getByRole<HTMLTextAreaElement>("textbox", { name: "Ваш творческий бриф" }).value).toBe("Мой бриф")
+  expect(screen.getByRole<HTMLTextAreaElement>("textbox", { name: "Ваша задача" }).value).toBe("Моя задача")
 })
 
 test("unauthenticated visitors see login and no protected navigation", async () => {
@@ -420,7 +420,7 @@ test("logout sends CSRF and clears local chat before another login", async () =>
   vi.stubGlobal("fetch", fetchMock)
   renderApp()
   await screen.findByRole("heading", { name: "Идея с культурным контекстом" })
-  fireEvent.change(screen.getByRole("textbox", { name: "Ваш творческий бриф" }), { target: { value: "Локальный секретный черновик" } })
+  fireEvent.change(screen.getByRole("textbox", { name: "Ваша задача" }), { target: { value: "Локальный секретный черновик" } })
   fireEvent.click(screen.getByRole("button", { name: "Отправить" }))
   expect(await screen.findByText("Локальный секретный черновик")).toBeInTheDocument()
   fireEvent.click(screen.getByRole("button", { name: "Выйти" }))
@@ -430,5 +430,5 @@ test("logout sends CSRF and clears local chat before another login", async () =>
   fireEvent.click(screen.getByRole("button", { name: "Войти" }))
   await screen.findByRole("heading", { name: "Идея с культурным контекстом" })
   expect(screen.queryByText("Локальный секретный черновик")).not.toBeInTheDocument()
-  expect(screen.getByRole<HTMLTextAreaElement>("textbox", { name: "Ваш творческий бриф" }).value).toBe("")
+  expect(screen.getByRole<HTMLTextAreaElement>("textbox", { name: "Ваша задача" }).value).toBe("")
 })

@@ -16,8 +16,8 @@ test("canonical user and admin screens in both themes", async ({ page }) => {
   await page.route("**/api/v1/**", (route) => {
     const path = new URL(route.request().url()).pathname
     if (path === "/api/v1/auth/me") return route.fulfill({ json: { user: { id: "visual-user", username: "tester", role }, csrf_token: "visual-csrf" } })
-    if (path === "/api/v1/chats") return route.fulfill({ json: [{ id: "chat-visual", title: "Синтетический бриф", updated_at: "2026-10-02T12:00:00Z" }] })
-    if (path === "/api/v1/chats/chat-visual") return route.fulfill({ json: { id: "chat-visual", title: "Синтетический бриф", updated_at: "2026-10-02T12:00:00Z", turns: [{ request_id: "turn-visual", ordinal: 0, user_text: "Создайте тестовый творческий бриф", assistant_text: "Source-supported: Тестовый фрагмент.\n\nInterpretation: Возможная тестовая трактовка.\n\nNew creative proposal: Новый синтетический вариант.", evidence_status: "grounded", status: "complete", citations: [citation] }] } })
+    if (path === "/api/v1/chats") return route.fulfill({ json: [{ id: "chat-visual", title: "Синтетическая задача", updated_at: "2026-10-02T12:00:00Z" }] })
+    if (path === "/api/v1/chats/chat-visual") return route.fulfill({ json: { id: "chat-visual", title: "Синтетическая задача", updated_at: "2026-10-02T12:00:00Z", turns: [{ request_id: "turn-visual", ordinal: 0, user_text: "Создайте тестовую творческую задачу", assistant_text: "Source-supported: Тестовый фрагмент.\n\nInterpretation: Возможная тестовая трактовка.\n\nNew creative proposal: Новый синтетический вариант.", evidence_status: "grounded", status: "complete", citations: [citation] }] } })
     if (path === "/api/v1/materials") return route.fulfill({ json: [material] })
     if (path === `/api/v1/materials/${revisionId}`) return route.fulfill({ json: { ...material, original_available: true, segments: [{ segment_id: segmentId, locator: { kind: "page", page: 2 }, text: "Тестовый фрагмент." }] } })
     if (path === "/api/v1/admin/sources") return route.fulfill({ json: [{ revision_id: revisionId, source_id: "00000000-0000-4000-8000-000000000001", title: "Синтетический кандидат", origin_url: "https://example.invalid/source.pdf", status: "review_pending", decision: null }] })
@@ -37,9 +37,9 @@ test("canonical user and admin screens in both themes", async ({ page }) => {
       await expect(page).toHaveScreenshot(`chat-empty-${key}.png`, { animations: "disabled" })
 
       if (width === 360) await page.getByRole("button", { name: "Чаты", exact: true }).last().click()
-      await page.getByRole("button", { name: "Синтетический бриф" }).click()
+      await page.getByRole("button", { name: "Синтетическая задача" }).click()
       await expect(page.getByRole("heading", { name: "Подтверждено источником" })).toBeVisible()
-      await expect(page.getByRole("textbox", { name: "Ваш творческий бриф" })).toBeInViewport()
+      await expect(page.getByRole("textbox", { name: "Ваша задача" })).toBeInViewport()
       await expect(page).toHaveScreenshot(`chat-answer-${key}.png`, { animations: "disabled" })
 
       await page.getByRole("button", { name: "Материалы" }).click()

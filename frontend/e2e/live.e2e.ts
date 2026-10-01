@@ -31,7 +31,7 @@ test("live synthetic source flows from admin review to cited chat and revocation
   const reviewedDescription = `Reviewed self-authored catalogue summary ${marker}`
   const region = `Synthetic region ${marker}`
   const cell = `item: ${marker}; count: seven`
-  const approvedBrief = `${cell} — summarize the source`
+  const approvedTask = `${cell} — summarize the source`
   const csv = Buffer.from(`item,count\r\n${marker},seven\r\n`, "utf8")
   const userName = `user_${marker}`
   const userPassword = "self-authored-live-test-password"
@@ -87,10 +87,10 @@ test("live synthetic source flows from admin review to cited chat and revocation
       if (requestIds.length === 1) await route.fulfill({ status: 503 })
       else await route.continue()
     })
-    await userPage.getByRole("textbox", { name: "Ваш творческий бриф" }).fill(cell)
+    await userPage.getByRole("textbox", { name: "Ваша задача" }).fill(cell)
     await userPage.getByRole("button", { name: "Отправить" }).click()
     await expect(userPage.getByRole("alert")).toContainText("Текст сохранён")
-    await expect(userPage.getByRole("textbox", { name: "Ваш творческий бриф" })).toHaveValue(cell)
+    await expect(userPage.getByRole("textbox", { name: "Ваша задача" })).toHaveValue(cell)
     await userPage.getByRole("button", { name: "Отправить" }).click()
     await expect(userPage.getByText(/There is no approved source evidence/)).toBeVisible()
     expect(requestIds[1]).toBe(requestIds[0])
@@ -158,7 +158,7 @@ test("live synthetic source flows from admin review to cited chat and revocation
     await userPage.getByRole("button", { name: "Вернуться к чату" }).first().click()
 
     await userPage.getByRole("button", { name: "Новый чат" }).click()
-    await userPage.getByRole("textbox", { name: "Ваш творческий бриф" }).fill(approvedBrief)
+    await userPage.getByRole("textbox", { name: "Ваша задача" }).fill(approvedTask)
     await userPage.getByRole("button", { name: "Отправить" }).click()
     await expect(userPage.getByRole("heading", { name: "Подтверждено источником" })).toBeVisible({ timeout: 60_000 })
     await userPage.getByRole("button", { name: unsupportedChatTitle, exact: true }).click()
@@ -168,7 +168,7 @@ test("live synthetic source flows from admin review to cited chat and revocation
     await expect(userPage.getByRole("button", { name: unsupportedChatTitle, exact: true })).toHaveCount(0)
     await userPage.getByRole("button", { name: "Новый чат" }).click()
     await expect(userPage.getByRole("heading", { name: "Подтверждено источником" })).toHaveCount(0)
-    await userPage.getByRole("button", { name: approvedBrief, exact: true }).click()
+    await userPage.getByRole("button", { name: approvedTask, exact: true }).click()
     await expect(userPage.getByRole("heading", { name: "Подтверждено источником" })).toBeVisible()
     await expectNoHorizontalOverflow(userPage)
     await userPage.getByRole("button", { name: /Источник · таблица CSV, строка 2/ }).click()
@@ -195,7 +195,7 @@ test("live synthetic source flows from admin review to cited chat and revocation
         return data.result[0]?.payload.revision_id ?? null
       }, { timeout: 180_000 }).toBe(intake.revision_id)
       await userPage.getByRole("button", { name: "Вернуться к чату" }).first().click()
-      await userPage.getByRole("textbox", { name: "Ваш творческий бриф" }).fill(cell)
+      await userPage.getByRole("textbox", { name: "Ваша задача" }).fill(cell)
       await userPage.getByRole("button", { name: "Отправить" }).click()
       await expect(userPage.getByRole("heading", { name: "Подтверждено источником" })).toHaveCount(2)
     }
@@ -210,7 +210,7 @@ test("live synthetic source flows from admin review to cited chat and revocation
     expect(await (await adminContext.request.get(reviewOriginalPath)).body()).toEqual(csv)
     approvedRevisionId = null
     await userPage.reload()
-    await userPage.getByRole("button", { name: approvedBrief, exact: true }).click()
+    await userPage.getByRole("button", { name: approvedTask, exact: true }).click()
     await expect(userPage.getByRole("heading", { name: "Подтверждено источником" })).toHaveCount(process.env.LIVE_E2E_RESET_VECTOR === "true" ? 2 : 1)
     await expect(userPage.getByRole("button", { name: /Источник · таблица CSV, строка 2/ }).first()).toBeDisabled()
     await expect(userPage.getByText("Источник отозван или недоступен")).toHaveCount(process.env.LIVE_E2E_RESET_VECTOR === "true" ? 2 : 1)
@@ -312,8 +312,8 @@ test("live synthetic source flows from admin review to cited chat and revocation
 
     await userPage.getByRole("button", { name: "Вернуться к чату" }).first().click()
     await userPage.getByRole("button", { name: "Новый чат" }).click()
-    const workbookBrief = "Item: Example A; Count: 7"
-    await userPage.getByRole("textbox", { name: "Ваш творческий бриф" }).fill(workbookBrief)
+    const workbookTask = "Item: Example A; Count: 7"
+    await userPage.getByRole("textbox", { name: "Ваша задача" }).fill(workbookTask)
     const workbookAnswerResponse = userPage.waitForResponse((response) => response.url().includes("/api/v1/chats/") && response.url().endsWith("/messages") && response.request().method() === "POST")
     await userPage.getByRole("button", { name: "Отправить" }).click()
     const workbookAnswer = (await (await workbookAnswerResponse).json()) as {
@@ -342,7 +342,7 @@ test("live synthetic source flows from admin review to cited chat and revocation
     }).toBe("revoke")
     approvedRevisionId = null
     await userPage.reload()
-    await userPage.getByRole("button", { name: workbookBrief, exact: true }).click()
+    await userPage.getByRole("button", { name: workbookTask, exact: true }).click()
     await expect(userPage.getByRole("button", { name: /Источник · таблица North, строка/ })).toBeDisabled()
 
     const proseTitle = `Synthetic two-page PDF ${marker}`
@@ -398,9 +398,9 @@ test("live synthetic source flows from admin review to cited chat and revocation
       const data = (await response.json()) as { result: { payload: { revision_id: string } }[] }
       return data.result[0]?.payload.revision_id ?? null
     }, { timeout: 180_000 }).toBe(approvedRevisionId)
-    const proseBrief = "Synthetic second page copper discs seven"
+    const proseTask = "Synthetic second page copper discs seven"
     await userPage.getByRole("button", { name: "Новый чат" }).click()
-    await userPage.getByRole("textbox", { name: "Ваш творческий бриф" }).fill(proseBrief)
+    await userPage.getByRole("textbox", { name: "Ваша задача" }).fill(proseTask)
     const proseAnswerResponse = userPage.waitForResponse((response) => response.url().includes("/api/v1/chats/") && response.url().endsWith("/messages") && response.request().method() === "POST")
     await userPage.getByRole("button", { name: "Отправить" }).click()
     const proseAnswer = (await (await proseAnswerResponse).json()) as {
@@ -429,7 +429,7 @@ test("live synthetic source flows from admin review to cited chat and revocation
     approvedRevisionId = null
     expect((await userContext.request.get(`/api/v1/materials/${proseIntake.revision_id}/original`)).status()).toBe(404)
     await userPage.reload()
-    await userPage.getByRole("button", { name: proseBrief, exact: true }).click()
+    await userPage.getByRole("button", { name: proseTask, exact: true }).click()
     await expect(userPage.getByRole("button", { name: "Источник · страница 2" })).toBeDisabled()
 
     const textTitle = `Synthetic reviewed TXT ${marker}`
@@ -485,7 +485,7 @@ test("live synthetic source flows from admin review to cited chat and revocation
     const textUserDetail = await userContext.request.get(`/api/v1/materials/${approvedRevisionId}`)
     expect(((await textUserDetail.json()) as { segments: { segment_id: string }[] }).segments.map((segment) => segment.segment_id)).toEqual([textSegments[0].segment_id])
     await userPage.getByRole("button", { name: "Новый чат" }).click()
-    await userPage.getByRole("textbox", { name: "Ваш творческий бриф" }).fill(marker)
+    await userPage.getByRole("textbox", { name: "Ваша задача" }).fill(marker)
     await userPage.getByRole("button", { name: "Отправить" }).click()
     await expect(userPage.getByRole("button", { name: "Источник · строки 1–2" })).toBeVisible({ timeout: 60_000 })
     await userPage.getByRole("button", { name: "Источник · строки 1–2" }).click()

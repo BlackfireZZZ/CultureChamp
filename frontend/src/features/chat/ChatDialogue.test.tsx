@@ -4,8 +4,8 @@ import { afterEach, expect, test, vi } from "vitest"
 import type { ChatDetail, ChatSummary } from "../../api/chats"
 import { ChatDialogue } from "./ChatDialogue"
 
-const summary = { id: "chat-test", title: "Synthetic brief", updated_at: "2026-10-02T00:00:00Z" } as ChatSummary
-const detail = { ...summary, turns: [{ request_id: "turn-test", ordinal: 0, user_text: "Test brief", assistant_text: "Source-supported: Synthetic excerpt.\n\nInterpretation: A possible reading.\n\nNew creative proposal: An original draft.", evidence_status: "grounded", status: "complete", citations: [] }] } as ChatDetail
+const summary = { id: "chat-test", title: "Synthetic task", updated_at: "2026-10-02T00:00:00Z" } as ChatSummary
+const detail = { ...summary, turns: [{ request_id: "turn-test", ordinal: 0, user_text: "Test task", assistant_text: "Source-supported: Synthetic excerpt.\n\nInterpretation: A possible reading.\n\nNew creative proposal: An original draft.", evidence_status: "grounded", status: "complete", citations: [] }] } as ChatDetail
 
 afterEach(cleanup)
 

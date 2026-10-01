@@ -27,7 +27,7 @@ export function ChatDialogue({ summary, detail, pending, error, onRetry, onCitat
     {error && <p role="alert">Диалог недоступен. <button type="button" onClick={onRetry}>Повторить</button></p>}
     {detail?.turns.length === 0 && <p>Этот диалог пока пуст. Опишите задачу ниже.</p>}
     {detail?.turns.map((turn) => <div key={turn.request_id}>
-      <article className="message user"><span className="eyebrow">Ваш бриф</span><p>{turn.user_text}</p></article>
+      <article className="message user"><span className="eyebrow">Ваша задача</span><p>{turn.user_text}</p></article>
       {turn.assistant_text && <article className="message assistant"><span className="eyebrow">Ответ · {turn.evidence_status === "grounded" ? "с опорой на источники" : "без подтверждённых источников"}</span>{answerParts(turn.assistant_text)?.map((part) => <section className="answer-part" key={part.title}><h2>{part.title}</h2><p>{part.body}</p></section>) ?? <p>{turn.assistant_text}</p>}
         {turn.citations.length > 0 && <ul className="chat-citations">{turn.citations.map((citation) => <li key={citation.segment_id}>
           <button type="button" disabled={!citation.available} onClick={() => onCitation(citation)}>{`Источник · ${sourceLocationLabel(citation, true)}`}</button>
