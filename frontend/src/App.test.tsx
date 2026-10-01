@@ -3,6 +3,7 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-li
 import { afterEach, expect, test, vi } from "vitest"
 
 import { App } from "./App"
+import { starters } from "./features/onboarding/starters"
 
 function renderApp() {
   render(<QueryClientProvider client={new QueryClient()}><App /></QueryClientProvider>)
@@ -37,9 +38,8 @@ test("each starter fills an editable composer without sending", async () => {
   mockSession()
   renderApp()
   await screen.findByRole("heading", { name: "Идея с культурным контекстом" })
-  for (let index = 1; index <= 6; index += 1) {
-    const id = `UC-0${index}`
-    fireEvent.click(screen.getByRole("button", { name: new RegExp(id) }))
+  for (const starter of starters) {
+    fireEvent.click(screen.getByRole("button", { name: starter.label }))
     const composer = screen.getByRole<HTMLTextAreaElement>("textbox", { name: "Ваша задача" })
     expect(composer.value.length).toBeGreaterThan(20)
     fireEvent.change(composer, { target: { value: "Моя изменённая задача" } })
@@ -54,7 +54,7 @@ test("guide sends a persisted task and shows an honest no-evidence answer", asyn
   await screen.findByRole("heading", { name: "Идея с культурным контекстом" })
   fireEvent.click(screen.getByRole("button", { name: "Что можно сделать?" }))
   expect(screen.getByRole("dialog", { name: "Что можно сделать?" })).toBeInTheDocument()
-  fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: /UC-06/ }))
+  fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Поиск источников" }))
   expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
   fireEvent.click(screen.getByRole("button", { name: "Отправить" }))
   await waitFor(() => expect(screen.getByText("Нет одобренных источников для культурного утверждения.")).toBeInTheDocument())
@@ -281,7 +281,7 @@ test("admin inventory and exact revision come from admin API", async () => {
   expect(screen.getByRole("link", { name: "Открыть оригинал для проверки" })).toHaveAttribute("href", "/api/v1/admin/revisions/rev-3/original")
   expect(screen.getByRole("link", { name: "https://example.org" })).toHaveAttribute("href", "https://example.org/")
   expect(screen.getByText("Не подтверждены")).toBeInTheDocument()
-  expect(screen.getByText("region: Приморье")).toBeInTheDocument()
+  expect(screen.getByText("Регион: Приморье")).toBeInTheDocument()
   const inventorySearch = screen.getByRole("form", { name: "Поиск в инвентаре" })
   fireEvent.change(within(inventorySearch).getByRole("textbox", { name: "Источник или название" }), { target: { value: "Owned" } })
   fireEvent.change(within(inventorySearch).getByRole("combobox", { name: "Формат" }), { target: { value: "application/pdf" } })
@@ -292,7 +292,7 @@ test("admin inventory and exact revision come from admin API", async () => {
   fireEvent.click(within(inventorySearch).getByRole("button", { name: "Сбросить" }))
   fireEvent.change(screen.getByRole("combobox", { name: "Обработка" }), { target: { value: "failed" } })
   fireEvent.change(screen.getByRole("combobox", { name: "Решение" }), { target: { value: "none" } })
-  expect(await screen.findByText("Ревизий не найдено")).toBeInTheDocument()
+  expect(await screen.findByText("Материалы не найдены")).toBeInTheDocument()
 })
 
 test("legacy unsafe source URL is displayed as text in admin review", async () => {

@@ -35,8 +35,12 @@ test("canonical user and admin screens in both themes", async ({ page }) => {
       await expect(page.getByRole("heading", { name: "Идея с культурным контекстом" })).toBeVisible()
       expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width)
       await expect(page).toHaveScreenshot(`chat-empty-${key}.png`, { animations: "disabled" })
+      await page.getByRole("button", { name: "Что можно сделать?" }).click()
+      await expect(page.getByRole("dialog", { name: "Что можно сделать?" })).toBeVisible()
+      await expect(page).toHaveScreenshot(`starter-guide-${key}.png`, { animations: "disabled" })
+      await page.getByRole("button", { name: "Закрыть подсказки" }).click()
 
-      if (width === 360) await page.getByRole("button", { name: "Чаты", exact: true }).last().click()
+      if (width <= 900) await page.getByRole("button", { name: "Чаты", exact: true }).last().click()
       await page.getByRole("button", { name: "Синтетическая задача" }).click()
       await expect(page.getByRole("heading", { name: "Подтверждено источником" })).toBeVisible()
       await expect(page.getByRole("textbox", { name: "Ваша задача" })).toBeInViewport()
@@ -49,7 +53,7 @@ test("canonical user and admin screens in both themes", async ({ page }) => {
 
       role = "admin"
       await page.reload()
-      await expect(page.getByRole("heading", { name: "Кандидаты и ревизии" })).toBeVisible()
+      await expect(page.getByRole("heading", { name: "Проверка материалов" })).toBeVisible()
       await expect(page.getByRole("button", { name: /Синтетический кандидат/ })).toBeVisible()
       await page.evaluate(() => window.scrollTo(0, 0))
       await expect(page).toHaveScreenshot(`admin-inventory-${key}.png`, { animations: "disabled" })

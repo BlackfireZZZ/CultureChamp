@@ -22,7 +22,7 @@ export function StarterGuide({ onChoose, onClose }: { onChoose: (prompt: string)
       <section ref={panelRef} aria-labelledby="guide-title" aria-modal="true" className="guide-panel" role="dialog" onKeyDown={handleKeyDown}>
         <div className="guide-heading"><h2 id="guide-title">Что можно сделать?</h2><button type="button" onClick={onClose} aria-label="Закрыть подсказки">✕</button></div>
         <p>Выберите задачу: текст появится в поле ввода, и его можно будет изменить. Примеры не подтверждают наличие источников по выбранной теме.</p>
-        <div className="guide-grid">{starters.map((item) => <button key={item.id} type="button" onClick={() => onChoose(item.prompt)}><span>{item.id}</span><strong>{item.label}</strong></button>)}</div>
+        <div className="guide-grid">{starters.map((item) => <button key={item.id} type="button" onClick={() => onChoose(item.prompt)}>{item.label}</button>)}</div>
       </section>
     </div>
   )

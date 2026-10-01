@@ -336,6 +336,11 @@ A fluid implementation with `clamp()` is preferred over multiple one-off media-q
 ### Grid
 
 Base spacing rhythm: **8px**, with a 4px half-step only for fine alignment.
+Use a 16–24px gap between major chat blocks (heading, explanation, examples,
+composer). Cards in one grid row MUST share a common height and edge alignment.
+At tablet widths, collapse the chat history rail into its labelled button before
+it makes the task column too narrow. Keep the composer visible without crowding
+the scrollable content above it.
 
 Recommended page geometry:
 
@@ -483,6 +488,11 @@ disappears at ordinary viewing size, increase its clarity within the two-zone
 and area budgets rather than adding unrelated decorations. Keep chat controls
 near-square to suit the stitch grid; round icon controls remain an option when
 their semantics and touch target warrant it.
+
+Starter cards and the task guide MUST show plain-language task names. Internal
+use-case identifiers such as `UC-04` may be retained for analytics and tests but
+MUST NOT appear as visible labels. Administrative counts and statuses MUST also
+translate internal codes into readable names.
 
 ### Hand-drawn arrow
 
