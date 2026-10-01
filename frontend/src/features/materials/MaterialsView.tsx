@@ -8,6 +8,12 @@ import type { ChatCitation } from "../../api/chats"
 import { useMaterial, useMaterials } from "./useMaterials"
 
 const xlsxMediaType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+function safeOriginUrl(value: string): string | null {
+  try {
+    const url = new URL(value)
+    return url.protocol === "https:" || url.protocol === "http:" ? url.href : null
+  } catch { return null }
+}
 const formatLabel = (mediaType: string) => {
   if (mediaType === "application/pdf") return "PDF"
   if (mediaType === "text/plain") return "TXT"
@@ -26,7 +32,9 @@ export function MaterialsView({ onBack, citationTarget = null }: { onBack: () =>
   useEffect(() => {
     if (!detail.isSuccess || !revisionId) return
     if (citationTarget?.revision_id === revisionId) {
-      document.getElementById(`segment-${citationTarget.segment_id}`)?.focus()
+      const segment = document.getElementById(`segment-${citationTarget.segment_id}`)
+      if (segment) segment.focus()
+      else headingRef.current?.focus()
     } else headingRef.current?.focus()
   }, [detail.isSuccess, detail.dataUpdatedAt, revisionId, citationTarget])
 
@@ -76,8 +84,9 @@ export function MaterialsView({ onBack, citationTarget = null }: { onBack: () =>
         {revisionId && detail.isError && <div role="alert"><p>Источник сейчас недоступен. Возможно, ревизия была отозвана.</p><button type="button" onClick={() => void detail.refetch()}>Повторить</button></div>}
         {revisionId && detail.isSuccess && <>
           <h2 ref={headingRef} tabIndex={-1}>{detail.data.title}</h2>
+          {citationTarget?.revision_id === revisionId && !detail.data.segments.some((segment) => segment.segment_id === citationTarget.segment_id) && <p role="alert">Цитируемый фрагмент больше недоступен в этой ревизии. Откройте другой доступный фрагмент или вернитесь к чату.</p>}
           {detail.data.description && <p>{detail.data.description}</p>}
-          <dl className="material-meta"><dt>Ревизия</dt><dd>{detail.data.revision_id}</dd><dt>Автор</dt><dd>{detail.data.creator || "Не указан"}</dd><dt>Тип</dt><dd>{formatLabel(detail.data.media_type)}</dd><dt>Метки</dt><dd>{detail.data.tags.map((tag) => `${tag.kind}: ${tag.value}`).join(" · ") || "Не указаны"}</dd><dt>Права и условия</dt><dd>{detail.data.rights_usage_note || "Не указаны"}</dd></dl>
+          <dl className="material-meta"><dt>Ревизия</dt><dd>{detail.data.revision_id}</dd><dt>Автор</dt><dd>{detail.data.creator || "Не указан"}</dd><dt>Происхождение</dt><dd>{safeOriginUrl(detail.data.origin_url) ? <a href={safeOriginUrl(detail.data.origin_url)!} target="_blank" rel="noopener noreferrer">Ссылка на источник</a> : "Не указано"}</dd><dt>Тип</dt><dd>{formatLabel(detail.data.media_type)}</dd><dt>Метки</dt><dd>{detail.data.tags.map((tag) => `${tag.kind}: ${tag.value}`).join(" · ") || "Не указаны"}</dd><dt>Права и условия</dt><dd>{detail.data.rights_usage_note || "Не указаны"}</dd></dl>
           {!detail.data.original_available && <p>Оригинальный файл недоступен по условиям использования. Проверьте страницу и текст фрагмента ниже.</p>}
           {detail.data.original_available && detail.data.media_type === "text/csv" && <a href={`/api/v1/materials/${encodeURIComponent(detail.data.revision_id)}/original`}>Скачать исходную таблицу CSV</a>}
           {detail.data.original_available && detail.data.media_type === "text/plain" && <a href={`/api/v1/materials/${encodeURIComponent(detail.data.revision_id)}/original`}>Скачать исходный текст TXT</a>}

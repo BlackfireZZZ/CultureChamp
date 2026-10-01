@@ -3,6 +3,7 @@ import type { FormEvent, KeyboardEvent } from "react"
 
 import { ApiError } from "./api/auth"
 import type { ChatCitation } from "./api/chats"
+import { Embroidery } from "./components/ui/Embroidery"
 import { AdminView } from "./features/admin/AdminView"
 import { LoginScreen } from "./features/auth/LoginScreen"
 import { useAuth } from "./features/auth/useAuth"
@@ -125,6 +126,7 @@ export function App() {
     {isUser && <div className="preview-banner" role="status">Пилотный чат · культурные источники доступны только после проверки и одобрения</div>}
     {effectiveView === "chat" && isUser && <main className="workspace">
       <aside ref={listRef} className={`chat-rail ${listOpen ? "open" : ""}`} aria-label="Список чатов" onKeyDown={onListKeyDown}>
+        <button className="mobile-list-close" type="button" onClick={closeList}>Закрыть список чатов</button>
         <div className="rail-heading"><h2>Чаты</h2><button type="button" onClick={() => { setSelectedId(null); setPendingRequest(null); setListOpen(false); composerRef.current?.focus() }}>Новый чат</button></div>
         {chats.isPending && <p role="status">Загружаем чаты…</p>}
         {chats.isError && <p role="alert">Не удалось загрузить чаты. <button type="button" onClick={() => void chats.refetch()}>Повторить</button></p>}
@@ -133,11 +135,11 @@ export function App() {
       </aside>
       <div className="chat-main">
         <div className="chat-topline"><button ref={listTriggerRef} className="mobile-list" type="button" aria-expanded={listOpen} onClick={() => setListOpen(!listOpen)}>Чаты</button><span>Текстовый творческий бриф</span><button ref={guideTriggerRef} type="button" onClick={() => setGuideOpen(true)}>Что можно сделать?</button></div>
-        {selected ? <ChatDialogue summary={selected} detail={detail.data} pending={detail.isPending} error={detail.isError} onRetry={() => void detail.refetch()} onCitation={(citation) => { setCitationTarget(citation); setView("materials") }} onDelete={() => { void actions.remove.mutateAsync(selected.id).then(() => setSelectedId(null)).catch(() => setSendError(true)) }} deleting={actions.remove.isPending} /> : <section className="chat-empty"><svg className="stitch-trim" viewBox="0 0 112 16" aria-hidden="true" focusable="false"><path d="M4 4l8 8m0-8l-8 8m16-8l8 8m0-8l-8 8m16-8l8 8m0-8l-8 8m16-8l8 8m0-8l-8 8m16-8l8 8m0-8l-8 8m16-8l8 8m0-8l-8 8" /></svg><p className="eyebrow">Начните с задачи</p><h1>Идея с культурным контекстом</h1><p>Опишите, что хотите создать. Источники будут доступны после проверки прав и одобрения материалов.</p><div className="starter-grid">{starters.map((item) => <button key={item.id} type="button" onClick={() => chooseStarter(item.prompt)}><span>{item.id}</span><strong>{item.label}</strong></button>)}</div></section>}
+        {selected ? <ChatDialogue summary={selected} detail={detail.data} pending={detail.isPending} error={detail.isError} onRetry={() => void detail.refetch()} onCitation={(citation) => { setCitationTarget(citation); setView("materials") }} onDelete={() => { void actions.remove.mutateAsync(selected.id).then(() => setSelectedId(null)).catch(() => setSendError(true)) }} deleting={actions.remove.isPending} /> : <section className="chat-empty"><Embroidery variant="panel" /><Embroidery variant="band" /><p className="eyebrow">Начните с задачи</p><h1>Идея с культурным контекстом</h1><p>Опишите, что хотите создать. Источники будут доступны после проверки прав и одобрения материалов.</p><div className="starter-grid">{starters.map((item) => <button key={item.id} type="button" onClick={() => chooseStarter(item.prompt)}><span>{item.id}</span><strong>{item.label}</strong></button>)}</div></section>}
         <form className="composer" onSubmit={(event) => { void send(event) }}><label htmlFor="brief">Ваш творческий бриф</label><textarea id="brief" ref={composerRef} value={draft} onChange={(event) => { setDraft(event.target.value); setPendingRequest(null) }} onKeyDown={onComposerKeyDown} placeholder="Например: подготовить текст для музейной вводной панели…" rows={3} /><div className="composer-actions"><span>Enter — отправить · Shift+Enter — новая строка</span><button type="submit" disabled={!draft.trim() || pending}>{pending ? "Готовим ответ…" : "Отправить"}</button></div>{pending && <p role="status">Ищем источники и готовим ответ…</p>}{sendError && <p role="alert">Не удалось отправить бриф. Текст сохранён; повторите отправку.</p>}</form>
       </div>
     </main>}
-    {effectiveView === "materials" && isUser && <MaterialsView onBack={() => setView("chat")} citationTarget={citationTarget} />}
+    {effectiveView === "materials" && isUser && <MaterialsView onBack={() => { setView("chat"); window.setTimeout(() => composerRef.current?.focus(), 0) }} citationTarget={citationTarget} />}
     {effectiveView === "admin" && activeSession.user.role === "admin" && <AdminView csrfToken={activeSession.csrf_token} />}
     {guideOpen && <StarterGuide onChoose={chooseStarter} onClose={() => { setGuideOpen(false); guideTriggerRef.current?.focus() }} />}
   </div>

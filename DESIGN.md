@@ -470,6 +470,19 @@ Implementation rules:
 - Do not use low-quality raster screenshots of textile patterns as UI chrome.
 - Decorative SVGs MUST be `aria-hidden="true"` unless they communicate actual information.
 
+For the MVP chat, embroidery MUST be a recognizable visual element, not a token
+row of isolated crosses. The empty chat uses one substantial abstract botanical
+and geometric panel beside the task on wide screens; at narrow widths it becomes
+one horizontal stitched band above the task. An existing dialogue uses the same
+band as a quiet header. This is one ornament zone in each of those views and
+stays outside answer text, citations, and the composer. The motif is original,
+pan-regional abstraction: its leaves, diamonds, and stitches make no claim about
+a named people's tradition. Review the actual rendered light and dark screens at
+360, 768, 1280, and 1440 px; if the motif disappears at ordinary viewing size,
+increase its clarity within the two-zone and area budgets rather than adding
+unrelated decorations. Keep chat controls near-square to suit the stitch grid;
+round icon controls remain an option when their semantics and touch target warrant it.
+
 ### Hand-drawn arrow
 
 The loose arrow from the reference is a signature secondary device.

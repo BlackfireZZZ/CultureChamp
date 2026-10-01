@@ -118,3 +118,25 @@ test("admin can filter inventory with keyboard without exposing it to user navig
   await page.setViewportSize({ width: 360, height: 800 })
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(360)
 })
+
+test("admin statistics show only aggregate API values and recover from an error", async ({ page }) => {
+  let requests = 0
+  await page.route("**/api/v1/auth/me", (route) => route.fulfill({ json: { user: { id: "admin", username: "admin", role: "admin" }, csrf_token: "csrf" } }))
+  await page.route("**/api/v1/admin/sources?*", (route) => route.fulfill({ json: [] }))
+  await page.route("**/api/v1/admin/request-statistics?*", (route) => {
+    requests += 1
+    return requests === 1 ? route.fulfill({ status: 503 }) : route.fulfill({ json: {
+      period_start: "2026-10-01", period_end: "2026-10-02",
+      daily_requests: [{ date: "2026-10-02", count: 7 }],
+      starter_requests: [{ starter_id: "UC-01", count: 3 }],
+    } })
+  })
+  await page.goto("/")
+  await page.getByRole("button", { name: "Статистика" }).click()
+  await expect(page.getByRole("heading", { name: "Не удалось загрузить статистику" })).toBeVisible()
+  await page.getByRole("button", { name: "Повторить" }).click()
+  await expect(page.getByRole("heading", { name: "Запросы по дням" })).toBeVisible()
+  await expect(page.getByRole("listitem").filter({ hasText: "2026-10-02" })).toContainText("7")
+  await expect(page.getByRole("listitem").filter({ hasText: "UC-01" })).toContainText("3")
+  await expect(page.getByText("prompt text secret")).toHaveCount(0)
+})

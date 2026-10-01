@@ -160,15 +160,16 @@ test("live synthetic source flows from admin review to cited chat and revocation
     await userPage.getByRole("button", { name: "Новый чат" }).click()
     await userPage.getByRole("textbox", { name: "Ваш творческий бриф" }).fill(approvedBrief)
     await userPage.getByRole("button", { name: "Отправить" }).click()
-    await expect(userPage.getByText(/Source-supported:/)).toBeVisible({ timeout: 60_000 })
+    await expect(userPage.getByRole("heading", { name: "Подтверждено источником" })).toBeVisible({ timeout: 60_000 })
     await userPage.getByRole("button", { name: unsupportedChatTitle, exact: true }).click()
     await expect(userPage.getByText(/There is no approved source evidence/)).toBeVisible()
     await userPage.getByRole("button", { name: "Удалить чат" }).click()
+    await userPage.getByRole("button", { name: "Подтвердить удаление" }).click()
     await expect(userPage.getByRole("button", { name: unsupportedChatTitle, exact: true })).toHaveCount(0)
     await userPage.getByRole("button", { name: "Новый чат" }).click()
-    await expect(userPage.getByText(/Source-supported:/)).toHaveCount(0)
+    await expect(userPage.getByRole("heading", { name: "Подтверждено источником" })).toHaveCount(0)
     await userPage.getByRole("button", { name: approvedBrief, exact: true }).click()
-    await expect(userPage.getByText(/Source-supported:/)).toBeVisible()
+    await expect(userPage.getByRole("heading", { name: "Подтверждено источником" })).toBeVisible()
     await expectNoHorizontalOverflow(userPage)
     await userPage.getByRole("button", { name: /Источник · таблица CSV, строка 2/ }).click()
     await expect(userPage.locator(`#segment-${segmentId}`)).toBeFocused()
@@ -196,7 +197,7 @@ test("live synthetic source flows from admin review to cited chat and revocation
       await userPage.getByRole("button", { name: "Вернуться к чату" }).first().click()
       await userPage.getByRole("textbox", { name: "Ваш творческий бриф" }).fill(cell)
       await userPage.getByRole("button", { name: "Отправить" }).click()
-      await expect(userPage.getByText(/Source-supported:/)).toHaveCount(2)
+      await expect(userPage.getByRole("heading", { name: "Подтверждено источником" })).toHaveCount(2)
     }
 
     const revoke = adminPage.getByRole("form", { name: "Отзыв ревизии" })
@@ -210,7 +211,7 @@ test("live synthetic source flows from admin review to cited chat and revocation
     approvedRevisionId = null
     await userPage.reload()
     await userPage.getByRole("button", { name: approvedBrief, exact: true }).click()
-    await expect(userPage.getByText(/Source-supported:/)).toHaveCount(process.env.LIVE_E2E_RESET_VECTOR === "true" ? 2 : 1)
+    await expect(userPage.getByRole("heading", { name: "Подтверждено источником" })).toHaveCount(process.env.LIVE_E2E_RESET_VECTOR === "true" ? 2 : 1)
     await expect(userPage.getByRole("button", { name: /Источник · таблица CSV, строка 2/ }).first()).toBeDisabled()
     await expect(userPage.getByText("Источник отозван или недоступен")).toHaveCount(process.env.LIVE_E2E_RESET_VECTOR === "true" ? 2 : 1)
     await userPage.getByRole("button", { name: "Материалы" }).click()
@@ -329,7 +330,7 @@ test("live synthetic source flows from admin review to cited chat and revocation
         column_start: workbookAnswer.citations[0].column_start,
       }),
     }))
-    await expect(userPage.getByText(/Source-supported:/)).toBeVisible()
+    await expect(userPage.getByRole("heading", { name: "Подтверждено источником" })).toBeVisible()
     await userPage.getByRole("button", { name: new RegExp(`Источник · таблица ${workbookAnswer.citations[0].sheet}, строка ${workbookAnswer.citations[0].row_start}`) }).click()
     await expect(userPage.locator(`#segment-${workbookAnswer.citations[0].segment_id}`)).toBeFocused()
     const workbookRevoke = adminPage.getByRole("form", { name: "Отзыв ревизии" })

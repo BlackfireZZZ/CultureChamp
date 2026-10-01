@@ -2,9 +2,11 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useState } from "react"
 import type { FormEvent } from "react"
 
+import { ApiError } from "../../api/auth"
 import { amendAdminMetadata, approveAdminRevision, getAdminMetadataHistory, getAdminRevision, getAdminSegmentHistory, getAdminSources, reviewAdminSegments, retryAdminRevision, revokeAdminRevision, uploadAdminSource } from "../../api/admin"
 import type { AdminFilters, MetadataInput, SegmentReviewInput } from "../../api/admin"
 import { sourceLocationLabel } from "../../api/locators"
+import { useRequestStatistics } from "./useRequestStatistics"
 
 function textField(form: FormData, name: string): string {
   const value = form.get(name)
@@ -27,6 +29,9 @@ function OriginReference({ value }: { value: string }) {
 
 export function AdminView({ csrfToken }: { csrfToken: string }) {
   const client = useQueryClient()
+  const [section, setSection] = useState<"sources" | "statistics">("sources")
+  const [feedback, setFeedback] = useState("")
+  const statistics = useRequestStatistics(section === "statistics")
   const [revisionId, setRevisionId] = useState<string | null>(null)
   const [status, setStatus] = useState<NonNullable<AdminFilters["status"]> | "">("")
   const [decision, setDecision] = useState<NonNullable<AdminFilters["decision"]> | "">("")
@@ -43,11 +48,11 @@ export function AdminView({ csrfToken }: { csrfToken: string }) {
   const segmentHistory = useQuery({ queryKey: ["admin", "segment-history", revisionId], queryFn: ({ signal }) => getAdminSegmentHistory(revisionId!, signal), enabled: revisionId !== null && Boolean(revision.data?.segments.length), retry: false })
   const refresh = async () => client.invalidateQueries({ queryKey: ["admin"] })
   const upload = useMutation({ mutationFn: (form: FormData) => uploadAdminSource(form, csrfToken), onSuccess: async (value) => { setRevisionId(value.revision_id); await refresh() } })
-  const approve = useMutation({ mutationFn: ({ id, data }: { id: string; data: { reason: string; evidence_url: string; user_text: boolean; original_file: boolean; provider_transfer: boolean; sensitivity_cleared: boolean } }) => approveAdminRevision(id, data, csrfToken), onSuccess: refresh })
-  const revoke = useMutation({ mutationFn: ({ id, reason }: { id: string; reason: string }) => revokeAdminRevision(id, reason, csrfToken), onSuccess: refresh })
-  const retry = useMutation({ mutationFn: (id: string) => retryAdminRevision(id, csrfToken), onSuccess: refresh })
-  const metadata = useMutation({ mutationFn: ({ id, data }: { id: string; data: MetadataInput }) => amendAdminMetadata(id, data, csrfToken), onSuccess: refresh })
-  const segmentReview = useMutation({ mutationFn: ({ id, data }: { id: string; data: SegmentReviewInput }) => reviewAdminSegments(id, data, csrfToken), onSuccess: refresh })
+  const approve = useMutation({ mutationFn: ({ id, data }: { id: string; data: { reason: string; evidence_url: string; user_text: boolean; original_file: boolean; provider_transfer: boolean; sensitivity_cleared: boolean } }) => approveAdminRevision(id, data, csrfToken), onSuccess: async () => { setFeedback("Точная ревизия одобрена."); await refresh() } })
+  const revoke = useMutation({ mutationFn: ({ id, reason }: { id: string; reason: string }) => revokeAdminRevision(id, reason, csrfToken), onSuccess: async () => { setFeedback("Точная ревизия отозвана."); await refresh() } })
+  const retry = useMutation({ mutationFn: (id: string) => retryAdminRevision(id, csrfToken), onSuccess: async () => { setFeedback("Повторная обработка запущена."); await refresh() } })
+  const metadata = useMutation({ mutationFn: ({ id, data }: { id: string; data: MetadataInput }) => amendAdminMetadata(id, data, csrfToken), onSuccess: async () => { setFeedback("Метаданные сохранены."); await refresh() } })
+  const segmentReview = useMutation({ mutationFn: ({ id, data }: { id: string; data: SegmentReviewInput }) => reviewAdminSegments(id, data, csrfToken), onSuccess: async () => { setFeedback("Проверка фрагментов сохранена."); await refresh() } })
 
   function submitUpload(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -122,9 +127,18 @@ export function AdminView({ csrfToken }: { csrfToken: string }) {
     setRevisionId(null)
   }
 
+  const statisticsUnavailable = statistics.error instanceof ApiError && [404, 501].includes(statistics.error.status)
+
   return <main className="simple-page materials-page">
     <p className="eyebrow">Администрация · проверка источников</p>
-    <h1>Кандидаты и ревизии</h1>
+    <h1>{section === "sources" ? "Кандидаты и ревизии" : "Статистика запросов"}</h1>
+    {feedback && <p role="status">{feedback}</p>}
+    <nav className="admin-tabs" aria-label="Разделы администрации"><button type="button" aria-current={section === "sources" ? "page" : undefined} onClick={() => { setFeedback(""); setSection("sources") }}>Источники</button><button type="button" aria-current={section === "statistics" ? "page" : undefined} onClick={() => { setFeedback(""); setSection("statistics") }}>Статистика</button></nav>
+    {section === "statistics" ? <section className="statistics-panel" aria-label="Статистика запросов">
+      {statistics.isPending && <p role="status">Загружаем статистику запросов…</p>}
+      {statistics.isError && <div className="empty-panel" role="alert"><h2>{statisticsUnavailable ? "Статистика недоступна" : "Не удалось загрузить статистику"}</h2><p>{statisticsUnavailable ? "Сервер пока не предоставляет агрегированные числа запросов по времени и использованию стартовых задач." : "Проверьте соединение и повторите запрос."}</p><button type="button" onClick={() => void statistics.refetch()}>Повторить</button></div>}
+      {statistics.isSuccess && <><p>Агрегированные запросы за период {statistics.data.period_start} — {statistics.data.period_end}. Тексты запросов здесь не показываются.</p><div className="statistics-grid"><section><h2>Запросы по дням</h2>{statistics.data.daily_requests.length ? <ol className="statistics-list">{statistics.data.daily_requests.map((day) => <li key={day.date}><span>{day.date}</span><strong>{day.count}</strong></li>)}</ol> : <p>Запросов за период нет.</p>}</section><section><h2>Стартовые задачи</h2>{statistics.data.starter_requests.length ? <ol className="statistics-list">{statistics.data.starter_requests.map((starter) => <li key={starter.starter_id}><span>{starter.starter_id}</span><strong>{starter.count}</strong></li>)}</ol> : <p>Стартовые задачи за период не использовались.</p>}</section></div></>}
+    </section> : <>
     <p>Загружайте кандидаты, проверяйте извлечение и права точной ревизии. Только явное одобрение делает материал доступным пользователям.</p>
     <form className="admin-form" onSubmit={submitUpload} aria-label="Загрузка кандидата">
       <h2>Загрузить PDF, TXT, CSV или XLSX</h2>
@@ -169,5 +183,6 @@ export function AdminView({ csrfToken }: { csrfToken: string }) {
         </>}
       </section>
     </div>}
+    </>}
   </main>
 }
