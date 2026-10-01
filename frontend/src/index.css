@@ -36,7 +36,7 @@ button:focus-visible, textarea:focus-visible, input:focus-visible, select:focus-
 .login-page form button { margin-top: 16px; border: 1px solid var(--color-text); border-radius: 2px; background: var(--color-text); color: var(--color-bg); }
 .login-page [role="alert"], .auth-error { color: var(--color-text); border-left: 3px solid #a64232; padding-left: 12px; }
 .auth-error { max-width: 1280px; margin: 16px auto; }
-.workspace { display: grid; grid-template-columns: 280px minmax(0, 1fr); gap: 32px; max-width: 1280px; width: 100%; flex: 1 1 0; min-height: 0; margin: 0 auto; padding: 24px 32px; }
+.workspace { position: relative; display: grid; grid-template-columns: 280px minmax(0, 1fr); gap: 32px; max-width: 1280px; width: 100%; flex: 1 1 0; min-height: 0; margin: 0 auto; padding: 24px 32px; }
 .chat-rail { min-height: 0; overflow-y: auto; padding-right: 24px; border-right: 1px solid var(--color-border); }
 .mobile-list-close { display: none; }
 .rail-heading { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
@@ -48,7 +48,7 @@ button:focus-visible, textarea:focus-visible, input:focus-visible, select:focus-
 .chat-main { display: flex; flex-direction: column; min-width: 0; min-height: 0; max-width: 760px; width: 100%; }
 .chat-topline { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-bottom: 20px; border-bottom: 1px solid var(--color-border); color: var(--color-text-muted); font-size: 14px; }
 .chat-topline .mobile-list { display: none; }
-.chat-empty { position: relative; flex: 1; min-height: 0; overflow-y: auto; padding: 48px 0 32px; }
+.chat-empty { position: relative; flex: 1; min-height: 0; overflow-y: auto; padding: 32px 0; }
 .embroidery { display: block; color: var(--color-accent); fill: none; stroke-linecap: square; stroke-linejoin: miter; }
 .embroidery .thread-main { stroke: var(--color-accent); stroke-width: 2; }
 .embroidery .thread-strong { stroke: var(--color-accent-strong); stroke-width: 2.5; }
@@ -60,15 +60,14 @@ button:focus-visible, textarea:focus-visible, input:focus-visible, select:focus-
 .eyebrow { display: block; margin: 0 0 12px; color: var(--color-accent-strong); font: 600 14px/1.2 var(--font-display); letter-spacing: .06em; text-transform: uppercase; }
 h1 { margin: 0; font: 600 clamp(38px, 5vw, 56px)/1 var(--font-display); letter-spacing: .02em; text-transform: uppercase; }
 .chat-empty > p:not(.eyebrow), .simple-page > p:not(.eyebrow) { max-width: 620px; color: var(--color-text-muted); font-size: 18px; }
-.starter-grid, .guide-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 32px; }
-.starter-grid button, .guide-grid button { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; min-height: 68px; padding: 12px 16px; border: 1px solid var(--color-border); border-radius: 4px; background: var(--color-surface); color: var(--color-text); text-align: left; }
+.chat-empty > p:not(.eyebrow) { margin: 20px 0 0; }
+.starter-grid, .guide-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 24px; }
+.starter-grid button, .guide-grid button { display: flex; align-items: center; min-height: 72px; padding: 16px; border: 1px solid var(--color-border); border-radius: 4px; background: var(--color-surface); color: var(--color-text); text-align: left; font-weight: 600; line-height: 1.35; }
 .starter-grid button:hover, .guide-grid button:hover { background: var(--color-surface-raised); }
-.starter-grid span, .guide-grid span { color: var(--color-accent-strong); font: 600 13px var(--font-display); }
-.starter-grid strong, .guide-grid strong { font-weight: 600; }
 .dialogue { flex: 1; min-height: 0; overflow-y: auto; padding: 32px 0; }
 .dialogue h1 { margin-bottom: 28px; font-size: 38px; }
-.dialogue-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
-.dialogue-heading h1 { min-width: 0; overflow-wrap: anywhere; }
+.dialogue-heading { display: flex; justify-content: space-between; align-items: center; gap: 24px; margin-bottom: 24px; }
+.dialogue-heading h1 { min-width: 0; margin: 0; overflow-wrap: anywhere; }
 .dialogue-heading button, .chat-citations button { padding: 8px 12px; border: 1px solid var(--color-border); background: var(--color-surface); color: var(--color-text); }
 .chat-citations { margin: 16px 0 0; padding-left: 20px; }
 .chat-citations li + li { margin-top: 8px; }
@@ -82,9 +81,9 @@ h1 { margin: 0; font: 600 clamp(38px, 5vw, 56px)/1 var(--font-display); letter-s
 .delete-confirm p { margin: 0 0 12px; }
 .delete-confirm button { margin: 0 8px 0 0; padding: 8px 12px; border: 1px solid var(--color-border); background: var(--color-bg); color: var(--color-text); }
 .delete-confirm button:last-child { background: var(--color-text); color: var(--color-bg); }
-.composer { flex: 0 0 auto; padding: 20px 0 24px; border-top: 1px solid var(--color-border); }
+.composer { flex: 0 0 auto; padding: 16px 0 20px; border-top: 1px solid var(--color-border); }
 .composer label { display: block; margin-bottom: 8px; font-weight: 600; }
-.composer textarea { display: block; width: 100%; min-height: 100px; padding: 12px; border: 1px solid var(--color-border); border-radius: 4px; background: var(--color-surface); color: var(--color-text); resize: vertical; }
+.composer textarea { display: block; width: 100%; height: 80px; min-height: 80px; padding: 12px; border: 1px solid var(--color-border); border-radius: 4px; background: var(--color-surface); color: var(--color-text); resize: vertical; }
 .composer-actions { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-top: 12px; }
 .composer-actions span { color: var(--color-text-muted); font-size: 13px; }
 .composer button[type="submit"] { min-width: 130px; background: var(--color-text); color: var(--color-bg); border-color: var(--color-text); font: 600 14px var(--font-display); letter-spacing: .04em; }
@@ -144,6 +143,6 @@ h1 { margin: 0; font: 600 clamp(38px, 5vw, 56px)/1 var(--font-display); letter-s
 .guide-panel > p { color: var(--color-text-muted); }
 @media (max-width: 1100px) { .chat-empty > .embroidery-panel { display: none; } .chat-empty > .embroidery-band { display: block; } .chat-empty > p, .chat-empty > h1, .chat-empty > .starter-grid { max-width: 100%; } }
 @media (max-width: 680px) { .statistics-grid { grid-template-columns: 1fr; } }
-@media (max-width: 900px) { .site-header { flex-wrap: wrap; } .workspace { grid-template-columns: 220px minmax(0, 1fr); gap: 24px; padding: 24px; } .chat-rail { padding-right: 16px; } .materials-layout { grid-template-columns: 1fr; } }
-@media (max-width: 680px) { .site-header { gap: 8px; padding: 12px 16px; } .wordmark { font-size: 20px; } .site-header nav { order: 3; width: 100%; justify-content: space-around; } .site-header nav button { flex: 1; } .theme-toggle, .signout { padding: 6px 8px; font-size: 12px; } .login-page { padding: 48px 16px; } .login-page form { padding: 16px; } .workspace { display: block; flex: 1 1 0; min-height: 0; padding: 16px; } .chat-rail { display: none; position: absolute; z-index: 5; left: 16px; right: 16px; top: 185px; padding: 16px; border: 1px solid var(--color-border); background: var(--color-surface); } .chat-rail.open { display: block; } .mobile-list-close { display: block; width: 100%; margin-bottom: 12px; padding: 8px 12px; border: 1px solid var(--color-border); background: var(--color-bg); color: var(--color-text); } .chat-main { height: 100%; } .chat-topline { gap: 8px; } .chat-topline > span { display: none; } .chat-topline .mobile-list { display: inline-block; } .dialogue { padding-top: 16px; } .dialogue h1 { margin-bottom: 12px; font-size: 32px; } .dialogue-heading { flex-wrap: wrap; } .chat-empty { padding-top: 24px; } .starter-grid, .guide-grid { grid-template-columns: 1fr; gap: 8px; margin-top: 24px; } .composer-actions { align-items: stretch; flex-direction: column; } .simple-page { padding: 40px 16px; } .guide-panel { padding: 16px; } }
+@media (max-width: 900px) { .site-header { flex-wrap: wrap; } .workspace { display: block; padding: 24px; } .chat-rail { display: none; position: absolute; z-index: 5; top: 24px; left: 24px; right: 24px; max-height: min(70vh, 600px); overflow-y: auto; padding: 16px; border: 1px solid var(--color-border); background: var(--color-surface); } .chat-rail.open { display: block; } .mobile-list-close { display: block; width: 100%; margin-bottom: 12px; padding: 8px 12px; border: 1px solid var(--color-border); background: var(--color-bg); color: var(--color-text); } .chat-main { max-width: none; height: 100%; } .chat-topline .mobile-list { display: inline-block; } .materials-layout { grid-template-columns: 1fr; } }
+@media (max-width: 680px) { .site-header { gap: 8px; padding: 12px 16px; } .wordmark { font-size: 20px; } .site-header nav { order: 3; width: 100%; justify-content: space-around; } .site-header nav button { flex: 1; } .theme-toggle, .signout { padding: 6px 8px; font-size: 12px; } .login-page { padding: 48px 16px; } .login-page form { padding: 16px; } .workspace { padding: 16px; } .chat-rail { top: 16px; left: 16px; right: 16px; } .chat-topline { gap: 8px; } .chat-topline > span { display: none; } .dialogue { padding-top: 16px; } .dialogue h1 { font-size: 32px; } .dialogue-heading { flex-wrap: wrap; gap: 16px; margin-bottom: 20px; } .message { padding: 16px; } .message.user { margin-left: 0; } .chat-empty { padding-top: 16px; } .chat-empty .embroidery-band { height: 64px; margin-bottom: 12px; } .chat-empty h1 { font-size: 34px; } .chat-empty > p:not(.eyebrow) { margin-top: 12px; font-size: 16px; } .starter-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 20px; } .starter-grid button { min-height: 76px; padding: 12px; font-size: 14px; } .guide-grid { grid-template-columns: 1fr; gap: 8px; margin-top: 20px; } .guide-grid button { min-height: 56px; } .composer { padding: 12px 0 16px; } .composer textarea { height: 72px; min-height: 72px; } .composer-actions { align-items: stretch; flex-direction: column; gap: 8px; margin-top: 8px; } .composer-actions span { display: none; } .simple-page { padding: 40px 16px; } .guide-panel { padding: 16px; } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; } }
