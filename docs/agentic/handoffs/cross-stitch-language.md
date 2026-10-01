@@ -3,8 +3,8 @@
 ## Objective and actual status
 
 Make cross-stitch the visible chat ornament and remove the Russian loanword for
-"brief" from product-facing text. The implementation and verification are complete
-in the isolated worktree, pending fast-forward integration into `main`.
+"brief" from product-facing text. The implementation was verified in the
+isolated worktree, fast-forwarded into `main`, and pushed to `origin/main`.
 
 ## Worktree / branch / base SHA
 
@@ -70,10 +70,11 @@ pattern needs source provenance and cultural review under `DESIGN.md`.
 
 ## Exact next step
 
-Commit the isolated slice, fast-forward `main` without touching its user-owned
-files, push `origin/main`, and confirm the remote SHA.
+Continue product validation with target users. The frontend slice is integrated;
+its code commit is `3f6e1b5b1318e2cba1ea4de7d9416430e2b48b15`. The
+primary checkout's user-owned concept edit and roadmap draft were preserved.
 
 ## Cleanup completed or retention reason
 
-The isolated Compose project is disposable and can be removed after the live
-check. Keep the worktree and branch as review evidence after integration.
+The isolated Compose project and its disposable volumes were removed after the
+live check. Keep the worktree and branch as review evidence.
