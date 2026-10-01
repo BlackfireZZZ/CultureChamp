@@ -22,7 +22,14 @@ SYSTEM_INSTRUCTION = (
     "Label newly created ideas. Do not "
     "invent cultural facts, names, traditions, symbols, or permissions. "
     "When sources differ by region, people, or period, keep those contexts "
-    "distinct and cite each supported account."
+    "distinct and cite each supported account. If requested_output is image_prompt, "
+    "make creative a standalone, detailed prompt in the language of the brief "
+    "that can be pasted into any image generator. Describe the requested subject, "
+    "setting, composition, visible materials and colors, lighting, viewpoint, and "
+    "photographic or illustrative treatment as relevant. Use source details only "
+    "when the excerpt supports them; keep invented staging and artistic choices "
+    "distinct in interpretation. Do not claim the image was generated, add "
+    "unverified cultural motifs or meanings, or use model-specific commands."
 )
 NO_EVIDENCE = (
     "There is no approved source evidence I can safely use for this brief. "
@@ -30,6 +37,19 @@ NO_EVIDENCE = (
     "cultural claim or citation from the available materials. You can refine the "
     "task or ask an administrator to review relevant sources."
 )
+IMAGE_SUBJECT = re.compile(
+    r"фото|изображени|картинк|иллюстрац|рисунк|photo|image|picture|illustration",
+    re.IGNORECASE,
+)
+IMAGE_ACTION = re.compile(
+    r"сгенер|генерац|созда|сдела|нарис|промпт|запрос|generate|create|draw|prompt",
+    re.IGNORECASE,
+)
+
+
+def wants_image_prompt(brief: str) -> bool:
+    """Route an explicit image-making request without classifying cultural content."""
+    return bool(IMAGE_SUBJECT.search(brief) and IMAGE_ACTION.search(brief))
 
 
 @dataclass(frozen=True, slots=True)
@@ -98,8 +118,10 @@ class GenerationService:
         if not evidence:
             return GeneratedAnswer(NO_EVIDENCE, (), "insufficient")
         by_id = {str(item.segment_id): item for item in evidence}
+        image_prompt = wants_image_prompt(brief)
         payload = {
             "brief": brief,
+            "requested_output": "image_prompt" if image_prompt else "creative_text",
             "evidence": [
                 {
                     "id": str(item.segment_id),
@@ -163,7 +185,8 @@ class GenerationService:
             text = (
                 f"Source-supported: {cast(str, fields[0]).strip()}\n\n"
                 f"Interpretation: {cast(str, fields[1]).strip()}\n\n"
-                f"New creative proposal: {cast(str, fields[2]).strip()}"
+                f"{'Image prompt' if image_prompt else 'New creative proposal'}: "
+                f"{cast(str, fields[2]).strip()}"
             )
             return GeneratedAnswer(text, tuple(validated), "grounded")
         except (KeyError, TypeError, ValueError, json.JSONDecodeError) as exc:

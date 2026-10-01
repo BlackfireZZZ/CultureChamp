@@ -3,6 +3,29 @@
 Status: **integration in progress** · Integration base: `790564e2fa8aa3c7307c5a8df3c633829c2745aa` ·
 Integration owner: **Codex integration agent** · Last updated: 2026-09-30
 
+## 2026-10-02 image-prompt MVP follow-up
+
+Hypothesis: an explicit image-making brief can yield a detailed, source-grounded
+text prompt usable in any image generator, while the interface offers GigaChat
+only as an optional destination. The smallest falsifying checks are an
+application test for output routing, evidence and citation validation, and a
+component check for prompt presentation and the external link. Existing text
+briefs must retain their response format; missing approved evidence must stop
+the model call. This extends UC-05 without changing the chat API or producing an
+image. The implementation is owned on `agent/image-prompt-mvp` in the existing
+isolated worktree, based on `4e8dc2c`; the primary checkout's user edits remain
+outside this branch.
+
+The focused checks and `make check` passed: 101 backend tests (18 skipped because
+the optional PostgreSQL and Qdrant services were stopped), 25 frontend tests,
+20 ML tests, lint, type checks, build, architecture, OpenAPI and Compose checks.
+Six Playwright shell and visual checks passed against updated snapshots. One
+synthetic live YandexGPT call returned a grounded image prompt with one exact
+citation; no cultural source or private answer was printed. Official GigaChat
+documentation describes image generation, but this workflow transfers no prompt
+there. Expert review of cultural output and third-party image quality remain
+open. See the [follow-up handoff](../../agentic/handoffs/image-prompt-mvp.md).
+
 ## 2026-10-02 engineering pilot update
 
 The isolated `agent/engineering-visual-gaps` worktree started at `3a837aa` with

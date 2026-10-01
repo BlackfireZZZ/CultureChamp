@@ -73,7 +73,13 @@ class GroundedFakeProvider:
             {
                 "fact": excerpt,
                 "interpretation": "This excerpt may inform the brief; review its context.",
-                "creative": "Use the brief to draft a contemporary concept, labelled as new work.",
+                "creative": (
+                    "Create a self-authored synthetic image of the requested subject. "
+                    "Use a clear composition, visible materials, lighting and viewpoint. "
+                    "Keep cultural details limited to the cited excerpt."
+                    if payload.get("requested_output") == "image_prompt" else
+                    "Use the brief to draft a contemporary concept, labelled as new work."
+                ),
                 "citations": [evidence["id"]],
             },
             ensure_ascii=False,

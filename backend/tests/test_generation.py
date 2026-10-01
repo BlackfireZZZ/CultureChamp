@@ -6,7 +6,12 @@ import pytest
 
 from app.application.access import Actor, Role
 from app.application.evidence_hygiene import has_explicit_prompt_control
-from app.application.generation import GenerationService, GenerationUnavailable, ModelCall
+from app.application.generation import (
+    GenerationService,
+    GenerationUnavailable,
+    ModelCall,
+    wants_image_prompt,
+)
 from app.application.retrieval import EvidenceSegment, RetrievalService
 from app.domain.sources import Citation, Locator
 from app.infrastructure.model.application_adapter import GatewayModelPort
@@ -68,17 +73,65 @@ class CaptureGroundedFakeProvider(GroundedFakeProvider):
         return await super().generate(request)
 
 
-def test_no_evidence_skips_model_and_makes_no_cultural_claim() -> None:
+@pytest.mark.parametrize("brief", ["Brief", "Сгенерируй фото с культурным мотивом"])
+def test_no_evidence_skips_model_and_makes_no_cultural_claim(brief: str) -> None:
     async def check() -> None:
         model = CaptureModel("never called")
         service = GenerationService(
             RetrievalService(StaticSearch(())), model, CurrentCitation(None)
         )
-        result = await service.generate(Actor("user-1", Role.USER), "Brief", "turn-1")
+        result = await service.generate(Actor("user-1", Role.USER), brief, "turn-1")
         assert result.evidence_status == "insufficient"
         assert result.citations == ()
         assert "no approved source evidence" in result.text
         assert model.calls == []
+
+    asyncio.run(check())
+
+
+@pytest.mark.parametrize("brief, expected", [
+    ("Сгенерируй фото подарка", True),
+    ("Составь промпт для изображения подарка", True),
+    ("Generate a photo of a gift", True),
+    ("Напиши рассказ о фотографии", False),
+    ("Предложи название проекта", False),
+])
+def test_explicit_image_request_detection(brief: str, expected: bool) -> None:
+    assert wants_image_prompt(brief) is expected
+
+
+def test_image_request_returns_model_agnostic_prompt_with_exact_citation() -> None:
+    async def check() -> None:
+        revision_id, segment_id = uuid4(), uuid4()
+        locator = Locator(page=3)
+        evidence = EvidenceSegment(
+            revision_id, segment_id, "Self-authored visual fixture", None, locator,
+            "The synthetic gift box has a blue lid.", 0.8,
+        )
+        model = CaptureModel(json.dumps({
+            "fact": "The synthetic gift box has a blue lid.",
+            "interpretation": "A contemporary product photo can use the documented blue lid.",
+            "creative": "Фотореалистичная предметная фотография подарочной коробки "
+                        "с синей крышкой на нейтральном фоне. Композиция по центру, "
+                        "мягкий боковой свет, вид под углом 45 градусов; "
+                        "без дополнительных символов.",
+            "citations": [str(segment_id)],
+        }, ensure_ascii=False))
+        service = GenerationService(
+            RetrievalService(StaticSearch((evidence,))), model,
+            CurrentCitation(Citation(revision_id, segment_id, locator)),
+        )
+        result = await service.generate(
+            Actor("user-1", Role.USER), "Сгенерируй фото подарочной коробки", "turn-image",
+        )
+        assert result.evidence_status == "grounded"
+        assert result.citations == (Citation(revision_id, segment_id, locator),)
+        assert "Image prompt: Фотореалистичная" in result.text
+        assert "New creative proposal:" not in result.text
+        payload = json.loads(model.calls[0].prompt)
+        assert payload["requested_output"] == "image_prompt"
+        assert "any image generator" in model.calls[0].system
+        assert payload["evidence"][0]["id"] == str(segment_id)
 
     asyncio.run(check())
 

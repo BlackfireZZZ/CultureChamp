@@ -15,6 +15,15 @@ test("separates source support, interpretation, and new work", () => {
   expect(screen.getByText("Synthetic excerpt.")).toBeInTheDocument()
 })
 
+test("image request shows a copyable prompt and optional external example", () => {
+  const imageDetail = { ...detail, turns: [{ ...detail.turns[0], user_text: "Сгенерируй фото", assistant_text: "Source-supported: Synthetic blue lid.\n\nInterpretation: Contemporary studio setting.\n\nImage prompt: Фотореалистичная предметная фотография коробки с синей крышкой, мягкий боковой свет." }] } as ChatDetail
+  render(<ChatDialogue summary={summary} detail={imageDetail} pending={false} error={false} onRetry={vi.fn()} onCitation={vi.fn()} onDelete={vi.fn()} deleting={false} />)
+  expect(screen.getByRole("heading", { name: "Промпт для изображения" })).toBeInTheDocument()
+  expect(screen.getByText(/Фотореалистичная предметная фотография/)).toBeInTheDocument()
+  expect(screen.getByRole("link", { name: "GigaChat" })).toHaveAttribute("href", "https://giga.chat/")
+  expect(screen.getByRole("link", { name: "GigaChat" })).toHaveAttribute("rel", "noopener noreferrer")
+})
+
 test("requires explicit deletion and restores focus after cancellation", () => {
   const onDelete = vi.fn()
   render(<ChatDialogue summary={summary} detail={detail} pending={false} error={false} onRetry={vi.fn()} onCitation={vi.fn()} onDelete={onDelete} deleting={false} />)

@@ -50,7 +50,15 @@ the requested tradition.
 | UC-02 | Event concept | "Draft a short event concept for [audience/occasion] inspired by documented practices from [region/community]. Explain the sources and identify any elements that need expert or community review." | Program idea, sources, sensitive-element boundary. |
 | UC-03 | Naming direction | "Propose naming directions for [project] connected to [place/community]. Explain the documented words or references used, and do not invent a translation or traditional meaning." | Names as proposals; language and etymology claims require sources. |
 | UC-04 | Story or greeting | "Write a short [story/greeting] for [audience] using verified references to [place/community]. Mark newly invented plot or wording separately from documented facts." | Usable text with a clear fact/fiction boundary. |
-| UC-05 | Visual brief in text | "Describe a visual direction for [product/event] informed by documented materials from [region/community]. Give a text-only brief and cite the basis of any specific motif or symbol." | Textual art direction only; no generated image in MVP. |
+| UC-05 | Image-generator prompt | "Write a detailed, model-agnostic image prompt for [subject/use] informed by approved materials from [region/community]. Specify composition, visible materials, colors, light and viewpoint. Cite supported cultural details and separate new staging choices." | A copyable text prompt, source citations and an explicit fact/interpretation boundary; no generated image in MVP. |
+
+An explicit request such as "generate a photo" returns a ready-to-use text prompt
+for any image generator. The interface may link to [GigaChat](https://giga.chat/)
+as one example; CultureChamp does not send the prompt to that service. The
+image prompt may use only visually describable source-supported cultural details.
+If evidence is missing, the assistant does not invent a culturally specific
+prompt. Image generation, quality and third-party usage terms remain outside
+this MVP text workflow.
 | UC-06 | Explore sources | "What approved materials do you have about [topic], and which ones are most relevant to [task]?" | A source-oriented answer with navigable document references. |
 
 The starter set is a hypothesis. Validate labels and wording with target users and
