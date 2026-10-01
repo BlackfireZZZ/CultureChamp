@@ -2,8 +2,10 @@
 
 Objective and actual status: Connect a synthetic YandexGPT path, aggregate
 request statistics, and a bounded image-in-PDF retrieval pilot. Implementation,
-focused checks and the full clean-database gate pass. Integration status is
-recorded below when the branch reaches main.
+focused checks and the full clean-database gate pass. The verified branch was
+fast-forward merged into local `main` at `46472d6` after incorporating the
+newer `535a862` main changes. The primary checkout's user-owned dirty files
+remained untouched.
 
 Worktree / branch / base SHA: `/home/blackfire/.codex/worktrees/0eb7/CultureChamp`,
 `agent/engineering-visual-gaps`, `3a837aabf7baf34cc5a74d41aafd40117a82ff9d`.
@@ -59,9 +61,9 @@ there is no calibrated abstention threshold. Large or malformed images are
 excluded by extraction limits. Query traffic and Qdrant storage cost on a
 representative corpus are unmeasured.
 
-Exact next step: Record final main integration commit; then
-discuss user scenarios and LLM prompts with the owner.
+Exact next step: Discuss user scenarios and LLM prompts with the owner. Real
+source and expert gates remain open before cultural release.
 
-Cleanup completed or retention reason: The isolated branch and worktree remain
-until integration has been verified. Disposable Compose resources can be removed
-after the checks.
+Cleanup completed or retention reason: The branch and worktree are retained as
+the reproducible checked-out integration workspace. Disposable Compose
+resources used by the checks can be removed after final audit.
