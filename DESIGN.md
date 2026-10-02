@@ -1,6 +1,6 @@
 ---
 version: alpha
-name: CultureChamp
+name: Лад
 description: "A culturally grounded creative generation service. Warm editorial interfaces meet cross-stitch-inspired ornament, with equal-quality dark and light themes."
 colors:
   dark-bg: "#080706"
@@ -116,7 +116,7 @@ components:
     rounded: "{rounded.sm}"
 ---
 
-# CultureChamp — Design Contract
+# Лад — Design Contract
 
 > **One-line design language:** a culturally grounded creative workspace built with the visual grammar of embroidery — warm black or unbleached linen, restrained gold/ochre thread, tall condensed display type, geometric cross-stitch ornament, and occasional hand-drawn arrows — while the actual product remains clear, fast, task-first, and source-aware.
 
@@ -133,7 +133,7 @@ The supplied festival poster is the primary visual reference for mood: black fie
 
 ### Product context
 
-CultureChamp helps users turn a practical creative task into a contemporary result
+Лад helps users turn a practical creative task into a contemporary result
 grounded in verified cultural heritage sources. The primary interface should make
 the task, generated result, source basis, and cultural context understandable.
 Source exploration may support this workflow; a map or archive browser is optional.
@@ -475,19 +475,14 @@ Implementation rules:
 - Do not use low-quality raster screenshots of textile patterns as UI chrome.
 - Decorative SVGs MUST be `aria-hidden="true"` unless they communicate actual information.
 
-For the MVP chat, embroidery MUST be a recognizable visual element. The empty
-chat uses one substantial, fully cross-stitched botanical and geometric panel
-beside the task on wide screens; at narrow widths it becomes one horizontal
-stitched band above the task. An existing dialogue uses the same band as a quiet
-header. Reuse the same stitch unit, palette, and motif logic in both variants.
-This is one ornament zone in each view and stays outside answer text, citations,
-and the composer. The motif is an original pan-regional abstraction: its leaves
-and diamonds make no claim about a named people's tradition. Review the actual
-rendered light and dark screens at 360, 768, 1280, and 1440 px; if the motif
-disappears at ordinary viewing size, increase its clarity within the two-zone
-and area budgets rather than adding unrelated decorations. Keep chat controls
-near-square to suit the stitch grid; round icon controls remain an option when
-their semantics and touch target warrant it.
+For the MVP chat, embroidery remains a recognizable but restrained element.
+Place one short stitched band above the opening question in both desktop and
+mobile layouts. Keep it outside the composer, suggestions, answers, and
+citations. The conversation view may omit ornament to prioritize reading.
+Reuse the same stitch unit and palette; the motif is an original pan-regional
+abstraction and makes no claim about a named people's tradition. Review the
+rendered light and dark screens at 360, 768, 1280, and 1440 px. Keep chat
+controls near-square to suit the stitch grid.
 
 Starter cards and the task guide MUST show plain-language task names. Internal
 use-case identifiers such as `UC-04` may be retained for analytics and tests but
@@ -555,6 +550,31 @@ Mobile navigation SHOULD use a conventional menu/drawer or bottom navigation if 
 - Must retain a visible hover/focus treatment.
 
 Buttons MUST have a minimum touch target of 44×44px.
+
+Every interactive button MUST be recognizable before hover. Use a visible
+boundary, filled surface, or clearly separated navigation item; plain body text
+alone is not a button treatment. Hover, pressed, keyboard focus, selected, and
+disabled states MUST be perceptibly distinct in both themes. A text action is
+appropriate only when its placement, underline or directional mark makes its
+action obvious. Avoid a lone rectangular button floating beside a heading or
+above unrelated copy: align the control with the content it affects.
+
+### Chat and materials workflow
+
+- Before the first message, center the question and growing composer within the
+  reading column. Show a short row of starter ideas directly below the composer.
+- Starter ideas disappear when the user types or selects one; choosing one fills
+  an editable composer and never sends automatically.
+- The composer grows with content up to a bounded height, then scrolls within
+  the field. After the first message, the conversation scrolls above the composer.
+- Put the new-chat action in the history rail as an obvious full-row control.
+  Keep global navigation and session controls in deliberate, aligned groups.
+- Materials lead with one search field and results. Put secondary filters and
+  image search behind clearly labelled disclosure controls. Empty states keep
+  the next useful action near the message.
+- Do not create a separately scrolling starter-ideas block. Scrollbars in long
+  histories and documents should be subtle but remain operable by mouse,
+  touch, and keyboard. Do not suppress focus indicators with scrollbar styling.
 
 ### Cards
 

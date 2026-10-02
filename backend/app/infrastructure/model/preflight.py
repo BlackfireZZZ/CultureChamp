@@ -39,7 +39,7 @@ class SyntheticSearch:
                 REVISION_ID,
                 SEGMENT_ID,
                 "Self-authored synthetic preflight fixture",
-                "CultureChamp technical test",
+                "Лад technical test",
                 SYNTHETIC_LOCATOR,
                 SYNTHETIC_TEXT,
                 1.0,

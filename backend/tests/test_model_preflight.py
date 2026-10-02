@@ -31,7 +31,7 @@ def test_preflight_sends_only_fixed_synthetic_evidence_and_validates_citation() 
         assert payload["evidence"] == [{
             "id": str(SEGMENT_ID),
             "title": "Self-authored synthetic preflight fixture",
-            "creator": "CultureChamp technical test",
+            "creator": "Лад technical test",
             "revision_id": "ed2236df-2b22-4aa4-985f-18ed26e899ef",
             "locator": {
                 "page": None, "section": "Synthetic section 1", "sheet": None,

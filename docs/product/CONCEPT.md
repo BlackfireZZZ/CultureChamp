@@ -1,4 +1,4 @@
-# Project Concept
+# Лад — Project Concept
 
 ## 1. Core Concept
 

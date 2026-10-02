@@ -14,7 +14,7 @@ check_ready() {
 }
 
 check_frontend() {
-  check_response "$frontend_url/" 'CultureChamp' 'Frontend'
+  check_response "$frontend_url/" 'Лад' 'Frontend'
   echo 'Frontend smoke check passed.'
 }
 

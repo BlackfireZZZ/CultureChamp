@@ -41,6 +41,13 @@ export function App() {
   const effectiveView = isUser ? view : "admin"
 
   useEffect(() => {
+    const input = composerRef.current
+    if (!input) return
+    input.style.height = "auto"
+    input.style.height = `${Math.min(input.scrollHeight, 180)}px`
+  }, [draft, selectedId, effectiveView])
+
+  useEffect(() => {
     if (listOpen) listRef.current?.querySelector("button")?.focus()
   }, [listOpen])
 
@@ -110,36 +117,39 @@ export function App() {
     return <div className="app-shell"><main className="login-page"><p role="alert">Не удалось проверить сессию.</p><button type="button" onClick={() => void auth.session.refetch()}>Повторить</button></main></div>
   }
   if (!auth.session.data) {
-    return <div className="app-shell"><header className="site-header"><span className="wordmark">CultureChamp</span><button className="theme-toggle" type="button" onClick={toggleTheme}>{theme === "dark" ? "Светлая тема" : "Тёмная тема"}</button></header><LoginScreen onSubmit={(username, password) => auth.signIn.mutate({ username, password })} pending={auth.signIn.isPending} error={auth.signIn.error} /></div>
+    return <div className="app-shell"><header className="site-header"><span className="wordmark">Лад</span><button className="theme-toggle" type="button" onClick={toggleTheme}>{theme === "dark" ? "Светлая тема" : "Тёмная тема"}</button></header><LoginScreen onSubmit={(username, password) => auth.signIn.mutate({ username, password })} pending={auth.signIn.isPending} error={auth.signIn.error} /></div>
   }
   const activeSession = auth.session.data
 
   return <div className="app-shell">
     <header className="site-header">
-      <span className="wordmark">CultureChamp</span>
-      <nav aria-label="Основная навигация">
+      <span className="wordmark">Лад</span>
+      <div className="header-controls"><nav aria-label="Основная навигация">
         {isUser && <button aria-current={effectiveView === "chat" ? "page" : undefined} type="button" onClick={() => setView("chat")}>Чат</button>}
         {isUser && <button aria-current={effectiveView === "materials" ? "page" : undefined} type="button" onClick={() => { setCitationTarget(null); setView("materials") }}>Материалы</button>}
         {activeSession.user.role === "admin" && <button aria-current={effectiveView === "admin" ? "page" : undefined} type="button" onClick={() => setView("admin")}>Админка</button>}
-      </nav>
+      </nav><div className="header-actions">
       <button className="theme-toggle" type="button" onClick={toggleTheme}>{theme === "dark" ? "Светлая тема" : "Тёмная тема"}</button>
       <button className="signout" type="button" onClick={() => auth.signOut.mutate(activeSession.csrf_token, { onSuccess: () => { setSelectedId(null); setPendingRequest(null); setDraft(""); setView("chat") } })} disabled={auth.signOut.isPending}>Выйти</button>
+      </div></div>
     </header>
     {auth.signOut.isError && <p className="auth-error" role="alert">Не удалось выйти. Повторите попытку.</p>}
-    {isUser && <div className="preview-banner" role="status">Пилотный чат · культурные источники доступны только после проверки и одобрения</div>}
     {effectiveView === "chat" && isUser && <main className="workspace">
       <aside ref={listRef} className={`chat-rail ${listOpen ? "open" : ""}`} aria-label="Список чатов" onKeyDown={onListKeyDown}>
         <button className="mobile-list-close" type="button" onClick={closeList}>Закрыть список чатов</button>
-        <div className="rail-heading"><h2>Чаты</h2><button type="button" onClick={() => { setSelectedId(null); setPendingRequest(null); setListOpen(false); composerRef.current?.focus() }}>Новый чат</button></div>
+        <button className="new-chat-button" type="button" onClick={() => { setSelectedId(null); setDraft(""); setStarterId(null); setPendingRequest(null); setListOpen(false); window.setTimeout(() => composerRef.current?.focus(), 0) }}><span aria-hidden="true">＋</span> Новый чат</button>
+        <div className="rail-heading"><h2>История</h2></div>
         {chats.isPending && <p role="status">Загружаем чаты…</p>}
         {chats.isError && <p role="alert">Не удалось загрузить чаты. <button type="button" onClick={() => void chats.refetch()}>Повторить</button></p>}
         {chats.isSuccess && allChats.length === 0 && <p>Пока нет чатов. Начните с задачи.</p>}
         <ul>{allChats.map((chat) => <li key={chat.id}><button aria-current={selectedId === chat.id ? "page" : undefined} type="button" onClick={() => { setSelectedId(chat.id); setPendingRequest(null); setListOpen(false) }}>{chat.title}</button></li>)}</ul>
       </aside>
-      <div className="chat-main">
-        <div className="chat-topline"><button ref={listTriggerRef} className="mobile-list" type="button" aria-expanded={listOpen} onClick={() => setListOpen(!listOpen)}>Чаты</button><span>Творческая задача</span><button ref={guideTriggerRef} type="button" onClick={() => setGuideOpen(true)}>Что можно сделать?</button></div>
-        {selected ? <ChatDialogue summary={selected} detail={detail.data} pending={detail.isPending} error={detail.isError} onRetry={() => void detail.refetch()} onCitation={(citation) => { setCitationTarget(citation); setView("materials") }} onDelete={() => { void actions.remove.mutateAsync(selected.id).then(() => setSelectedId(null)).catch(() => setSendError(true)) }} deleting={actions.remove.isPending} onRate={(requestId, rating, comment) => actions.rate.mutateAsync({ chatId: selected.id, requestId, rating, comment })} /> : <section className="chat-empty"><Embroidery variant="panel" /><Embroidery variant="band" /><p className="eyebrow">Начните с задачи</p><h1>Идея с культурным контекстом</h1><p>Опишите, что хотите создать. Источники будут доступны после проверки прав и одобрения материалов.</p><div className="starter-grid">{starters.map((item) => <button key={item.id} type="button" onClick={() => chooseStarter(item.prompt)}>{item.label}</button>)}</div></section>}
-        <form className="composer" onSubmit={(event) => { void send(event) }}><label htmlFor="task">Ваша задача</label><textarea id="task" ref={composerRef} value={draft} onChange={(event) => { setDraft(event.target.value); setPendingRequest(null) }} onKeyDown={onComposerKeyDown} placeholder="Например: подготовить текст для музейной вводной панели…" rows={3} /><div className="composer-actions"><span>Enter — отправить · Shift+Enter — новая строка</span><button type="submit" disabled={!draft.trim() || pending}>{pending ? "Готовим ответ…" : "Отправить"}</button></div>{pending && <p role="status">Ищем источники и готовим ответ…</p>}{sendError && <p role="alert">Не удалось отправить задачу. Текст сохранён; повторите отправку.</p>}</form>
+      <div className={`chat-main ${selected ? "has-chat" : "is-empty"}`}>
+        <div className="chat-topline"><button ref={listTriggerRef} className="mobile-list" type="button" aria-expanded={listOpen} onClick={() => setListOpen(!listOpen)}>Чаты</button>{selected && <span>Чат</span>}{selected && <button ref={guideTriggerRef} type="button" onClick={() => setGuideOpen(true)}>Что можно сделать?</button>}</div>
+        {selected ? <ChatDialogue summary={selected} detail={detail.data} pending={detail.isPending} error={detail.isError} onRetry={() => void detail.refetch()} onCitation={(citation) => { setCitationTarget(citation); setView("materials") }} onDelete={() => { void actions.remove.mutateAsync(selected.id).then(() => setSelectedId(null)).catch(() => setSendError(true)) }} deleting={actions.remove.isPending} onRate={(requestId, rating, comment) => actions.rate.mutateAsync({ chatId: selected.id, requestId, rating, comment })} /> : <div className="chat-launch"><section className="chat-empty"><Embroidery variant="band" /><p className="eyebrow">Творческая задача</p><h1>Идея с культурным контекстом</h1><p>Что вы хотите создать?</p></section>
+        <form className="composer" onSubmit={(event) => { void send(event) }}><label htmlFor="task">Ваша задача</label><textarea id="task" ref={composerRef} value={draft} onChange={(event) => { setDraft(event.target.value); setPendingRequest(null) }} onKeyDown={onComposerKeyDown} placeholder="Опишите задачу…" rows={1} /><div className="composer-actions"><span>Enter — отправить · Shift+Enter — новая строка</span><button type="submit" disabled={!draft.trim() || pending}>{pending ? "Готовим ответ…" : "Отправить"}</button></div>{pending && <p role="status">Ищем источники и готовим ответ…</p>}{sendError && <p role="alert">Не удалось отправить задачу. Текст сохранён; повторите отправку.</p>}</form>
+        {!draft.trim() && <section className="starter-section" aria-label="Идеи для начала"><div className="starter-heading"><span>Попробуйте начать с идеи</span><button ref={guideTriggerRef} type="button" onClick={() => setGuideOpen(true)}>Что можно сделать?</button></div><div className="starter-grid">{starters.slice(0, 3).map((item) => <button key={item.id} type="button" onClick={() => chooseStarter(item.prompt)}>{item.label}</button>)}</div></section>}</div>}
+        {selected && <form className="composer" onSubmit={(event) => { void send(event) }}><label htmlFor="task">Ваша задача</label><textarea id="task" ref={composerRef} value={draft} onChange={(event) => { setDraft(event.target.value); setPendingRequest(null) }} onKeyDown={onComposerKeyDown} placeholder="Продолжите разговор…" rows={1} /><div className="composer-actions"><span>Enter — отправить · Shift+Enter — новая строка</span><button type="submit" disabled={!draft.trim() || pending}>{pending ? "Готовим ответ…" : "Отправить"}</button></div>{pending && <p role="status">Ищем источники и готовим ответ…</p>}{sendError && <p role="alert">Не удалось отправить задачу. Текст сохранён; повторите отправку.</p>}</form>}
       </div>
     </main>}
     {effectiveView === "materials" && isUser && <MaterialsView onBack={() => { setView("chat"); window.setTimeout(() => composerRef.current?.focus(), 0) }} citationTarget={citationTarget} />}

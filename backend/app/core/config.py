@@ -5,7 +5,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    app_name: str = "CultureChamp API"
+    app_name: str = "Лад API"
     app_env: str = "development"
     database_url: str = (
         "postgresql+asyncpg://culturechamp:culturechamp_local@localhost:5432/culturechamp"

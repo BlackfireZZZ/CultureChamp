@@ -2,7 +2,7 @@
 
 ## Repository mission
 
-CultureChamp helps people create contemporary, culturally specific concepts and
+Лад helps people create contemporary, culturally specific concepts and
 content using verified heritage sources from the peoples of Russia. The canonical
 product concept is `docs/product/CONCEPT.md`. The primary workflow starts from a
 creative task and produces a usable result with traceable cultural references where

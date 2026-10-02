@@ -79,7 +79,7 @@ test("live synthetic source flows from admin review to cited chat and revocation
     expect(await initialMaterials.json(), "live check needs an empty approved corpus").toEqual([])
     await userPage.getByRole("button", { name: "Материалы" }).click()
     await expect(userPage.getByText(title)).toHaveCount(0)
-    await userPage.getByRole("button", { name: "Вернуться к чату" }).first().click()
+    await userPage.getByRole("button", { name: /К чату|Вернуться к чату/ }).first().click()
     const requestIds: string[] = []
     await userPage.route("**/api/v1/chats/*/messages", async (route) => {
       const payload = route.request().postDataJSON() as { request_id: string }
@@ -148,6 +148,7 @@ test("live synthetic source flows from admin review to cited chat and revocation
 
     await userPage.getByRole("button", { name: "Материалы" }).click()
     const filter = userPage.getByRole("form", { name: "Поиск материалов" })
+    await filter.getByText("Дополнительные фильтры").click()
     await filter.getByRole("textbox", { name: "Регион" }).fill(region)
     await filter.getByRole("button", { name: "Найти" }).click()
     await expect(userPage.getByRole("button", { name: new RegExp(title) })).toBeVisible()
@@ -155,7 +156,7 @@ test("live synthetic source flows from admin review to cited chat and revocation
     await filter.getByRole("textbox", { name: "Регион" }).fill("Unrelated region")
     await filter.getByRole("button", { name: "Найти" }).click()
     await expect(userPage.getByRole("heading", { name: "Материалов по запросу не найдено" })).toBeVisible()
-    await userPage.getByRole("button", { name: "Вернуться к чату" }).first().click()
+    await userPage.getByRole("button", { name: /К чату|Вернуться к чату/ }).first().click()
 
     await userPage.getByRole("button", { name: "Новый чат" }).click()
     await userPage.getByRole("textbox", { name: "Ваша задача" }).fill(approvedTask)
@@ -204,7 +205,7 @@ test("live synthetic source flows from admin review to cited chat and revocation
         const data = (await response.json()) as { result: { payload: { revision_id: string } }[] }
         return data.result[0]?.payload.revision_id ?? null
       }, { timeout: 180_000 }).toBe(intake.revision_id)
-      await userPage.getByRole("button", { name: "Вернуться к чату" }).first().click()
+      await userPage.getByRole("button", { name: /К чату|Вернуться к чату/ }).first().click()
       await userPage.getByRole("textbox", { name: "Ваша задача" }).fill(cell)
       await userPage.getByRole("button", { name: "Отправить" }).click()
       await expect(userPage.getByRole("heading", { name: "Подтверждено источником" })).toHaveCount(2)
@@ -310,6 +311,7 @@ test("live synthetic source flows from admin review to cited chat and revocation
     }, { timeout: 180_000 }).toBe(approvedRevisionId)
 
     const workbookFilter = userPage.getByRole("form", { name: "Поиск материалов" })
+    await workbookFilter.getByText("Дополнительные фильтры").click()
     await workbookFilter.getByRole("combobox", { name: "Тип документа" }).selectOption("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
     await workbookFilter.getByRole("button", { name: "Найти" }).click()
     await userPage.getByRole("button", { name: new RegExp(workbookTitle) }).click()
@@ -320,7 +322,7 @@ test("live synthetic source flows from admin review to cited chat and revocation
     const workbookDownload = await workbookDownloadPromise
     expect(await readFile(await workbookDownload.path())).toEqual(workbook)
 
-    await userPage.getByRole("button", { name: "Вернуться к чату" }).first().click()
+    await userPage.getByRole("button", { name: /К чату|Вернуться к чату/ }).first().click()
     await userPage.getByRole("button", { name: "Новый чат" }).click()
     const workbookTask = "Item: Example A; Count: 7"
     await userPage.getByRole("textbox", { name: "Ваша задача" }).fill(workbookTask)

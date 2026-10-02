@@ -70,22 +70,27 @@ export function MaterialsView({ onBack, citationTarget = null }: { onBack: () =>
   const hasFilters = Object.values(filters).some(Boolean)
 
   return <main className="simple-page materials-page">
-    <button type="button" onClick={onBack}>Вернуться к чату</button>
-    <p className="eyebrow">Материалы</p>
-    <h1>Проверенные источники</h1>
-    <p>Здесь видны только одобренные ревизии. Локатор и текст каждого фрагмента относятся к указанной ревизии.</p>
+    <div className="materials-intro"><button className="back-to-chat" type="button" onClick={onBack}>← К чату</button>
+    <p className="eyebrow">Библиотека Лада</p>
+    <h1>Материалы</h1>
+    <p>Найдите источник и откройте его фрагменты. Здесь показаны проверенные материалы.</p></div>
+    <div className="materials-tools">
     <form className="material-filters" onSubmit={applyFilters} aria-label="Поиск материалов">
-      <label>Поиск по названию, описанию, автору или метке<input name="q" maxLength={100} /></label>
+      <label className="material-search">Поиск материалов<input name="q" maxLength={100} placeholder="Название, автор или тема" /></label>
+      <div className="material-filter-actions"><button type="submit">Найти</button><button type="reset" onClick={() => { setFilters({}); setRevisionId(null) }}>Сбросить</button></div>
+      <details className="advanced-filters"><summary>Дополнительные фильтры</summary><div className="advanced-filter-grid">
       <label>Регион<input name="region" maxLength={100} /></label>
       <label>Народ<input name="people" maxLength={100} /></label>
       <label>Период<input name="period" maxLength={100} /></label>
       <label>Тип документа<select name="media_type"><option value="">Все типы</option><option value="application/pdf">PDF</option><option value="text/plain">TXT</option><option value="text/csv">CSV</option><option value={xlsxMediaType}>XLSX</option></select></label>
-      <div className="material-filter-actions"><button type="submit">Найти</button><button type="reset" onClick={() => { setFilters({}); setRevisionId(null) }}>Сбросить</button></div>
+      </div></details>
     </form>
+    <details className="visual-search"><summary>Поиск по изображениям PDF</summary>
     <form className="material-filters" onSubmit={(event) => { event.preventDefault(); setVisualQuery(visualDraft.trim()) }} aria-label="Поиск по изображениям PDF">
-      <label>Поиск по изображениям PDF<input value={visualDraft} onChange={(event) => setVisualDraft(event.target.value)} minLength={2} maxLength={200} placeholder="Например: красный круг и синие полосы" /></label>
+      <label>Описание изображения<input value={visualDraft} onChange={(event) => setVisualDraft(event.target.value)} minLength={2} maxLength={200} placeholder="Например: красный круг и синие полосы" /></label>
       <div className="material-filter-actions"><button type="submit" disabled={visualDraft.trim().length < 2}>Найти изображения</button></div>
     </form>
+    </details></div>
     {visualQuery && <section aria-label="Найденные изображения">
       <h2>Совпадения по изображению</h2>
       <p>Экспериментальный поиск: совпадение изображения не подтверждает культурный факт. Проверьте страницу и контекст оригинала.</p>
@@ -96,7 +101,7 @@ export function MaterialsView({ onBack, citationTarget = null }: { onBack: () =>
     </section>}
     {list.isPending && <p role="status">Загружаем материалы…</p>}
     {list.isError && <div role="alert"><p>Не удалось загрузить материалы.</p><button type="button" onClick={() => void list.refetch()}>Повторить</button></div>}
-    {list.isSuccess && list.data.length === 0 && <div className="empty-panel"><h2>{hasFilters ? "Материалов по запросу не найдено" : "Одобренных материалов пока нет"}</h2><p>{hasFilters ? "Уточните поиск или сбросьте фильтры." : "Кандидатные источники не показываются до проверки прав, контекста и точной ревизии."}</p><button type="button" onClick={onBack}>Вернуться к чату</button></div>}
+    {list.isSuccess && list.data.length === 0 && <div className="empty-panel"><h2>{hasFilters ? "Материалов по запросу не найдено" : "Материалов пока нет"}</h2><p>{hasFilters ? "Попробуйте другое слово или сбросьте фильтры." : "Источники появятся здесь после проверки и одобрения."}</p><button type="button" onClick={onBack}>Вернуться к чату</button></div>}
     {list.isSuccess && list.data.length > 0 && <div className="materials-layout">
       <section aria-label="Список одобренных материалов"><h2>Одобренные ревизии</h2><ul className="material-list">{list.data.map((item) => <li key={item.revision_id}><button type="button" aria-current={revisionId === item.revision_id ? "true" : undefined} onClick={() => choose(item.revision_id)}><strong>{item.title}</strong>{item.description && <span>{item.description}</span>}<span>{item.creator || "Автор не указан"} · {formatLabel(item.media_type)}</span><span>{item.tags.map((tag) => tag.value).join(" · ") || "Без меток"}</span></button></li>)}</ul></section>
       <section aria-label="Точный источник" className="material-detail">

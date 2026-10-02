@@ -1,1 +1,1 @@
-"""CultureChamp backend."""
+"""Лад backend."""

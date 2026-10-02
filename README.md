@@ -1,6 +1,6 @@
-# CultureChamp
+# Лад
 
-CultureChamp is a service for creating contemporary concepts and content using
+Лад is a service for creating contemporary concepts and content using
 verified cultural heritage sources from the peoples of Russia. A user starts with a
 practical creative task; the service generates a useful result and, where relevant,
 shows the cultural sources and context behind it.

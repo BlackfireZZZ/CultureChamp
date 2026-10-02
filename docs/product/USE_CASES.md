@@ -54,7 +54,7 @@ the requested tradition.
 
 An explicit request such as "generate a photo" returns a ready-to-use text prompt
 for any image generator. The interface may link to [GigaChat](https://giga.chat/)
-as one example; CultureChamp does not send the prompt to that service. The
+as one example; Лад does not send the prompt to that service. The
 image prompt may use only visually describable source-supported cultural details.
 If evidence is missing, the assistant does not invent a culturally specific
 prompt. Image generation, quality and third-party usage terms remain outside

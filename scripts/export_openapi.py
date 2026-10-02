@@ -13,7 +13,7 @@ DEFAULT_OUTPUT = ROOT / "contracts" / "openapi.json"
 
 
 def render_openapi() -> str:
-    os.environ["APP_NAME"] = "CultureChamp API"
+    os.environ["APP_NAME"] = "Лад API"
     sys.path.insert(0, str(BACKEND_ROOT))
     from app.main import app  # noqa: PLC0415
 

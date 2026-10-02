@@ -39,11 +39,15 @@ test("each starter fills an editable composer without sending", async () => {
   renderApp()
   await screen.findByRole("heading", { name: "Идея с культурным контекстом" })
   for (const starter of starters) {
-    fireEvent.click(screen.getByRole("button", { name: starter.label }))
+    fireEvent.click(screen.getByRole("button", { name: "Что можно сделать?" }))
+    fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: starter.label }))
     const composer = screen.getByRole<HTMLTextAreaElement>("textbox", { name: "Ваша задача" })
     expect(composer.value.length).toBeGreaterThan(20)
     fireEvent.change(composer, { target: { value: "Моя изменённая задача" } })
     expect(composer.value).toBe("Моя изменённая задача")
+    expect(screen.queryByRole("region", { name: "Идеи для начала" })).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole("button", { name: "Новый чат" }))
+    expect(composer.value).toBe("")
   }
   expect(screen.queryByText("Демонстрационный ответ. Серверная генерация и проверенные ссылки пока не подключены.")).not.toBeInTheDocument()
 })
@@ -61,7 +65,7 @@ test("guide sends a persisted task and shows an honest no-evidence answer", asyn
   const calls = vi.mocked(fetch).mock.calls
   const sent = calls.find(([url, options]) => url === "/api/v1/chats/chat-1/messages" && options?.method === "POST")
   expect(JSON.parse(sent?.[1]?.body as string)).toMatchObject({ starter_id: "UC-06" })
-  expect(screen.getByRole("status", { name: "" }).textContent).toContain("Пилотный чат")
+  expect(screen.queryByRole("region", { name: "Идеи для начала" })).not.toBeInTheDocument()
 })
 
 test("materials show no unapproved candidates", async () => {
@@ -69,7 +73,7 @@ test("materials show no unapproved candidates", async () => {
   renderApp()
   await screen.findByRole("heading", { name: "Идея с культурным контекстом" })
   fireEvent.click(screen.getByRole("button", { name: "Материалы" }))
-  expect(await screen.findByText("Одобренных материалов пока нет")).toBeInTheDocument()
+  expect(await screen.findByText("Материалов пока нет")).toBeInTheDocument()
   expect(screen.queryByText(/PDF-02/)).not.toBeInTheDocument()
 })
 
@@ -105,6 +109,7 @@ test("materials search uses approved-only server filters and can be reset", asyn
   expect(await screen.findByRole("button", { name: /Synthetic table/ })).toBeInTheDocument()
   expect(screen.getByText("Curator-written synthetic summary")).toBeInTheDocument()
   const form = screen.getByRole("form", { name: "Поиск материалов" })
+  fireEvent.click(within(form).getByText("Дополнительные фильтры"))
   fireEvent.change(within(form).getByRole("textbox", { name: "Регион" }), { target: { value: "Other" } })
   fireEvent.click(within(form).getByRole("button", { name: "Найти" }))
   expect(await screen.findByRole("heading", { name: "Материалов по запросу не найдено" })).toBeInTheDocument()
@@ -146,7 +151,7 @@ test("a chat citation opens the exact approved segment and returns to chat", asy
   fireEvent.click(await screen.findByRole("button", { name: "Источник · страница 7" }))
   const excerpt = await screen.findByText("Точный синтетический фрагмент.")
   expect(excerpt.closest("li")).toHaveFocus()
-  fireEvent.click(screen.getByRole("button", { name: "Вернуться к чату" }))
+  fireEvent.click(screen.getByRole("button", { name: "← К чату" }))
   expect(await screen.findByText("Source-supported: Synthetic fact")).toBeInTheDocument()
 })
 
@@ -221,7 +226,7 @@ test("materials error can be retried without showing candidates", async () => {
   fireEvent.click(screen.getByRole("button", { name: "Материалы" }))
   expect(await screen.findByRole("alert")).toHaveTextContent("Не удалось загрузить материалы")
   fireEvent.click(within(screen.getByRole("alert")).getByRole("button", { name: "Повторить" }))
-  expect(await screen.findByText("Одобренных материалов пока нет")).toBeInTheDocument()
+  expect(await screen.findByText("Материалов пока нет")).toBeInTheDocument()
   expect(attempts).toBe(2)
 })
 
