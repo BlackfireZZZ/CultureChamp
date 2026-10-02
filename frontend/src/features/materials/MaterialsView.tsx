@@ -1,13 +1,14 @@
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import type { FormEvent } from "react"
 
 import { approvedPageUrl } from "../../api/materials"
-import { sourceLocationLabel } from "../../api/locators"
 import type { MaterialFilters } from "../../api/materials"
 import type { ChatCitation } from "../../api/chats"
 import { useMaterial, useMaterials, useVisualSearch } from "./useMaterials"
+import "./materials.css"
 
 const xlsxMediaType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+const emptyCitations: readonly ChatCitation[] = []
 function safeOriginUrl(value: string): string | null {
   try {
     const url = new URL(value)
@@ -22,29 +23,48 @@ const formatLabel = (mediaType: string) => {
   return mediaType
 }
 
-export function MaterialsView({ onBack, citationTarget = null }: { onBack: () => void; citationTarget?: ChatCitation | null }) {
+export function MaterialsView({ onBack, citationTarget = null, citations = emptyCitations }: { onBack: () => void; citationTarget?: ChatCitation | null; citations?: readonly ChatCitation[] }) {
   const [revisionId, setRevisionId] = useState<string | null>(citationTarget?.revision_id ?? null)
   const [filters, setFilters] = useState<MaterialFilters>({})
   const [visualQuery, setVisualQuery] = useState("")
+  const [activeMatch, setActiveMatch] = useState(0)
+  const [searchMode, setSearchMode] = useState(false)
   const list = useMaterials(filters)
   const visuals = useVisualSearch(visualQuery)
   const detail = useMaterial(revisionId)
+  const lastScrollKey = useRef("")
   const headingRef = useRef<HTMLHeadingElement>(null)
-  const citedSegmentRef = useCallback((node: HTMLLIElement | null) => {
-    if (node) window.requestAnimationFrame(() => { if (node.isConnected) node.focus() })
-  }, [])
+  const chatRevisionIds = useMemo(() => new Set([citationTarget?.revision_id, ...citations.map((item) => item.revision_id)].filter((id): id is string => Boolean(id))), [citationTarget, citations])
+  const contextual = citationTarget !== null && !searchMode
+  const visibleMaterials = list.isSuccess ? list.data.filter((item) => !contextual || chatRevisionIds.has(item.revision_id)) : []
+  const matches = useMemo(() => detail.data?.segments.filter((segment) => citations.some((item) => item.available && item.revision_id === revisionId && item.segment_id === segment.segment_id) || citationTarget?.revision_id === revisionId && citationTarget.segment_id === segment.segment_id) ?? [], [citationTarget, citations, detail.data, revisionId])
+  const matchIds = useMemo(() => new Set(matches.map((segment) => segment.segment_id)), [matches])
 
   useEffect(() => {
     if (!detail.isSuccess || !revisionId) return
+    const firstIndex = citationTarget?.revision_id === revisionId ? Math.max(0, matches.findIndex((segment) => segment.segment_id === citationTarget.segment_id)) : 0
+    const scrollKey = `${revisionId}:${citationTarget?.segment_id ?? ""}:${detail.dataUpdatedAt}`
+    if (lastScrollKey.current === scrollKey) return
+    lastScrollKey.current = scrollKey
     const timer = window.setTimeout(() => {
-      if (citationTarget?.revision_id === revisionId) {
-        const segment = document.getElementById(`segment-${citationTarget.segment_id}`)
-        if (segment) segment.focus()
-        else headingRef.current?.focus()
-      } else headingRef.current?.focus()
+      setActiveMatch(firstIndex)
+      if (matches[firstIndex]) {
+        const target = document.getElementById(`segment-${matches[firstIndex].segment_id}`)
+        target?.scrollIntoView?.({ behavior: "auto", block: "center" })
+        target?.focus({ preventScroll: true })
+      } else headingRef.current?.focus({ preventScroll: true })
     }, 0)
     return () => window.clearTimeout(timer)
-  }, [detail.isSuccess, detail.dataUpdatedAt, revisionId, citationTarget])
+  }, [detail.isSuccess, detail.dataUpdatedAt, revisionId, citationTarget, matches])
+
+  function moveMatch(direction: -1 | 1) {
+    if (!matches.length) return
+    const next = Math.max(0, Math.min(matches.length - 1, activeMatch + direction))
+    setActiveMatch(next)
+    const target = document.getElementById(`segment-${matches[next].segment_id}`)
+    target?.scrollIntoView?.({ behavior: window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "center" })
+    target?.focus({ preventScroll: true })
+  }
 
   function choose(id: string) {
     setRevisionId(id)
@@ -65,20 +85,23 @@ export function MaterialsView({ onBack, citationTarget = null }: { onBack: () =>
       media_type: mediaType === "application/pdf" || mediaType === "text/plain" || mediaType === "text/csv" || mediaType === xlsxMediaType ? mediaType : undefined,
     })
     setVisualQuery(query.length >= 2 ? query : "")
+    setSearchMode(true)
     setRevisionId(null)
   }
 
   const hasFilters = Object.values(filters).some(Boolean)
+  const source = detail.data
+  const originalUrl = source?.original_available ? `/api/v1/materials/${encodeURIComponent(source.revision_id)}/original` : null
 
   return <main className="simple-page materials-page">
     <div className="materials-intro"><button className="back-to-chat" type="button" onClick={onBack}>← К чату</button>
     <p className="eyebrow">Библиотека Лада</p>
-    <h1>Материалы</h1>
-    <p>Ищите по теме, названию или описанию. Откройте материал и изучите его в контексте.</p></div>
+    <h1>{contextual ? "Источники этого чата" : "Материалы"}</h1>
+    <p>{contextual ? "Читайте документ целиком. Отмеченные места связаны с ответом." : "Ищите по теме, названию или описанию. Откройте материал и изучите его в контексте."}</p></div>
     <div className="materials-tools">
     <form className="material-filters" onSubmit={applyFilters} aria-label="Поиск материалов">
       <label className="material-search">Поиск материалов<input name="q" maxLength={100} placeholder="Название, автор или тема" /></label>
-      <div className="material-filter-actions"><button type="submit">Найти</button><button type="reset" onClick={() => { setFilters({}); setVisualQuery(""); setRevisionId(null) }}>Сбросить</button></div>
+      <div className="material-filter-actions"><button type="submit">Найти</button><button type="reset" onClick={() => { setFilters({}); setVisualQuery(""); setSearchMode(false); setRevisionId(citationTarget?.revision_id ?? null) }}>Сбросить</button></div>
       <details className="advanced-filters"><summary>Дополнительные фильтры</summary><div className="advanced-filter-grid">
       <label>Регион<input name="region" maxLength={100} /></label>
       <label>Народ<input name="people" maxLength={100} /></label>
@@ -89,28 +112,27 @@ export function MaterialsView({ onBack, citationTarget = null }: { onBack: () =>
     </div>
     {list.isPending && <p role="status">Загружаем материалы…</p>}
     {list.isError && <div role="alert"><p>Не удалось загрузить материалы.</p><button type="button" onClick={() => void list.refetch()}>Повторить</button></div>}
-    {list.isSuccess && list.data.length === 0 && (!visualQuery || visuals.isSuccess && visuals.data.length === 0) && <div className="empty-panel"><h2>{hasFilters ? "Материалов по запросу не найдено" : "Материалов пока нет"}</h2><p>{hasFilters ? "Попробуйте другое слово или сбросьте фильтры." : "Источники появятся здесь после проверки и одобрения."}</p><button type="button" onClick={onBack}>Вернуться к чату</button></div>}
-    {list.isSuccess && list.data.length > 0 && <div className="materials-layout">
-      <section aria-label="Список материалов"><h2>Источники</h2><ul className="material-list">{list.data.map((item) => <li key={item.revision_id}><button type="button" aria-current={revisionId === item.revision_id ? "true" : undefined} onClick={() => choose(item.revision_id)}><strong>{item.title}</strong>{item.description && <span>{item.description}</span>}<span>{item.creator || "Автор не указан"} · {formatLabel(item.media_type)}</span><span>{item.tags.map((tag) => tag.value).join(" · ") || "Без меток"}</span></button></li>)}</ul></section>
-      <section aria-label="Точный источник" className="material-detail">
-        {!revisionId && <p>Выберите материал, чтобы увидеть точную ревизию и фрагменты.</p>}
-        {revisionId && detail.isPending && <p role="status">Загружаем источник…</p>}
+    {list.isSuccess && visibleMaterials.length === 0 && (!visualQuery || visuals.isSuccess && visuals.data.length === 0) && <div className="empty-panel"><h2>{hasFilters ? "Материалов по запросу не найдено" : contextual ? "Источники чата недоступны" : "Материалов пока нет"}</h2><p>{hasFilters ? "Попробуйте другое слово или сбросьте фильтры." : contextual ? "Возможно, источник был отозван." : "Источники появятся здесь после проверки и одобрения."}</p><button type="button" onClick={onBack}>Вернуться к чату</button></div>}
+    {list.isSuccess && visibleMaterials.length > 0 && <div className="materials-layout">
+      <aside className="material-catalogue" aria-label="Список материалов"><h2>{contextual ? "В ответе" : "Источники"}</h2><ul className="material-list">{visibleMaterials.map((item) => <li key={item.revision_id}><button type="button" aria-current={revisionId === item.revision_id ? "true" : undefined} onClick={() => choose(item.revision_id)}><strong>{item.title}</strong>{item.description && <span>{item.description}</span>}<span>{item.creator || "Автор не указан"}</span></button></li>)}</ul></aside>
+      <section aria-label="Документ" className="material-detail">
+        {!revisionId && <p className="material-placeholder">Выберите материал, чтобы прочитать его.</p>}
+        {revisionId && detail.isPending && <p role="status">Загружаем документ…</p>}
         {revisionId && detail.isError && <div role="alert"><p>Источник сейчас недоступен. Возможно, ревизия была отозвана.</p><button type="button" onClick={() => void detail.refetch()}>Повторить</button></div>}
-        {revisionId && detail.isSuccess && <>
-          <h2 ref={headingRef} tabIndex={-1}>{detail.data.title}</h2>
-          {citationTarget?.revision_id === revisionId && !detail.data.segments.some((segment) => segment.segment_id === citationTarget.segment_id) && <p role="alert">Цитируемый фрагмент больше недоступен в этой ревизии. Откройте другой доступный фрагмент или вернитесь к чату.</p>}
-          {detail.data.description && <p>{detail.data.description}</p>}
-          <dl className="material-meta"><dt>Версия источника</dt><dd>{detail.data.revision_id}</dd><dt>Автор</dt><dd>{detail.data.creator || "Не указан"}</dd><dt>Происхождение</dt><dd>{safeOriginUrl(detail.data.origin_url) ? <a href={safeOriginUrl(detail.data.origin_url)!} target="_blank" rel="noopener noreferrer">Ссылка на источник</a> : "Не указано"}</dd><dt>Тип</dt><dd>{formatLabel(detail.data.media_type)}</dd><dt>Метки</dt><dd>{detail.data.tags.map((tag) => `${tag.kind}: ${tag.value}`).join(" · ") || "Не указаны"}</dd><dt>Права и условия</dt><dd>{detail.data.rights_usage_note || "Не указаны"}</dd></dl>
-          {!detail.data.original_available && <p>Оригинальный файл недоступен по условиям использования. Проверьте страницу и текст фрагмента ниже.</p>}
-          {detail.data.original_available && detail.data.media_type === "text/csv" && <a href={`/api/v1/materials/${encodeURIComponent(detail.data.revision_id)}/original`}>Скачать исходную таблицу CSV</a>}
-          {detail.data.original_available && detail.data.media_type === "text/plain" && <a href={`/api/v1/materials/${encodeURIComponent(detail.data.revision_id)}/original`}>Скачать исходный текст TXT</a>}
-          {detail.data.original_available && detail.data.media_type === xlsxMediaType && <a href={`/api/v1/materials/${encodeURIComponent(detail.data.revision_id)}/original`}>Скачать исходную книгу XLSX</a>}
-          {detail.data.segments.length === 0 ? <p>В этой ревизии нет доступных фрагментов.</p> : <ol className="segment-list">{detail.data.segments.map((segment) => {
-            const page = segment.locator.page
-            const sourceUrl = page === null ? null : approvedPageUrl(detail.data.revision_id, page, detail.data.original_available)
-            const location = sourceLocationLabel(segment.locator)
-            return <li id={`segment-${segment.segment_id}`} tabIndex={-1} ref={citationTarget?.segment_id === segment.segment_id ? citedSegmentRef : undefined} className={citationTarget?.segment_id === segment.segment_id ? "cited-segment" : undefined} key={segment.segment_id}><h3>{location}</h3><p>{segment.text}</p>{sourceUrl && <a href={sourceUrl} target="_blank" rel="noopener noreferrer">Открыть страницу {page} в источнике</a>}</li>
-          })}</ol>}
+        {revisionId && detail.isSuccess && source && <>
+          <div className="document-toolbar"><div className="document-heading"><p className="document-kicker">Документ{source.creator ? ` · ${source.creator}` : ""}</p><h2 ref={headingRef} tabIndex={-1}>{source.title}</h2></div><div className="document-actions">
+            <details className="document-info"><summary aria-label="Сведения о документе" title="Сведения о документе"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><circle cx="12" cy="12" r="9" /><path d="M12 11v5M12 8h.01" /></svg></summary><div className="document-info-popover"><h3>Сведения о документе</h3><dl><dt>Автор</dt><dd>{source.creator || "Не указан"}</dd><dt>Тип</dt><dd>{formatLabel(source.media_type)}</dd><dt>Происхождение</dt><dd>{safeOriginUrl(source.origin_url) ? <a href={safeOriginUrl(source.origin_url)!} target="_blank" rel="noopener noreferrer">Перейти к источнику</a> : "Не указано"}</dd><dt>Оригинал</dt><dd>{originalUrl ? "Доступен для скачивания" : "Не загружен"}</dd></dl></div></details>
+            {originalUrl && <a className="document-icon-link" href={originalUrl} download title={`Скачать документ ${formatLabel(source.media_type)}`} aria-label={`Скачать исходн${source.media_type === "text/plain" ? "ый текст" : source.media_type === "text/csv" ? "ую таблицу" : source.media_type === xlsxMediaType ? "ую книгу" : "ый документ"} ${formatLabel(source.media_type)}`}><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3v11m-4-4 4 4 4-4M4 17v3h16v-3" /></svg></a>}
+          </div></div>
+          {citationTarget?.revision_id === revisionId && !source.segments.some((segment) => segment.segment_id === citationTarget.segment_id) && <p role="alert">Цитируемый текст больше недоступен. Вы можете прочитать остальные доступные части документа.</p>}
+          {matches.length > 0 && <nav className="document-match-nav" aria-label="Релевантные места"><span><strong>{activeMatch + 1} из {matches.length}</strong> {matches.length === 1 ? "отмеченного места" : "отмеченных мест"}</span><div><button type="button" aria-label="Предыдущее отмеченное место" title="Предыдущее отмеченное место" disabled={activeMatch === 0} onClick={() => moveMatch(-1)}>↑</button><button type="button" aria-label="Следующее отмеченное место" title="Следующее отмеченное место" disabled={activeMatch === matches.length - 1} onClick={() => moveMatch(1)}>↓</button></div></nav>}
+          <article className="document-paper" aria-label={`Текст документа «${source.title}»`}>
+            {source.segments.length === 0 ? <p>Текст документа сейчас недоступен.</p> : source.segments.map((segment) => {
+              const marked = matchIds.has(segment.segment_id)
+              const pageLink = segment.locator.page === null ? null : approvedPageUrl(source.revision_id, segment.locator.page, source.original_available)
+              return <div className={`document-paragraph${marked ? " is-relevant" : ""}${matches[activeMatch]?.segment_id === segment.segment_id ? " is-current" : ""}`} id={`segment-${segment.segment_id}`} tabIndex={-1} key={segment.segment_id}><p>{marked ? <mark>{segment.text}</mark> : segment.text}</p>{pageLink && <a className="document-page-link" href={pageLink} target="_blank" rel="noopener noreferrer" aria-label={`Открыть страницу ${segment.locator.page} в источнике`} title={`Открыть страницу ${segment.locator.page} в источнике`}>↗</a>}</div>
+            })}
+          </article>
         </>}
       </section>
     </div>}

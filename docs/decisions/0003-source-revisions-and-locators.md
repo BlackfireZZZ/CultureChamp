@@ -7,21 +7,17 @@ Date: 2026-09-30
 
 The [product concept](../product/CONCEPT.md) requires traceable cultural claims and
 separation of facts, interpretation and creative output. The
-[source policy](../product/SOURCE_POLICY.md) holds all supplied PDFs pending rights
-and cultural review. The [format check](../product/FORMAT_MATRIX.md) found stable
+[source policy](../product/SOURCE_POLICY.md) permits the supplied corpus in local
+application and model tests while requiring exact-revision publication and
+extraction checks. The [format check](../product/FORMAT_MATRIX.md) found stable
 physical PDF pages but unreliable column reading order in PDF-03, and no table
 fixture. A citation cannot silently point to replacement bytes or an inferred
 printed page number.
 
 Comparable design inputs:
 
-- [Crossref license metadata](https://www.crossref.org/documentation/schema-library/markup-guide-metadata-segments/license-information/)
-  distinguishes licenses for the version of record, accepted manuscript and text
-  mining. We likewise separate rights by allowed action instead of treating a DOI
-  or access link as permission.
-- [Library of Congress sensitive-materials policy](https://www.loc.gov/acq/devpol/materialsindigenouspeoplesaccess.pdf)
-  distinguishes access, reproduction and community permission. It is a comparison
-  for review process, not legal authority for this corpus.
+- Exact revision IDs separate the source used in an answer from later replacement
+  files. The application records publication and withdrawal as auditable events.
 - [SQLAlchemy constraints](https://docs.sqlalchemy.org/en/20/core/constraints.html)
   support explicit foreign keys, unique keys and checks; they can enforce locator
   shape and duplicate retry identity. [Alembic guidance](https://alembic.sqlalchemy.org/en/latest/autogenerate.html)
@@ -63,13 +59,12 @@ Comparable design inputs:
    until a real fixture passes S04/C06.
 5. Approval/revocation decisions are append-only events keyed to `revision_id`.
    Decisions for one revision serialize on its revision row, and the latest event
-   is authoritative. Its rights scopes distinguish user text
-   visibility, original-file access and external-provider transfer. Unknown rights
-   default to false. A revocation event immediately fails closed at user retrieval
+   is authoritative. Its current visibility fields distinguish user text,
+   original-file access and model context. A revocation event immediately fails closed at user retrieval
    and display, regardless of stale indexes. Reviewer ID, time, reason and evidence
    are mandatory for approval; the project owner still needs to appoint authority.
-6. User-facing queries must apply current approval, revocation, sensitivity and
-   rights before ranking or serialization. Unknown, held and revoked IDs have the
+6. User-facing queries must apply current publication, revocation and passage
+   exclusions before ranking or serialization. Unknown, draft and revoked IDs have the
    same external lookup result. Admin queries are separately authorized.
 7. PDF intake records a candidate processing row before extraction. A separate
    worker claims rows with a lease and `SKIP LOCKED`, writes all page segments in
@@ -92,7 +87,7 @@ Comparable design inputs:
    Administrators can retrieve the hash-verified private original of a candidate
    or withdrawn revision through a separate admin-only route to compare it with
    extracted segments before making a decision. This review route never changes
-   the user-facing rights check and uses the same generated filename, `nosniff`
+   the user-facing publication check and uses the same generated filename, `nosniff`
    and `no-store` response rules.
 9. The API rejects request bodies above the PDF limit plus bounded multipart
    overhead before parsing the multipart form. The proxy also caps bodies.
@@ -175,7 +170,7 @@ provides the serialization boundary for concurrent review and approval;
 [SQLAlchemy's transaction guidance](https://docs.sqlalchemy.org/en/20/orm/session_transaction.html)
 supports committing the projection and event atomically. This audit records
 who changed catalogue context, but it does not by itself validate the cultural
-accuracy of a tag or description. Source rights and sensitivity decisions still
+accuracy of a tag or description. Publication and sensitivity decisions still
 require the appointed reviewer under S02.
 
 ## Preapproval segment review (2026-10-01)
@@ -225,7 +220,7 @@ external-link, macro, chart, drawing, media and pivot parts, along with duplicat
 ZIP member names. Parsing runs in a separate CPU/memory/time-limited
 process; the parent validates its bounded JSON output. The supported profile has
 at most eight sheets, 2,000 rows, 50 columns and 10,000 nonempty data cells.
-The same exact-revision approval, rights, original-file and revocation rules
+The same exact-revision publication, original-file and revocation rules
 apply as to CSV. No schema migration is needed because the locator already has a
 sheet field. This is a technical format profile, not a claim that arbitrary
 spreadsheets or real cultural tables are semantically correct.

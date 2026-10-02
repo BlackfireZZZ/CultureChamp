@@ -8,6 +8,7 @@ from starlette.middleware.body_limit import RequestBodyLimitMiddleware
 from starlette.requests import Request
 
 from app.api.http_telemetry import http_telemetry
+from app.api.routes.chat_stream import router as chat_stream_router
 from app.api.routes.chats import router as chats_router
 from app.api.routes.health import router as health_router
 from app.api.routes.identity import admin_account_router, auth_router
@@ -79,7 +80,7 @@ def create_app() -> FastAPI:
         CORSMiddleware,
         allow_origins=settings.backend_cors_origins,
         allow_credentials=True,
-        allow_methods=["GET", "POST", "PUT"],
+        allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
         allow_headers=["*"],
     )
     app.add_middleware(RequestBodyLimitMiddleware, max_body_size=MAX_REQUEST_BYTES)
@@ -90,6 +91,7 @@ def create_app() -> FastAPI:
     app.include_router(statistics_router, prefix="/api/v1")
     app.include_router(materials_router, prefix="/api/v1")
     app.include_router(chats_router, prefix="/api/v1")
+    app.include_router(chat_stream_router, prefix="/api/v1")
     app.middleware("http")(http_telemetry)
     return app
 

@@ -21,7 +21,7 @@ claims that any particular cultural fact is present in the approved corpus.
   are planned separately from browsing the inventory.
 - Image, audio, music, and video input or generation follow the first text release.
   They are part of the full-concept backlog, with modality-specific source
-  representations, embeddings and rights review. They must not be implied to work now.
+  representations, embeddings and quality review. They must not be implied to work now.
 
 ## Primary user journey
 
@@ -78,20 +78,20 @@ replace examples that prompt unsupported or stereotyped outputs.
 
 The secondary user tab lists **approved** documents with a title, source
 organization or author, document type, region/community/time tags where known,
-rights/usage note, and a concise description. A detail view shows the original
+and a concise description. A detail view shows the original
 document or a faithful text/table representation and stable locations such as a
 section, page, sheet, row, or cell. Filters and search help discovery; they do not
 replace chat as the primary interaction.
 
 The first ingestion fixtures determine which file formats can be viewed directly.
 If a format cannot be rendered faithfully, show an explicit limitation and provide
-the approved original file through an authorized route when rights allow it.
+the approved original file through an authorized route.
 
 ## Administrator journey
 
 1. The administrator opens a document inventory grouped or filtered by source,
    type, tags, ingestion state, and approval state.
-2. A document detail shows origin, attribution, rights, version, extracted structure,
+2. A document detail shows origin, attribution, version, extracted structure,
    table locations, processing errors, and whether it can appear in user retrieval.
 3. Authorized ingestion creates a new revision and processes it outside the request
    path. The administrator reviews extraction and metadata before approval.
@@ -118,7 +118,7 @@ palette, borders, focus treatment, and restrained ornament.
 - Which model API provider and embedding service meet cost, data-location, language,
   privacy, and reliability requirements?
 - Which document formats and table structures occur in the initial fixtures, and
-  which original files may be shown or downloaded under their rights?
+  how should the original files be shown or downloaded in the document reader?
 - Who may approve or revoke a source, and what evidence establishes "verified"?
 - What retention and deletion rules apply to chat briefs, source files, extracted
   text, and model-provider requests?

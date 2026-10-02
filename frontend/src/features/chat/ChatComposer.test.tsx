@@ -32,6 +32,8 @@ test("voice input appends final Russian speech and can be stopped", () => {
     return <ChatComposer value={value} onChange={setValue} onSubmit={(event) => event.preventDefault()} pending={false} error={false} placeholder="Задача" inputRef={createRef()} onKeyDown={() => {}} />
   }
   render(<Harness />)
+  expect(screen.getByRole("button", { name: "Голосовой ввод" }).parentElement?.parentElement).toContainElement(screen.getByRole("textbox", { name: "Ваша задача" }))
+  expect(screen.getByRole("button", { name: "Отправить" }).parentElement?.parentElement).toContainElement(screen.getByRole("textbox", { name: "Ваша задача" }))
   fireEvent.click(screen.getByRole("button", { name: "Голосовой ввод" }))
   const recognition = recognitions[0]
   expect(recognition.lang).toBe("ru-RU")

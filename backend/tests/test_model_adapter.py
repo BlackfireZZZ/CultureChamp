@@ -235,6 +235,61 @@ def test_http_provider_parses_bounded_response() -> None:
     asyncio.run(_http_provider_parses_bounded_response())
 
 
+def test_http_provider_streams_json_deltas_and_requires_usage() -> None:
+    async def check(include_usage: bool) -> None:
+        def handler(outgoing: httpx.Request) -> httpx.Response:
+            body = json.loads(outgoing.content)
+            assert body["stream"] is True
+            assert body["stream_options"] == {"include_usage": True}
+            events = [
+                {"choices": [{"delta": {"content": '{"fact":"A '},
+                              "finish_reason": None}]},
+                {"choices": [{"delta": {"content": 'fact","citations":[]}'},
+                              "finish_reason": None}]},
+                {"choices": [{"delta": {}, "finish_reason": "stop"}]},
+            ]
+            if include_usage:
+                events.append({"choices": [], "usage": {
+                    "prompt_tokens": 10, "completion_tokens": 6,
+                }})
+            payload = "".join(
+                f"data: {json.dumps(event)}\n\n" for event in events
+            ) + "data: [DONE]\n\n"
+            return httpx.Response(200, content=payload.encode(), headers={
+                "content-type": "text/event-stream",
+            })
+
+        async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+            provider = HttpModelProvider(
+                endpoint="https://approved.example/v1/chat/completions",
+                model="pilot-model", api_key="test-key", policy_approved=True,
+                client=client,
+            )
+            quota = RecordingQuota()
+            deltas: list[str] = []
+
+            async def on_delta(value: str) -> None:
+                deltas.append(value)
+
+            request = ModelRequest(
+                "user-1", "Write a brief", "turn-1", provider_transfer_permitted=True
+            )
+            if include_usage:
+                result = await ModelGateway(provider, quota).generate_stream(
+                    request, on_delta
+                )
+                assert result == ModelResult('{"fact":"A fact","citations":[]}', 10, 6)
+                assert deltas == ['{"fact":"A ', 'fact","citations":[]}']
+                assert quota.finished == [(result, True)]
+            else:
+                with pytest.raises(ModelFailure, match="provider_unavailable"):
+                    await ModelGateway(provider, quota).generate_stream(request, on_delta)
+                assert quota.finished == [(None, False)]
+
+    asyncio.run(check(True))
+    asyncio.run(check(False))
+
+
 async def _http_provider_parses_bounded_response() -> None:
     def handler(outgoing: httpx.Request) -> httpx.Response:
         assert outgoing.headers["idempotency-key"] == "turn-1"

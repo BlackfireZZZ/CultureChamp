@@ -20,13 +20,14 @@ function mockSession(role: "user" | "admin" = "user", failSend = false) {
       return Promise.resolve({ ok: true, status: 201, json: () => Promise.resolve({ id: chat!.id, title: chat!.title, updated_at: "2026-09-30T00:00:00Z" }) })
     }
     if (input === "/api/v1/chats/chat-1" && !options?.method) return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ ...chat, updated_at: "2026-09-30T00:00:00Z" }) })
-    if (input === "/api/v1/chats/chat-1/messages" && options?.method === "POST") {
+    if (input === "/api/v1/chats/chat-1/messages/stream" && options?.method === "POST") {
       if (failSend) return Promise.resolve({ ok: false, status: 503 })
       const payload = JSON.parse(options.body as string) as { text: string; request_id: string }
       const turn = { request_id: payload.request_id, ordinal: 0, user_text: payload.text, assistant_text: "Нет одобренных источников для культурного утверждения.", evidence_status: "insufficient", status: "complete", citations: [] }
       chat!.turns.push(turn)
       chat!.title = payload.text.slice(0, 38)
-      return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(turn) })
+      const events = `event: delta\ndata: ${JSON.stringify({ text: turn.assistant_text })}\n\nevent: complete\ndata: ${JSON.stringify({ turn })}\n\n`
+      return Promise.resolve({ ok: true, status: 200, headers: new Headers({ "content-type": "text/event-stream" }), body: new ReadableStream({ start(controller) { controller.enqueue(new TextEncoder().encode(events)); controller.close() } }) })
     }
     throw new Error("Unexpected request")
   }))
@@ -63,7 +64,7 @@ test("guide sends a persisted task and shows an honest no-evidence answer", asyn
   fireEvent.click(screen.getByRole("button", { name: "Отправить" }))
   await waitFor(() => expect(screen.getByText("Нет одобренных источников для культурного утверждения.")).toBeInTheDocument())
   const calls = vi.mocked(fetch).mock.calls
-  const sent = calls.find(([url, options]) => url === "/api/v1/chats/chat-1/messages" && options?.method === "POST")
+  const sent = calls.find(([url, options]) => url === "/api/v1/chats/chat-1/messages/stream" && options?.method === "POST")
   expect(JSON.parse(sent?.[1]?.body as string)).toMatchObject({ starter_id: "UC-06" })
   expect(screen.queryByRole("region", { name: "Идеи для начала" })).not.toBeInTheDocument()
 })
@@ -150,7 +151,9 @@ test("a chat citation opens the exact approved segment and returns to chat", asy
   fireEvent.click(await screen.findByRole("button", { name: "Синтетическая задача" }))
   fireEvent.click(await screen.findByRole("button", { name: "Источник · страница 7" }))
   const excerpt = await screen.findByText("Точный синтетический фрагмент.")
-  expect(excerpt.closest("li")).toHaveFocus()
+  await waitFor(() => expect(excerpt.closest(".document-paragraph")).toHaveFocus())
+  expect(excerpt.closest("mark")).toBeInTheDocument()
+  expect(screen.queryByText(/Строка 1/)).not.toBeInTheDocument()
   fireEvent.click(screen.getByRole("button", { name: "← К чату" }))
   expect(await screen.findByText("Source-supported: Synthetic fact")).toBeInTheDocument()
 })
@@ -167,7 +170,7 @@ test("a material without original-file rights keeps the locator but offers no PD
   fireEvent.click(await screen.findByRole("button", { name: "Материалы" }))
   fireEvent.click(await screen.findByRole("button", { name: /Только текст/ }))
   expect(await screen.findByText("Одобренный текст.")).toBeInTheDocument()
-  expect(screen.getByText(/Оригинальный файл недоступен/)).toBeInTheDocument()
+  expect(screen.queryByRole("link", { name: /Скачать исходный/ })).not.toBeInTheDocument()
   expect(screen.queryByRole("link", { name: /Открыть страницу/ })).not.toBeInTheDocument()
 })
 
@@ -186,9 +189,10 @@ test("a TXT citation opens its exact line section and original download", async 
   renderApp()
   fireEvent.click(await screen.findByRole("button", { name: "Synthetic task" }))
   fireEvent.click(await screen.findByRole("button", { name: "Источник · строки 1–2" }))
-  expect(await screen.findByRole("heading", { name: "Строки 1–2" })).toBeInTheDocument()
+  expect(await screen.findByText("Synthetic fact")).toBeInTheDocument()
+  expect(screen.queryByRole("heading", { name: "Строки 1–2" })).not.toBeInTheDocument()
   expect(screen.getByRole("link", { name: "Скачать исходный текст TXT" })).toHaveAttribute("href", `/api/v1/materials/${revisionId}/original`)
-  expect(document.getElementById(`segment-${segmentId}`)).toHaveFocus()
+  await waitFor(() => expect(document.getElementById(`segment-${segmentId}`)).toHaveFocus())
 })
 
 test.each([
@@ -205,7 +209,8 @@ test.each([
   renderApp()
   fireEvent.click(await screen.findByRole("button", { name: "Материалы" }))
   fireEvent.click(await screen.findByRole("button", { name: /Synthetic table/ }))
-  expect(await screen.findByRole("heading", { name: "Таблица Synthetic, строка 3, столбец 2" })).toBeInTheDocument()
+  expect(await screen.findByText("Row 3, column 2: seven")).toBeInTheDocument()
+  expect(screen.queryByRole("heading", { name: /Таблица Synthetic/ })).not.toBeInTheDocument()
   expect(screen.getByRole("link", { name: originalLabel })).toHaveAttribute("href", "/api/v1/materials/rev-table/original")
   expect(screen.queryByRole("link", { name: /Открыть страницу/ })).not.toBeInTheDocument()
 })

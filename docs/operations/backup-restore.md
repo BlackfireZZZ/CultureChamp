@@ -1,7 +1,7 @@
 # Text-pilot backup and restore
 
 PostgreSQL is authoritative for accounts, account grant events, chat retention,
-source revisions, metadata and segment review history, rights decisions, exact locators
+source revisions, metadata and segment review history, publication decisions, exact locators
 and vector completion markers. Private source files are authoritative original bytes.
 Qdrant is a derived index and can be rebuilt from approved PostgreSQL
 revisions after the database and originals are restored. A Qdrant snapshot
@@ -134,4 +134,4 @@ The CLI behavior follows [Uvicorn's logging settings](https://www.uvicorn.org/se
 The procedure follows [PostgreSQL's `pg_dump` and `pg_restore` documentation](https://www.postgresql.org/docs/current/backup-dump.html)
 and [Qdrant snapshot/recovery guidance](https://qdrant.tech/documentation/operations/snapshots/).
 The project uses replay for its small text index; Qdrant snapshots may reduce
-rebuild time for larger media collections but need version and rights checks.
+rebuild time for larger media collections but need version and publication-state checks.

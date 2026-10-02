@@ -7,11 +7,9 @@ Date: 2026-09-30
 
 The current source corpus has immutable segments and append-only revision
 decisions. Retrieval must filter the latest exact decision, processing state,
-rights and sensitivity **before** ranking and limiting results. The first
+publication state and sensitivity **before** ranking and limiting results. The first
 provisional qrels have eight cases, including one explicitly synthetic table
-mechanics case. They are agent labels, not expert ground truth. The three PDF
-fixtures remain held from users and external providers; the measurement used
-local, temporary PostgreSQL data only.
+mechanics case. They are agent labels, not expert ground truth. The measurement used local, temporary PostgreSQL data only.
 
 PostgreSQL's [text-search controls](https://www.postgresql.org/docs/17/textsearch-controls.html)
 define query normalization and cover-density ranking, and its
@@ -41,7 +39,7 @@ must separately validate support and cite only segments it actually used.
 
 ## Same-set measurement
 
-The offline runner hash-checked all three held PDFs, parsed their page text in
+The offline runner hash-checked all three supplied PDFs, parsed their page text in
 the bounded subprocess, loaded it and the synthetic table cell into a temporary
 PostgreSQL table, and wrote only locator keys and ranks to the run files. The
 same eight provisional qrels and `k=5` were used for both configurations.
@@ -71,5 +69,5 @@ Obtain expert-confirmed qrels and a real permitted table before choosing a
 release threshold. Compare any dense/hybrid alternative on the same frozen
 corpus and query set with latency and cost. Test claim-level no-evidence and
 sensitive-content guardrails; a lexical score alone cannot make that decision.
-Recheck the plan and latency at realistic corpus size. Revocation and rights
+Recheck the plan and latency at realistic corpus size. Revocation and publication-state
 checks must remain on the authoritative database path even if an index is stale.

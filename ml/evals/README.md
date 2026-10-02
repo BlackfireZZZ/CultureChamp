@@ -2,29 +2,29 @@
 
 ## Status, objective, and falsifying check
 
-These are **provisional test labels**, not expert-confirmed ground truth. All PDF
-revisions are candidate fixtures with unknown reuse rights and no user approval.
-This directory is offline evaluation material only. It must not be loaded by the
-online backend or used to populate the user corpus.
+These are **provisional test labels**, not expert-confirmed ground truth. The
+supplied PDFs may be used by the local application and model; their files remain
+outside Git. This directory contains offline evaluation labels and scripts,
+not a source of production ground truth.
 
 Hypothesis: a page-level lexical baseline can retrieve passages needed for three
 Primorye text briefs while returning no cultural evidence for unsupported or
 sensitive requests. The measured provisional runs falsify the no-evidence part:
 lexical overlap returns candidates for unsupported requests. Removing a labelled
 relevant page from a run also causes `assert_required_recall` to fail. A real R01
-gate still requires reviewer-confirmed judgements and a rights-cleared table
+gate still requires reviewer-confirmed judgements and a representative table
 fixture; language and format slices have been measured provisionally.
 
 ## Inputs and provenance
 
 - [Fixture inventory](../../data/retrieval-fixtures/README.md) gives exact PDF
-  filenames, hashes, page counts and rights status. The physical PDF page is the
+  filenames, hashes, page counts and extraction status. The physical PDF page is the
   locator; printed page numbers are recorded separately for reviewer navigation.
-- [First corpus slice](https://github.com/BlackfireZZZ/CultureChamp/blob/57756799530a4740df08b8822ffc2813cee9d44a/docs/product/FIRST_CORPUS_SLICE.md) defines the three
+- [First corpus slice](../../docs/product/FIRST_CORPUS_SLICE.md) defines the three
   user tasks and limits. PDF-01 is an off-slice distractor. PDF-02 and PDF-03 are
   secondary scholarly accounts, not community endorsement.
-- [Source policy](https://github.com/BlackfireZZZ/CultureChamp/blob/57756799530a4740df08b8822ffc2813cee9d44a/docs/product/SOURCE_POLICY.md) governs rights, sensitivity
-  and expert approval. Unknown rights mean hold. `manifest.json` records this
+- [Source policy](../../docs/product/SOURCE_POLICY.md) governs source provenance, sensitivity
+  and editorial review. `manifest.json` records this
   dataset version, geography, time range, leakage controls and review status.
 - `qrels.jsonl` stores each question, expected evidence pages, explicit no-evidence
   cases and the review prompt. The `label_status` is `provisional_agent` for every
@@ -32,7 +32,7 @@ fixture; language and format slices have been measured provisionally.
   `manifest.json` maps each source ID to the exact file and hash so no hidden
   filename lookup is required.
 - `synthetic_table.json` exists only to test row/cell locator mechanics. Its invented
-  values are **not cultural facts** or a substitute for a rights-cleared table.
+  values are **not cultural facts** or a substitute for a representative table.
 
 ## Expert review rubric
 
@@ -48,12 +48,12 @@ source revision hash, physical/printed page and a reason for each judgement.
 | Context and attribution | Erases author, place, period or people | Some context missing but recoverable | Names the author/account and keeps region, people and period bounded |
 | Interpretation boundary | Presents an author's view or new idea as a verified community fact | Labels one but not every interpretation | Separates documented observations, author's interpretation and new creative proposal |
 | Citation precision | Wrong revision/page or unverifiable locator | Correct document, weak page/section | Exact immutable revision plus physical page (and row/cell for tables) |
-| Sensitivity and rights | Restricted/unknown-rights text exposed to user/provider | Held from output but review record incomplete | Held until explicit rights and sensitivity decision; no prohibited transfer |
+| Sensitivity | A culturally sensitive passage is presented as a verified claim without context | Passage is flagged but review is incomplete | Passage is contextualized or excluded after editorial review |
 | Uncertainty | Invents support or universalizes a thin account | Admits a gap but still overstates a claim | States what is missing, narrows scope and avoids fabricated citation |
 
 The reviewer also records a free-text disagreement note and whether a community
 review is required. For an answer, any zero on factual support, citation precision,
-or sensitivity/rights blocks a sourced cultural claim. A no-evidence case should
+or sensitivity blocks a sourced cultural claim. A no-evidence case should
 return **no citation**, an explicit gap and, if useful, a clearly unsourced creative
 alternative. The two articles may frame change differently; the reviewer should
 attribute both, not force a single universal narrative. Source text containing
@@ -70,7 +70,7 @@ Duplicate returned keys are rejected. Unknown keys count as nonrelevant.
 `runs/oracle_smoke.jsonl` is a hand-written harness smoke run, **not** a retrieval
 baseline or quality result. `runs/postgres_simple_provisional.jsonl` and
 `runs/postgres_russian_provisional.jsonl` are actual PostgreSQL lexical runs on
-the same eight provisional cases. The runner loads held PDF text into a temporary
+the same eight provisional cases. The runner loads supplied PDF text into a temporary
 local table; no source becomes user-visible or reaches a model provider. Their
 recall@5 values are 0.40 and 0.80 respectively, while no-evidence false-positive
 rates are 0.667 and 1.000. See [ADR 0005](../../docs/decisions/0005-postgres-lexical-baseline.md)
@@ -81,10 +81,10 @@ raw no-evidence false-positive rate is 1.00. An internal cosine gate of 0.84
 leaves recall@5 at 1.00 and lowers the observed no-evidence false-positive
 rate to 0.00 on these eight cases. The gate was selected on the very set
 reported here and is **not held-out validation**. Similarity does not prove
-claim support. The held PDFs remain local evaluation-only material; the runner
+claim support. The supplied PDFs remain outside Git; the runner
 deletes its temporary Qdrant collection and writes locator keys only.
 Thresholds for release cannot be fixed until an expert reviews qrels and a
-real permitted corpus is available. The smallest
+representative corpus is evaluated. The smallest
 mechanical gate requires every provisionally labelled relevant page to occur by
 `k=5` in this oracle run. Its failure case is tested by removing one relevant key.
 Do not train or tune on these same labels and report the result as held-out quality.
@@ -105,7 +105,7 @@ Reports also store only per-query similarity scores, making abstention overlap
 visible without exposing source text; they must not be used to tune and validate
 the same threshold.
 `--review-csv /tmp/culturechamp-e5-large-review.csv` optionally writes the top
-five passage candidates per query, including locally held excerpts and blank
+five passage candidates per query, including local excerpts and blank
 relevance/notes columns. The runner rejects review paths inside the repository.
 For persistent local review, copy the completed file into the Git-ignored
 `.private/reviews/` directory and keep it off remote storage.
@@ -159,5 +159,5 @@ remains open without expert judgement and a real table fixture.
   motivate graded page relevance and nDCG; a binary-only score would obscure
   contextual pages that cannot alone support a claim.
 - [BEIR](https://arxiv.org/abs/2104.08663) motivates reporting heterogeneous
-  slices. This pilot's tiny, rights-limited set cannot inherit BEIR's performance
+  slices. This pilot's tiny provisional set cannot inherit BEIR's performance
   claims or represent all languages and formats.

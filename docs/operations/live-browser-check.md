@@ -2,7 +2,7 @@
 
 This check exercises the built frontend, backend, worker, PostgreSQL and Qdrant
 on a separate Compose project. It creates a self-authored CSV and test accounts;
-it does not use the held cultural PDFs or contact a model provider. The default
+it does not use the supplied cultural PDFs or contact a model provider. The default
 fake model proves application wiring and citation navigation, not answer quality.
 
 Use Node 24 and an installed Playwright Chromium. From the repository root:

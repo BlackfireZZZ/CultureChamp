@@ -45,15 +45,14 @@ def test_preflight_sends_only_fixed_synthetic_evidence_and_validates_citation() 
     asyncio.run(check())
 
 
-def test_preflight_rejects_provider_claim_outside_synthetic_evidence() -> None:
+def test_preflight_rejects_provider_citation_outside_synthetic_evidence() -> None:
     class BadProvider:
         async def generate(self, request: ModelRequest) -> ModelResult:
-            payload = json.loads(request.prompt)
             return ModelResult(json.dumps({
                 "fact": "The synthetic swatch is red.",
                 "interpretation": "A test interpretation.",
                 "creative": "A new test proposal.",
-                "citations": [payload["evidence"][0]["id"]],
+                "citations": ["outside-synthetic-evidence"],
             }), 25, 18)
 
     with pytest.raises(GenerationUnavailable):

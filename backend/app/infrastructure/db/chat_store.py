@@ -20,7 +20,7 @@ from app.infrastructure.db.chat_models import ChatCitation, ChatConversation, Ch
 from app.infrastructure.db.source_repository import SourceRepository
 
 RETENTION = timedelta(days=30)
-TURN_LEASE = timedelta(seconds=60)
+TURN_LEASE = timedelta(seconds=120)
 
 
 class SqlChatStore:
@@ -148,6 +148,14 @@ class SqlChatStore:
             chat = await self._owned(session, owner, chat_id, lock=True)
             await session.delete(chat)
 
+    async def rename(self, owner: str, chat_id: UUID, title: str) -> ChatData:
+        async with self.factory.begin() as session:
+            chat = await self._owned(session, owner, chat_id, lock=True)
+            chat.title = title
+            chat.updated_at = datetime.now(UTC)
+            await session.flush()
+            return ChatData(chat.id, chat.title, chat.updated_at)
+
     async def claim(
         self, owner: str, chat_id: UUID, request_id: UUID, text: str, starter_id: str | None
     ) -> TurnClaim:
@@ -197,7 +205,11 @@ class SqlChatStore:
                 )
             )
             if chat.title == "New chat":
-                chat.title = text[:100]
+                first_line = text.splitlines()[0].strip()
+                if len(first_line) > 60:
+                    chat.title = first_line[:57].rsplit(" ", 1)[0].rstrip(" ,.;:")
+                else:
+                    chat.title = first_line
             return TurnClaim(1, None)
 
     async def finish(

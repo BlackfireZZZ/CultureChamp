@@ -14,6 +14,8 @@
 }
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--color-bg); color: var(--color-text); font: 16px/1.5 var(--font-body); }
+a { color: var(--color-accent-strong); text-decoration-line: underline; text-decoration-thickness: 1.5px; text-underline-offset: .18em; }
+a:hover { color: var(--color-accent); text-decoration-thickness: 2px; }
 button, textarea, input, select { font: inherit; }
 button { min-height: 44px; cursor: pointer; }
 button:disabled { cursor: not-allowed; opacity: .6; }
@@ -322,3 +324,19 @@ summary:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 
 @media (prefers-reduced-motion: reduce) {
   .chat-launch, .dialogue, .materials-layout, .visual-results, .guide-panel, .guide-backdrop, .material-detail > h2, .material-detail > .segment-list, .message, .chat-rail.open { animation: none; }
 }
+
+/* The conversation scrolls at the workspace edge while its text remains readable. */
+.workspace { max-width: none; padding-right: 0; }
+.chat-main.has-chat { max-width: none; margin: 0; }
+.chat-main.has-chat .dialogue { width: 100%; }
+.chat-main.has-chat .dialogue > :not(.embroidery-band),
+.chat-main.has-chat .composer,
+.chat-main.has-chat .chat-topline { width: min(calc(100% - 48px), 940px); margin-inline: auto; }
+.chat-main.has-chat .dialogue > .embroidery-band { margin-inline: auto; }
+@media (max-width: 900px) {
+  .workspace { padding-left: 24px; }
+  .chat-main.has-chat .dialogue > :not(.embroidery-band),
+  .chat-main.has-chat .composer,
+  .chat-main.has-chat .chat-topline { width: calc(100% - 24px); }
+}
+@media (max-width: 680px) { .workspace { padding-left: 16px; } }

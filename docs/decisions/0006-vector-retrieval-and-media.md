@@ -20,7 +20,7 @@ product architecture.
 
 ## Decision
 
-- PostgreSQL is authoritative for immutable source revisions, rights, cultural
+- PostgreSQL is authoritative for immutable source revisions, publication state, cultural
   review, visibility, chat ownership and exact locators. It does not hold media
   bytes or serve as the vector search engine.
 - Original text documents, images, audio and video live in private, content
@@ -30,7 +30,7 @@ product architecture.
   text embedding model with an enforced snapshot and weights hash, plus a named
   text vector space. Points refer
   to segment IDs and exact revision IDs; they do not become the source of truth
-  for full text, rights or citation identity.
+  for full text, publication state or citation identity.
 - Ingestion produces modality-specific representations: text passages and table
   rows/cells now; OCR/layout, image regions/captions and visual embeddings,
   audio transcript/time spans and audio embeddings later. Each representation
@@ -75,7 +75,7 @@ values of one field and a [UUID payload index](https://qdrant.tech/documentation
 for selective revision IDs. [FastEmbed](https://github.com/qdrant/fastembed)
 supports local text and image inference. This resembles the product's need for
 multiple searchable media representations, but those examples do not enforce
-CultureChamp's exact-revision rights policy. The post-search database check is
+CultureChamp's exact-revision publication policy. The post-search database check is
 therefore mandatory. [S3's object model](https://docs.aws.amazon.com/AmazonS3/latest/userguide/Welcome.html)
 illustrates the separation of file bytes and vector metadata; the storage API
 choice remains open. A dedicated vector service adds an operational dependency,
@@ -101,7 +101,7 @@ authorization, revocation, citation resolution and clean Compose recovery with
 synthetic sources. The same frozen queries and corpus must compare vector-only
 and lexical/hybrid candidates by language, format, latency and cost. A named
 expert must validate relevance and cultural support before release. Image and
-audio encoders, transcription/OCR, media rights, cross-modal relevance thresholds
+audio encoders, transcription/OCR, media quality, cross-modal relevance thresholds
 and output generation providers are later milestones, not claimed capabilities.
 
 An internal, same-fixture diagnostic found recall@5 of 0.80 for Russian SQL

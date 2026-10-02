@@ -42,7 +42,7 @@ def get_chat_service(request: Request) -> ChatService:
         RetrievalService(
             SqlGovernedVectorSearch(factory, index)
         ),
-        GatewayModelPort(ModelGateway(provider, SqlModelQuota(factory))),
+        GatewayModelPort(ModelGateway(provider, SqlModelQuota(factory), deadline_seconds=90)),
         SqlCitationResolver(factory),
         external=bool(getattr(provider, "requires_provider_transfer", False)),
     )
@@ -89,6 +89,10 @@ class SendInput(BaseModel):
     request_id: UUID
     text: str = Field(min_length=1, max_length=2_000)
     starter_id: Literal["UC-01", "UC-02", "UC-03", "UC-04", "UC-05", "UC-06"] | None = None
+
+
+class RenameInput(BaseModel):
+    title: str = Field(min_length=1, max_length=120)
 
 
 class FeedbackInput(BaseModel):
@@ -170,6 +174,20 @@ async def delete_chat(
     service: Annotated[ChatService, Depends(get_chat_service)],
 ) -> None:
     await service.delete(actor, chat_id)
+
+
+@router.patch("/{chat_id}", response_model=ChatSummaryView)
+async def rename_chat(
+    chat_id: UUID,
+    data: RenameInput,
+    response: Response,
+    actor: Annotated[Actor, Depends(current_user)],
+    service: Annotated[ChatService, Depends(get_chat_service)],
+) -> ChatSummaryView:
+    if not data.title.strip():
+        raise HTTPException(status_code=422, detail="Chat title must contain text")
+    response.headers["Cache-Control"] = "no-store"
+    return _summary(await service.rename(actor, chat_id, data.title))
 
 
 @router.post("/{chat_id}/messages", response_model=ChatTurnView)

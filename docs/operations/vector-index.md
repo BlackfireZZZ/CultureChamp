@@ -61,7 +61,7 @@ DELETE FROM source_vector_indexes;
 Start the worker. It replays all currently approved, eligible revisions from
 PostgreSQL. Keep the entire chat endpoint unavailable during a controlled full
 rebuild until the marker count matches the approved revision count and a synthetic
-paraphrase, held-source and revocation check pass. The routine partial-indexing
+paraphrase, unpublished-source and revocation check pass. The routine partial-indexing
 behavior above is not a full-rebuild readiness check.
 Do not restore an old Qdrant snapshot as an authority for visibility. A model or
 chunking change needs a new named collection/generation and an evaluation before
@@ -74,6 +74,6 @@ The local Docker port is bound to loopback for development. Production requires
 service authentication, network isolation, backups, resource limits and monitoring
 for indexing lag, model failures, Qdrant availability, query latency and stale
 points. The current indexer performs serial work and the search adapter retrieves
-at most 100 vector candidates before current-rights filtering; measure recall at
+at most 100 vector candidates before current-revision filtering; measure recall at
 larger corpus size. The text model, chunking and no-evidence threshold are not
 release quality decisions until the frozen evaluation and expert review pass.

@@ -2,6 +2,7 @@
 
 import json
 import re
+from collections.abc import Awaitable, Callable
 from dataclasses import asdict, dataclass
 from typing import Protocol, cast
 from uuid import UUID
@@ -17,12 +18,15 @@ SYSTEM_INSTRUCTION = (
     "excerpts. Return only a JSON object with exactly these keys: fact, "
     "interpretation, creative, citations. The first three values must be "
     "strings; citations must be a list of cited evidence ID strings. "
-    "The fact must be a short verbatim span "
-    "from a cited excerpt, without adding claims. Attribute interpretations. "
+    "The fact must be copied character-for-character from exactly one of the "
+    "provided fact_options quotes. Cite that quote's evidence ID. Do not join, "
+    "paraphrase, or change its punctuation. Attribute interpretations. "
     "Label newly created ideas. Do not "
     "invent cultural facts, names, traditions, symbols, or permissions. "
     "When sources differ by region, people, or period, keep those contexts "
-    "distinct and cite each supported account. If requested_output is image_prompt, "
+    "distinct and cite each supported account. Use multiple relevant excerpts "
+    "when they support distinct details; cite every excerpt actually used and "
+    "do not cite unused context. If requested_output is image_prompt, "
     "make creative a standalone, detailed prompt in the language of the brief "
     "that can be pasted into any image generator. Describe the requested subject, "
     "setting, composition, visible materials and colors, lighting, viewpoint, and "
@@ -43,11 +47,22 @@ IMAGE_ACTION = re.compile(
     r"сгенер|генерац|созда|сдела|нарис|промпт|запрос|generate|create|draw|prompt",
     re.IGNORECASE,
 )
+MAX_EVIDENCE_SEGMENTS = 8
+MAX_EVIDENCE_CHARS = 12_000
 
 
 def wants_image_prompt(brief: str) -> bool:
     """Route an explicit image-making request without classifying cultural content."""
     return bool(IMAGE_SUBJECT.search(brief) and IMAGE_ACTION.search(brief))
+
+
+def _fact_option(text: str) -> str:
+    normalized = " ".join(text.split())
+    sentence = re.split(r"(?<=[.!?])\s+", normalized, maxsplit=1)[0]
+    if len(sentence) <= 220:
+        return sentence
+    clipped = sentence[:220]
+    return clipped.rsplit(" ", 1)[0] or clipped
 
 
 @dataclass(frozen=True, slots=True)
@@ -61,6 +76,10 @@ class ModelCall:
 
 class ModelPort(Protocol):
     async def generate(self, call: ModelCall) -> str: ...
+
+    async def generate_stream(
+        self, call: ModelCall, on_delta: Callable[[str], Awaitable[None]]
+    ) -> str: ...
 
 
 class CitationPort(Protocol):
@@ -82,6 +101,43 @@ class GeneratedAnswer:
     evidence_status: str
 
 
+class _AnswerPreview:
+    """Expose readable provisional fields from incremental JSON model output."""
+
+    _fields = (
+        ("fact", "Подтверждено источником: "),
+        ("interpretation", "Интерпретация: "),
+        ("creative", "Творческий результат: "),
+    )
+
+    def __init__(self) -> None:
+        self.raw = ""
+        self.emitted: dict[str, str] = {}
+
+    def feed(self, chunk: str) -> str:
+        self.raw += chunk
+        output = ""
+        for key, label in self._fields:
+            match = re.search(
+                rf'"{key}"\s*:\s*"((?:\\.|[^"\\])*)', self.raw,
+                re.DOTALL,
+            )
+            if match is None:
+                continue
+            try:
+                value = json.loads('"' + match.group(1) + '"')
+            except (json.JSONDecodeError, ValueError):
+                continue
+            old = self.emitted.get(key, "")
+            if not isinstance(value, str) or not value.startswith(old) or value == old:
+                continue
+            if not old:
+                output += ("\n\n" if self.emitted else "") + label
+            output += value[len(old):]
+            self.emitted[key] = value
+        return output
+
+
 class GenerationService:
     def __init__(
         self,
@@ -97,11 +153,25 @@ class GenerationService:
         self.external = external
 
     async def generate(self, actor: Actor, brief: str, request_id: str) -> GeneratedAnswer:
+        return await self._generate(actor, brief, request_id, None)
+
+    async def generate_stream(
+        self, actor: Actor, brief: str, request_id: str,
+        on_delta: Callable[[str], Awaitable[None]],
+    ) -> GeneratedAnswer:
+        return await self._generate(actor, brief, request_id, on_delta)
+
+    async def _generate(
+        self, actor: Actor, brief: str, request_id: str,
+        on_delta: Callable[[str], Awaitable[None]] | None,
+    ) -> GeneratedAnswer:
         require_role(actor, Role.USER)
         if not brief.strip() or len(brief) > 2_000 or not request_id.strip():
             raise ValueError("Invalid brief or request ID")
-        retrieved = await self.retrieval.search(actor, brief, for_provider=self.external)
-        evidence = tuple(
+        retrieved = await self.retrieval.search(
+            actor, brief, limit=10, for_provider=self.external
+        )
+        clean = tuple(
             item for item in retrieved
             if not any(has_explicit_prompt_control(part) for part in (
                 item.text,
@@ -113,6 +183,22 @@ class GenerationService:
                 *(part for tag in item.context_tags for part in tag),
             ))
         )
+        substantive = tuple(
+            item for item in clean
+            if item.text.strip().casefold() != item.title.strip().casefold()
+        )
+        candidates = substantive or clean
+        selected: list[EvidenceSegment] = []
+        used_chars = 0
+        for candidate in candidates:
+            excerpt_size = min(len(candidate.text), 2_000)
+            if used_chars + excerpt_size > MAX_EVIDENCE_CHARS:
+                continue
+            selected.append(candidate)
+            used_chars += excerpt_size
+            if len(selected) == MAX_EVIDENCE_SEGMENTS:
+                break
+        evidence = tuple(selected)
         if not evidence:
             return GeneratedAnswer(NO_EVIDENCE, (), "insufficient")
         by_id = {str(item.segment_id): item for item in evidence}
@@ -120,6 +206,10 @@ class GenerationService:
         payload = {
             "brief": brief,
             "requested_output": "image_prompt" if image_prompt else "creative_text",
+            "fact_options": [
+                {"id": str(item.segment_id), "quote": _fact_option(item.text[:2_000])}
+                for item in evidence
+            ],
             "evidence": [
                 {
                     "id": str(item.segment_id),
@@ -137,15 +227,24 @@ class GenerationService:
             ],
         }
         try:
-            raw = await self.model.generate(
-                ModelCall(
-                    actor.subject_id,
-                    request_id,
-                    SYSTEM_INSTRUCTION,
-                    json.dumps(payload, ensure_ascii=False),
-                    self.external,
-                )
+            call = ModelCall(
+                actor.subject_id,
+                request_id,
+                SYSTEM_INSTRUCTION,
+                json.dumps(payload, ensure_ascii=False),
+                self.external,
             )
+            if on_delta is None:
+                raw = await self.model.generate(call)
+            else:
+                preview = _AnswerPreview()
+
+                async def readable_delta(chunk: str) -> None:
+                    readable = preview.feed(chunk)
+                    if readable:
+                        await on_delta(readable)
+
+                raw = await self.model.generate_stream(call, readable_delta)
             answer = json.loads(raw)
             if not isinstance(answer, dict):
                 raise ValueError("invalid answer")
@@ -173,15 +272,19 @@ class GenerationService:
             fact_pattern = re.compile(
                 rf"(?<!\w){left_guard}{re.escape(fact)}(?!\w){right_guard}"
             )
-            if not any(
+            exact_match = any(
                 fact_pattern.search(
                     " ".join(by_id[segment_id].text[:2_000].split()).casefold()
                 )
                 for segment_id in ids
-            ):
-                raise ValueError("fact is not a span of cited evidence")
+            )
+            supported_fact = cast(str, fields[0]).strip()
+            if not exact_match:
+                # Discard an altered model quote. The fallback is copied only
+                # from a cited, currently visible source segment.
+                supported_fact = _fact_option(by_id[ids[0]].text[:2_000])
             text = (
-                f"Подтверждено источником: {cast(str, fields[0]).strip()}\n\n"
+                f"Подтверждено источником: {supported_fact}\n\n"
                 f"Интерпретация: {cast(str, fields[1]).strip()}\n\n"
                 f"{'Промпт для изображения' if image_prompt else 'Новая творческая идея'}: "
                 f"{cast(str, fields[2]).strip()}"

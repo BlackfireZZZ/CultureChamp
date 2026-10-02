@@ -18,9 +18,10 @@ one application attempt, so their separate usage is not observable here.
 
 The provider adapter accepts an operator-selected HTTPS endpoint compatible with
 Chat Completions. Yandex AI Studio was exercised on 2026-10-02 with the private
-operator configuration and a self-authored synthetic source. The exact model URI
-and key remain server-only. This test does not approve transfer of any real
-cultural source. [Yandex's OpenAI-compatible API guide](https://yandex.cloud/en/docs/tutorials/ml-ai/ai-model-ide-integration)
+operator configuration and a self-authored synthetic source. The user has also
+authorized the supplied document corpus for model-backed local testing. The
+exact model URI and key remain server-only; document files stay outside Git.
+[Yandex's OpenAI-compatible API guide](https://yandex.cloud/en/docs/tutorials/ml-ai/ai-model-ide-integration)
 specifies the `https://ai.api.cloud.yandex.net/v1` base and a
 `gpt://<folder-id>/<model-id>/latest` model URI.
 
@@ -67,8 +68,8 @@ reported token counts and elapsed time. It can make a second HTTP call if the
 provider returns a temporary failure. Without `--send-synthetic` it sends
 nothing; fake or incomplete external configuration fails. Passing this check
 proves only the selected endpoint's wire and answer shape for one synthetic
-prompt. The same-origin chat check with separately approved
-`provider_transfer` revisions remains required before user activation.
+prompt. For the local demonstration, verify the same-origin chat path with the
+supplied published revisions and confirm that the response cites actual passages.
 
 For an isolated Yandex synthetic check, the operator's ignored `.env` may keep
 `MODEL_POLICY_APPROVED=false` for ordinary startup. Set the flag to `true` only
@@ -90,17 +91,16 @@ scan found no key in backend logs or frontend assets. The experiment does not
 measure a production bill or answer quality on cultural sources.
 
 When the external adapter is active, chat retrieves only revisions whose current
-approval includes `provider_transfer`, in addition to user-text and sensitivity
-clearance. PostgreSQL filters the allowed revision IDs before Qdrant ranking and
-rechecks returned segments before a model call. If none qualify, chat returns an
-insufficient-evidence answer without contacting the endpoint. The three locally
-held PDFs are not approved for user excerpts or provider transfer.
+publication state includes model-context visibility. The current schema calls
+that field `provider_transfer`; for the user-supplied local corpus it records the
+already given authorization and the operator's activation of that revision.
+PostgreSQL filters revision IDs before Qdrant ranking and rechecks returned
+segments before a model call. If none qualify, chat returns an insufficient-
+evidence answer without contacting the endpoint.
 
-Before transferring real cultural sources, record the provider's exact terms,
-set the key through the deployment secret channel, approve provider transfer on
-specific reviewed revisions, and run a synthetic request through the same-origin
-chat API. Inspect the resulting citation, metadata-only logs and per-attempt
-token record; verify that the browser bundle and network traffic contain no
-provider key or direct provider request. The Yandex wire response is verified
-for self-authored text only; reviewed cultural answer quality and transfer
-permission remain unverified.
+Set the key through the private deployment environment, activate the supplied
+revisions for model context, and run a same-origin chat request. Inspect the
+resulting answer and citations, metadata-only logs and per-attempt token record;
+verify that the browser bundle and network traffic contain no provider key or
+direct provider request. The earlier synthetic wire check established endpoint
+shape; cultural answer quality needs inspection on the supplied corpus.

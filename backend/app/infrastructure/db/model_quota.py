@@ -59,7 +59,7 @@ class SqlModelQuota:
                 return False
             if existing is not None:
                 existing.status = "active"
-                existing.lease_until = now + timedelta(seconds=45)
+                existing.lease_until = now + timedelta(seconds=120)
                 existing.input_tokens = None
                 existing.output_tokens = None
             else:
@@ -69,7 +69,7 @@ class SqlModelQuota:
                         subject_id=subject,
                         status="active",
                         created_at=now,
-                        lease_until=now + timedelta(seconds=45),
+                        lease_until=now + timedelta(seconds=120),
                     )
                 )
                 await session.flush()

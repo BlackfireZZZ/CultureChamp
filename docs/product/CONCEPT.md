@@ -270,9 +270,9 @@ There is a risk of turning complex traditions into visual clichés or decontextu
 
 Reliable cultural data is fragmented across institutions and publications. Collecting, structuring, and validating it may become the main operational cost of the project.
 
-### Intellectual property
+### Source provenance
 
-A historical fact, a traditional motif, a museum image, a contemporary photograph, and a modern scholarly text have different legal conditions of use. Source provenance and usage rights must be treated separately.
+A historical fact, a traditional motif, a museum image, a contemporary photograph, and a scholarly text have different origins and levels of evidence. Record those distinctions alongside attribution and context.
 
 ### Misrepresentation
 

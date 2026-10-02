@@ -96,11 +96,13 @@ concept determines which components are needed.
 
 - Distinguish a source-supported cultural fact, an interpretation based on sources,
   and a newly generated creative result.
-- Preserve attribution, regional and historical context, and usage rights for
-  cultural source material when the corresponding data and workflows are designed.
+- Preserve attribution and regional and historical context for cultural sources.
+- The user has authorized use of the supplied documents in the application and
+  model workflow. Never add the supplied document files to Git; keep them in
+  private local or deployment storage.
 - Do not present invented traditions, symbols or unsupported model claims as verified.
-- Treat sacred, ritual, restricted and community-sensitive material as requiring
-  explicit review or exclusion rules before generation from it.
+- Review sacred, ritual and community-sensitive material for accurate, respectful
+  presentation before using it in generated cultural claims.
 
 ## Database and API
 

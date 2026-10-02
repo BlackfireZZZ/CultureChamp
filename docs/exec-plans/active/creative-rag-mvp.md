@@ -1,5 +1,12 @@
 # CultureChamp delivery — MVP and full-concept task baseline
 
+> 2026-10-02 corpus-use update: The user authorized the supplied documents for
+> local application display and external model-backed testing. Keep original
+> document files outside Git. Earlier entries in this plan describing absent
+> document-use authorization are historical status reports, not current gates.
+> Continue to check extraction fidelity, attribution, cultural context, citation
+> accuracy, revision publication and withdrawal.
+
 Status: **integration in progress** · Integration base: `790564e2fa8aa3c7307c5a8df3c633829c2745aa` ·
 Integration owner: **Codex integration agent** · Last updated: 2026-09-30
 
@@ -48,8 +55,8 @@ passed 112 backend, 24 frontend and 20 ML tests; the live browser journey
 passed after a cached-citation focus race was corrected.
 The six-page benchmark and limitations are recorded in
 [ADR 0008](../../decisions/0008-document-visual-search.md). These results do
-not change the blocked real-source rights, cultural-expert review and target-user
-gates. No real cultural PDF was transferred to YandexGPT.
+not establish cultural-expert review or target-user validation. No real
+cultural PDF was transferred in that historical experiment.
 
 ## Purpose and observable result
 
@@ -92,7 +99,7 @@ XLSX; HTML and scanned PDFs require separate evidence and decisions.
 
 ## Architecture sketch and decision gates
 
-1. **Corpus:** immutable source revisions plus metadata (origin, author, rights,
+1. **Corpus:** immutable source revisions plus metadata (origin, author, publication state,
    language, region, period, sensitivity, approval), extracted sections and table
    cells/rows with stable source locators. Keep original bytes separate from search
    representations. No unapproved revision enters user search or generation.
@@ -101,7 +108,7 @@ XLSX; HTML and scanned PDFs require separate evidence and decisions.
    failures, retries, deletion and revocation are auditable and idempotent.
 3. **Retrieval:** generate versioned embeddings and search a dedicated vector
    database for the first text slice. PostgreSQL remains authoritative for source
-   rights, exact revisions and locators. Compare vector-only and hybrid relevance
+   publication state, exact revisions and locators. Compare vector-only and hybrid relevance
    on the same labelled corpus. The lexical SQL path is an offline baseline, not
    the chat retrieval implementation. See [ADR 0006](../../decisions/0006-vector-retrieval-and-media.md).
 4. **Generation:** retrieval returns approved source segments with locators. A
@@ -123,9 +130,9 @@ evidence; ADR 0006 sets the vector storage direction.
 
 | Milestone | Gate | Status |
 |---|---|---|
-| M0 — Product slice and decisions | One narrow corpus/task slice, source policy, format matrix, identity/provider constraints and evaluable examples are recorded. | in_progress: policy and examples exist; real-source rights, reviewer and provider terms are external dependencies |
-| M1 — Governed corpus | An approved source revision can be ingested, inspected, cited, revoked, and excluded from user retrieval; text and table locations survive extraction. | in_progress: synthetic PDF, UTF-8 TXT, CSV and XLSX vertical paths verified; real-source fidelity and rights remain open |
-| M2 — Vector retrieval | Versioned embeddings are indexed in Qdrant; chat uses vector candidates with authoritative rights rechecks; measured retrieval meets agreed thresholds. | in_progress: synthetic vector and revocation checks pass; same-fixture provisional dense recall@5 1.00; expert relevance, replay and release thresholds remain |
+| M0 — Product slice and decisions | One narrow corpus/task slice, source policy, format matrix, identity/provider constraints and evaluable examples are recorded. | in_progress: policy and examples exist; source quality, reviewer and provider operations need validation |
+| M1 — Governed corpus | An approved source revision can be ingested, inspected, cited, revoked, and excluded from user retrieval; text and table locations survive extraction. | in_progress: synthetic PDF, UTF-8 TXT, CSV and XLSX vertical paths verified; real-source extraction fidelity remains open |
+| M2 — Vector retrieval | Versioned embeddings are indexed in Qdrant; chat uses vector candidates with authoritative revision-state rechecks; measured retrieval meets agreed thresholds. | in_progress: synthetic vector and revocation checks pass; same-fixture provisional dense recall@5 1.00; expert relevance, replay and release thresholds remain |
 | M3 — Grounded chat | A text brief produces a persisted text conversation with validated source citations, no-evidence behavior, and bounded model API calls. | in_progress: a live synthetic browser journey passes with the fake provider; exact external provider activation and reviewed cultural answers remain |
 | M4 — Two-role product UI | User chat, starter guide, source browser/citation view and admin document inventory work at canonical widths and keyboard paths. | in_progress: live browser tagged upload with curator description, server-filtered materials, review, cited answer, original download and revocation pass; full use-case checks remain |
 | M5 — MVP evidence and operations | End-to-end, security, quality, recovery, cost/latency and user/expert review evidence supports a narrow release decision. | in_progress: one clean-stack synthetic journey passes; remaining release gates are open |
@@ -154,15 +161,15 @@ gate. Each row is intended as one cohesive review.
   the isolated checkout for the remaining large task; logical commits will be
   verified here before integration with `main`.
 - Hypothesis: a synthetic, explicitly non-cultural document can prove ingestion,
-  rights filtering, retrieval, citation navigation, and persisted chat mechanics.
+  publication filtering, retrieval, citation navigation, and persisted chat mechanics.
   The hypothesis fails if an unapproved revision reaches search/model context, a
   citation changes revision or location, a retry duplicates a turn, or a user
   reads another user's chat. Passing it cannot establish cultural or legal release.
-- S01 and S02 are blocked on an appointed rights/cultural reviewer and exact-source
-  permission decisions. Q04 is blocked on recruited target users. These remain
-  external dependencies. The three supplied PDFs stay held and are not user or
-  provider fixtures. S03 can proceed with the fake provider and retention work;
-  external provider activation awaits approved terms, key handling and budget.
+- S01 and S02 retain cultural evidence and review work. Q04 depends on recruited
+  target users. The supplied documents may be used in the local application and
+  model workflow under the user's authorization; original files stay outside
+  Git. External provider activation still requires private key handling and
+  budget controls.
 - Technical tasks with verified subsets remain `in_progress`; their unmet checks
   are in their acceptance columns and the [prior handoff](../../agentic/handoffs/integration-backend.md).
   `ready` marks independent work with sufficient technical inputs; dependent work
@@ -173,9 +180,9 @@ gate. Each row is intended as one cohesive review.
 | ID | Status · owner · handoff | Depends | Deliverable and owned area | Acceptance and smallest falsifying check |
 |---|---|---|---|---|
 | S01 | blocked · integration agent · [handoff](../../agentic/handoffs/integration-backend.md) | — | Choose one region/community, 2–3 creative tasks and a bounded initial corpus; `docs/product/` | A written slice maps at least three real briefs to permitted sources and expected output; review against the concept and UC-01–UC-06. |
-| S02 | blocked · integration agent · [handoff](../../agentic/handoffs/integration-backend.md) | — | Define verified/approved, rights, sensitive-source and revocation policy; `docs/product/` | Each fixture source has a reviewer, rights decision and user-visibility rule; challenge with a restricted and a disputed source. |
+| S02 | blocked · integration agent · [handoff](../../agentic/handoffs/integration-backend.md) | — | Define verified/published, sensitive-source and revocation policy; `docs/product/` | Each fixture source has a reviewer, publication decision and user-visibility rule; challenge with a restricted and a disputed source. |
 | S03 | in_progress · integration agent · [handoff](../../agentic/handoffs/integration-backend.md) | — | Decide user identity/guest mode, admin bootstrap, conversation retention, model-provider data handling and budget constraints; `docs/decisions/` | Decision records user/admin access, deletion, provider data flow and who holds keys; threat-review one leaked-token and one cross-role case. Authenticated account creation now records the grant actor, target and role atomically in PostgreSQL; production audit retention and external-provider terms remain open. |
-| S04 | in_progress · integration agent · [handoff](../../agentic/handoffs/integration-backend.md) | S01 | Inventory supplied text/table fixtures and choose supported MVP formats; `docs/product/` | Format matrix records extraction fidelity, locators, unsupported cases and sample rights; inspect at least one prose file and one table. |
+| S04 | in_progress · integration agent · [handoff](../../agentic/handoffs/integration-backend.md) | S01 | Inventory supplied text/table fixtures and choose supported MVP formats; `docs/product/` | Format matrix records extraction fidelity, locators, unsupported cases and sample quality; inspect at least one prose file and one table. |
 | S05 | in_progress · integration agent · [handoff](../../../frontend/HANDOFF.md) | S01, S02, S04 | Build task/query examples and expert review rubric; `ml/evals/` | Cases cover factual support, interpretation, no evidence, conflicting accounts, sensitive content and table lookup; a reviewer can label each without hidden knowledge. |
 
 ### M1 — Corpus contracts and administration
@@ -198,7 +205,7 @@ gate. Each row is intended as one cohesive review.
 | ID | Status · owner · handoff | Depends | Deliverable and owned area | Acceptance and smallest falsifying check |
 |---|---|---|---|---|
 | R01 | in_progress · integration agent · — | S05, C05, C06 | Gold query-to-source/locator judgements and retrieval harness; `ml/evals/` | Evaluation reports recall@k and ranking metrics by language, format and table/prose slice; a missing relevant source fails a labelled case. |
-| R02 | done · integration agent · — | C07 | Historical PostgreSQL lexical baseline; `backend/app/infrastructure/db/lexical_search.py` | Reproducible provisional metrics and rights-filter test are retained for comparison only; ADR 0005 is superseded. |
+| R02 | done · integration agent · — | C07 | Historical PostgreSQL lexical baseline; `backend/app/infrastructure/db/lexical_search.py` | Reproducible provisional metrics and revision-filter test are retained for comparison only; ADR 0005 is superseded. |
 | R03 | in_progress · integration agent · — | C07, S03 | Versioned multilingual text embeddings, dedicated Qdrant collection, ingestion/reindex jobs and index health; `backend/app/infrastructure/vector/` | A paraphrased synthetic query finds its passage; retries are idempotent; clean Compose replay rebuilds the index; no chat request uses SQL lexical ranking. During one revision's repair, indexed scoped evidence remains available while an empty search with matching pending evidence reports 503. |
 | R04 | in_progress · integration agent · — | R03, R01 | ADR 0006 and measured retrieval selection, chunking, fusion/reranking and thresholds; `docs/decisions/`, `ml/evals/` | Same frozen corpus and query set compare vector-only and lexical/hybrid by language, format, latency and cost; expert-reviewed regressions and tradeoffs are explicit. |
 | R05 | in_progress · integration agent · — | R03, C07 | Application retrieval port/service with current-authority filters, bounded context and stable evidence IDs; `backend/app/application/retrieval.py` | Same query/approved corpus yields traceable vector candidates; revoked/restricted text never returns even with stale vector points; integration tests cover prose and tables. |
@@ -220,7 +227,7 @@ gate. Each row is intended as one cohesive review.
 | U01 | ready · integration agent · — | S01, S03 | Responsive information architecture and reviewed wireframes for two roles; `docs/product/`, `DESIGN.md` | Default chat, secondary materials, admin inventory and source navigation are demonstrated at 360/768/1280/1440 px with keyboard paths. |
 | U02 | done · integration agent · [handoff](../../agentic/handoffs/integration-backend.md) | U01, G04 | Chat list, dialogue, composer and request states; `frontend/src/features/chat/` | Component checks cover persisted send and failure draft. A clean-stack browser journey observes persistence, switching, deletion and a retry with the same request ID after a simulated 503. |
 | U03 | done · integration agent · [handoff](../../agentic/handoffs/integration-backend.md) | U01, S01 | Editable starter prompts and in-app use-case help sourced from `USE_CASES.md`; `frontend/src/features/onboarding/` | All six starters fill an editable composer without sending; the guide opens before a chat exists. Component and browser keyboard checks pass. Wording remains a target-user hypothesis under Q04. |
-| U04 | in_progress · integration agent · [handoff](../../agentic/handoffs/integration-backend.md) | U01, C09 | Approved materials list, filters and document detail; `frontend/src/features/materials/` | A user can filter approved materials by text, description, region, people, period and format; exact-revision tags, curator descriptions and rights appear after approval. Synthetic CSV and two-sheet XLSX filters, exact cell detail, cited navigation and original access pass live browser checks. Citation focus survives a cached detail refresh. Prose/table review on eligible real sources and broader discovery remain open. |
+| U04 | in_progress · integration agent · [handoff](../../agentic/handoffs/integration-backend.md) | U01, C09 | Approved materials list, filters and document detail; `frontend/src/features/materials/` | A user can filter approved materials by text, description, region, people, period and format; exact-revision tags, curator descriptions appear after approval. Synthetic CSV and two-sheet XLSX filters, exact cell detail, cited navigation and original access pass live browser checks. Citation focus survives a cached detail refresh. Prose/table review on eligible real sources and broader discovery remain open. |
 | U05 | done · integration agent · [handoff](../../agentic/handoffs/integration-backend.md) | U02, U04, G03 | Citation cards/links and exact-location inspector with return-to-chat navigation; `frontend/src/features/chat/`, `frontend/src/features/materials/` | A component check opens an exact PDF page; live CSV citation focuses its row, opens exact original bytes and returns to chat. Revocation disables the historical citation without hiding the answer or linking to another revision. |
 | U06 | in_progress · integration agent · [handoff](../../agentic/handoffs/integration-backend.md) | U01, C08, C10 | Admin document inventory/detail UI with structure, tags, status and explicit review actions; `frontend/src/features/admin/` | Server filters by source text, format, tag kind/value, processing status and decision before the 100-row limit. A live synthetic browser opens the candidate original, amends description/tags with an audit trail before approval, then proves user denial before approval and exact-revision visibility afterward. The same browser journey shows a malformed PDF extraction failure and retry without user publication. A component and live browser check cover audited segment exclusion, whole-original denial and exact-revision approval; a live API test covers stale vector points. Broader PDF review and scale remain. |
 
@@ -237,15 +244,15 @@ gate. Each row is intended as one cohesive review.
 
 These items are product commitments to plan and validate, not claims that a
 specific model or provider already meets quality requirements. Each keeps the
-same source identity, rights and citation rules as the text slice.
+same source identity, publication and citation rules as the text slice.
 
 | ID | Status | Deliverable | Acceptance evidence |
 |---|---|---|---|
-| F01 | todo | Expand governed collections across communities, regions and periods with institutional and community review. | Each added slice has provenance, accountable review, rights scopes, conflict handling and expert-labelled tasks. |
+| F01 | todo | Expand governed collections across communities, regions and periods with institutional and community review. | Each added slice has provenance, accountable review, context rules, conflict handling and expert-labelled tasks. |
 | F02 | in_progress | Ingest images and scanned pages into private media storage with image regions, OCR/layout text and stable visual locators. | A synthetic embedded PDF image now has private derived storage, an exact revision/page locator and immediate revocation. Scans, vector drawings, region boxes and OCR remain open; authorized source-like quality needs expert review. |
-| F03 | todo | Ingest recordings and music with transcript, time ranges, performer/recording rights and audio embeddings. | A query opens the cited recording at the correct time span; transcript and audio similarity are evaluated separately; restricted recordings never leak. |
+| F03 | todo | Ingest recordings and music with transcript, time ranges, performer attribution and audio embeddings. | A query opens the cited recording at the correct time span; transcript and audio similarity are evaluated separately; restricted recordings never leak. |
 | F04 | in_progress | Add modality-aware and cross-modal retrieval with separately versioned text, visual and audio encoders. | A separate CLIP text-to-embedded-image pilot and six-page synthetic comparison exist. Russian/source-like expert recall, abstention, fusion and text-to-audio remain open; incompatible vector spaces are not compared. |
-| F05 | todo | Generate and edit visual and audio creative outputs where rights and cultural review permit. | Generated work is marked creative, has inspectable cultural references, respects source and output rights, and passes user and expert review. |
+| F05 | todo | Generate and edit visual and audio creative outputs with cultural review. | Generated work is marked creative, has inspectable cultural references, preserves source attribution, and passes user and expert review. |
 | F06 | todo | Expand professional creative workflows, output formats and collaborative revision. | Target professionals complete recurring briefs with usable deliverables and traceable source context; user research validates priority. |
 | F07 | todo | Institutional source submission, review, correction and revocation workflows. | A provider can submit and correct an exact revision; independent reviewers decide visibility and sensitive use; audit and withdrawal propagate to every modality index. |
 | F08 | todo | Production object storage, index generation lifecycle, backups and scale tests. | Restore and full reindex reproduce approved search state; latency, cost and failure targets are measured on representative media collections. |
@@ -254,7 +261,7 @@ The owner accepted the current retrieval diagnostics for MVP engineering progres
 and requested no further retrieval experiments. Server-side external-model
 configuration and one live synthetic end-to-end journey are implemented. The
 next work is G05 guardrails, C06/U04 and remaining quality and operations gates.
-Cultural answer release still needs eligible source rights,
+Cultural answer release still needs source quality,
 provider terms and support review; provisional page labels do not prove those
 gates. F02–F08 are not silently discarded after M5; their product ordering
 follows the concept's coverage, creative-domain and institutional-participation
@@ -267,7 +274,7 @@ model adapter and a chat/citation path. The owner stopped further retrieval
 ablations after reviewing the diagnostic results. Unreviewed extraction,
 passage relevance and no-evidence calibration remain known release risks; the
 external adapter can be wired and tested with synthetic content while its real
-provider and source permissions are pending. Frontend and backend
+provider configuration and source review are pending. Frontend and backend
 owners must agree on OpenAPI before working in parallel; no two writing owners edit
 the same contract file. An external model is connected only after the fake-provider
 path, evaluation cases, and data-handling constraints exist.
@@ -282,7 +289,7 @@ path, evaluation cases, and data-handling constraints exist.
 - [Qdrant named vectors](https://qdrant.tech/documentation/manage-data/vectors/)
   support modality-specific spaces, while its
   [filtering](https://qdrant.tech/documentation/search/filtering/) supports
-  candidate selection. Current rights remain authoritative in PostgreSQL.
+  candidate selection. Current publication state remains authoritative in PostgreSQL.
 - [FastEmbed](https://github.com/qdrant/fastembed) provides local embedding
   inference; the chosen multilingual model remains a quality hypothesis.
 - [pgvector](https://github.com/pgvector/pgvector#hybrid-search) is a considered
@@ -313,10 +320,10 @@ path, evaluation cases, and data-handling constraints exist.
   on a two-column article but figure OCR remained partial and erroneous; figure
   children retain a separate region contract in the offline study. Runtime
   chunking/model remain unchanged pending expert passage labels and parser
-  coverage review. The three held PDFs stayed local and out of user/model flows.
+  coverage review. The three supplied PDFs were used only in that historical extraction check.
 - **2026-09-30, concept correction:** ADR 0006 superseded the SQL lexical
   retrieval default. Chat now requests locally generated multilingual embeddings,
-  obtains Qdrant candidates and rechecks current exact-revision rights in
+  obtains Qdrant candidates and rechecks current exact-revision state in
   PostgreSQL. A worker indexes approved revisions and cleans revoked points.
   A clean database upgrade and Alembic check passed. The live PostgreSQL/Qdrant
   suite passed 49 backend tests, including a paraphrased Russian query, stale
@@ -327,7 +334,7 @@ path, evaluation cases, and data-handling constraints exist.
   representative corpus, robust index recovery drill, production security and
   media encoders remain open. The [index runbook](../../operations/vector-index.md)
   records replay and failure behavior.
-- **2026-09-30, dense comparison:** the same three locally held PDFs and one
+- **2026-09-30, dense comparison:** the same three locally supplied PDFs and one
   explicitly synthetic table cell were run through Qdrant with local embeddings.
   Full-page embeddings recalled 0.70 of provisional relevant pages at k=5.
   Overlapping 120-word windows with page aggregation recalled 1.00, MRR@5 0.84
@@ -368,13 +375,13 @@ path, evaluation cases, and data-handling constraints exist.
   Frontend lint, build and 14 component tests pass. A live browser run against
   the rebuilt backend remains open.
 - **2026-09-30, admin continuation:** admin upload, error/retry, exact revision
-  review, explicit rights-scope approval and revocation controls now use the
+  review, explicit revision publication and revocation controls now use the
   server API. A component check covers approval and withdrawal payloads with
-  original-file and provider-transfer rights false by default. Live Compose
+  original-file and model-context visibility false by default. Live Compose
   review and upload remain open.
 - **2026-09-30, retrieval baseline:** a clean PostgreSQL migration added the
   `russian` GIN expression index. The application retrieval service and SQL
-  adapter apply current exact-revision, rights and sensitivity filters before
+  adapter apply current exact-revision, publication and sensitivity filters before
   ranking; tests prove held/revoked exclusion and immediate revocation on a
   synthetic corpus. A temporary local PostgreSQL evaluation compared `simple`
   and `russian` against the same eight provisional qrels. Recall@5 was 0.40 and
@@ -403,12 +410,12 @@ path, evaluation cases, and data-handling constraints exist.
   evaluation commits by cherry-pick. The synthetic, self-authored PDF path now
   supports admin intake, worker extraction with physical page locators, exact
   approval, user list/detail, and immediate revocation. Three supplied PDFs remain
-  held candidates and were never approved for user answers or provider transfer.
+  unpublished candidates in that historical check.
   Clean PostgreSQL migration and `alembic check` passed. Final `make check` passed:
   35 backend, 12 frontend and 6 ML tests; OpenAPI and Compose config matched.
   Four Playwright tests and live Compose HTTP worker/approval/revocation paths
   also passed. See the [integration handoff](../../agentic/handoffs/integration-backend.md).
-- **Remaining M1 limits (earlier PDF checkpoint):** no rights-cleared real corpus, appointed review authority,
+- **Remaining M1 limits (earlier PDF checkpoint):** real-source extraction review, appointed review authority,
   table fixture/extractor, hardened parser sandbox, tag-value
   admin filtering, or passage-level sensitivity exclusion. Exact original-file
   access and admin state/decision filters are implemented for the PDF slice.
@@ -418,11 +425,11 @@ path, evaluation cases, and data-handling constraints exist.
   [retrieval fixture inventory](../../../data/retrieval-fixtures/README.md).
   Their page counts and hashes are recorded, and text extraction produced
   nonempty output. S04 remains open: extraction fidelity, exact locators,
-  rights and a table fixture still need assessment.
+  source quality and a table fixture still need assessment.
 - **2026-09-30, synthetic CSV extension:** A narrow UTF-8 comma CSV with unique
   headers and a first-column row key now passes private intake, isolated parsing,
   exact cell storage, admin review, Qdrant indexing, material detail, permitted
-  original download and immediate rights revocation. Empty interior cells preserve
+  original download and immediate revision withdrawal. Empty interior cells preserve
   their original column number. A clean PostgreSQL migration and live API/vector
   test passed. This is a technical fixture only. C06 and S04 remain open for real
   cultural table comparison and XLSX/merged-cell semantics; no table quality
@@ -439,9 +446,9 @@ path, evaluation cases, and data-handling constraints exist.
   answers; admin structured document inventory; text-only MVP; external model API.
 - **2026-09-30:** Created the use-case guide and tracker. No ingestion, retrieval,
   model API, role system or product UI task was complete at that initial checkpoint.
-- **Open:** approval authority and rights for a real source, a table fixture,
+- **Open:** approval authority and extraction quality for a real source, a table fixture,
   model and embedding providers, chat retention implementation, broader format
-  support, and quality thresholds. Do not infer permission or product validation
+  support, and quality thresholds. Do not infer product validation
   from the synthetic integration fixture.
 
 ## Validation and recovery

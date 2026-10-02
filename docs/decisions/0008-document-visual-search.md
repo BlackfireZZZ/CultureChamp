@@ -8,8 +8,7 @@ Date: 2026-10-02
 The present PDF path extracts text but misses labels inside figures. The local
 audit of candidate PDF-02 physical page 7 found a map and legend whose labels
 were absent from both plain PDF text and Docling body text; local OCR introduced
-recognition errors. Candidate PDFs are absent from this checkout and have no
-confirmed user-visible or provider-transfer rights. The question is whether a
+recognition errors. Candidate PDFs are absent from this checkout and remain local application data outside Git. The question is whether a
 visual representation retrieves a relevant, precisely located region that the
 current caption/neighbor-text path misses, at an acceptable latency and index
 cost, without treating a visual match as evidence for a cultural claim.
@@ -22,7 +21,7 @@ cost, without treating a visual match as evidence for a cultural claim.
   needs visual review. A bounding box from a parser is not verified semantics.
 - [Qdrant named vectors and multi-representation search](https://qdrant.tech/documentation/tutorials-search-engineering/multi-representation-search/)
   allow separate vector spaces and query-time rank fusion. CultureChamp still
-  needs PostgreSQL prefiltering and post-search review of exact revision rights.
+  needs PostgreSQL prefiltering and post-search review of exact revision publication state.
   Qdrant point payloads cannot authorize a result.
 - [ColPali](https://proceedings.iclr.cc/paper_files/paper/2025/file/99e9e141aafc314f76b0ca3dd66898b3-Paper-Conference.pdf)
   retrieves rendered pages using many patch vectors and MaxSim. Its page-level
@@ -82,7 +81,7 @@ replays missing collections and audits point sets. It does not create captions,
 OCR or cultural claims. The API returns a visual match and an authorized link to
 the whole original PDF at the physical page; it makes no bounding-box claim.
 The original route rechecks current authorization. Search requires currently
-approved, sensitivity-cleared **original-file** and user-text rights before
+approved, sensitivity-cleared published original and user-text visibility before
 ranking and again after ranking, with no excluded segments. A stale Qdrant
 point cannot authorize a result. The UI labels matches as experimental.
 
@@ -94,7 +93,7 @@ provider transfer. No model-generated caption or OCR text is treated as fact.
 
 ## Next release gate
 
-Before selecting that candidate, evaluate a source-like, rights-cleared and
+Before selecting that candidate, evaluate a source-like, locally supplied and
 expert-labelled Russian document set with figures, photographs, drawings,
 ornaments, diagrams, tables and scans. Record recall@k, false matches,
 abstention, precise page/region accuracy, warm/cold latency, model memory,

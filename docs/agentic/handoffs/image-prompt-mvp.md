@@ -40,7 +40,7 @@ real cultural source and did not print its private content or credentials.
 
 What remains unverified and why: Synthetic tests cannot establish the cultural
 accuracy or practical image quality of model output. Real approved sources,
-rights decisions, expert review and target-user prompt evaluation remain open.
+expert review and target-user prompt evaluation remain open.
 
 Risks and open questions: Intent routing requires explicit image and action
 words in Russian or English. The cultural fact and citation fields are validated,

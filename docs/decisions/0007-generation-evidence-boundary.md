@@ -47,7 +47,7 @@ formal ontology or treating those papers as evidence of model accuracy.
   source, index or admin review record. If nothing usable remains, return the
   insufficient-evidence response without a model call.
 - Validate model-selected IDs against only the screened context, re-resolve each
-  citation under current permissions and require the `fact` field to match a
+  citation under current publication state and require the `fact` field to match a
   bounded span of a cited excerpt with word boundaries and numeric-prefix
   checks. Interpretive and creative fields retain visible labels, but their
   cultural accuracy is not algorithmically certified.

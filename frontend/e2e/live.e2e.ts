@@ -7,6 +7,16 @@ const vectorURL = process.env.LIVE_E2E_VECTOR_URL
 const adminName = process.env.LIVE_E2E_ADMIN_USER
 const adminPassword = process.env.LIVE_E2E_ADMIN_PASSWORD
 
+async function completedStreamTurn<T>(response: import("@playwright/test").Response): Promise<T> {
+  expect(response.ok()).toBe(true)
+  expect(response.headers()["content-type"]).toContain("text/event-stream")
+  const events = (await response.text()).split(/\r?\n\r?\n/)
+  const complete = events.find((entry) => entry.split(/\r?\n/).some((line) => line === "event: complete"))
+  expect(complete, "stream must finish with a persisted turn").toBeDefined()
+  const data = complete!.split(/\r?\n/).filter((line) => line.startsWith("data:")).map((line) => line.slice(5).trimStart()).join("\n")
+  return (JSON.parse(data) as { turn: T }).turn
+}
+
 async function expectNoHorizontalOverflow(page: import("@playwright/test").Page) {
   for (const width of [360, 768, 1280, 1440]) {
     await page.setViewportSize({ width, height: 900 })
@@ -81,7 +91,7 @@ test("live synthetic source flows from admin review to cited chat and revocation
     await expect(userPage.getByText(title)).toHaveCount(0)
     await userPage.getByRole("button", { name: /К чату|Вернуться к чату/ }).first().click()
     const requestIds: string[] = []
-    await userPage.route("**/api/v1/chats/*/messages", async (route) => {
+    await userPage.route("**/api/v1/chats/*/messages/stream", async (route) => {
       const payload = route.request().postDataJSON() as { request_id: string }
       requestIds.push(payload.request_id)
       if (requestIds.length === 1) await route.fulfill({ status: 503 })
@@ -184,6 +194,7 @@ test("live synthetic source flows from admin review to cited chat and revocation
     await expectNoHorizontalOverflow(userPage)
     await userPage.getByRole("button", { name: /Источник · таблица CSV, строка 2/ }).click()
     await expect(userPage.locator(`#segment-${segmentId}`)).toBeFocused()
+    await expect(userPage.locator(`#segment-${segmentId} mark`)).toContainText(marker)
     await expect(userPage.getByRole("heading", { name: title })).toBeVisible()
     await expectNoHorizontalOverflow(userPage)
     const downloadPromise = userPage.waitForEvent("download")
@@ -315,7 +326,7 @@ test("live synthetic source flows from admin review to cited chat and revocation
     await workbookFilter.getByRole("combobox", { name: "Тип документа" }).selectOption("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
     await workbookFilter.getByRole("button", { name: "Найти" }).click()
     await userPage.getByRole("button", { name: new RegExp(workbookTitle) }).click()
-    await expect(userPage.getByRole("heading", { name: "Таблица North, строка 3, столбец 2" })).toBeVisible()
+    await expect(userPage.getByRole("article", { name: `Текст документа «${workbookTitle}»` })).toContainText("Item: Example A; Count: 7")
     await expect(userPage.getByText("Item: Example A; Count: 7")).toBeVisible()
     const workbookDownloadPromise = userPage.waitForEvent("download")
     await userPage.getByRole("link", { name: "Скачать исходную книгу XLSX" }).click()
@@ -326,11 +337,11 @@ test("live synthetic source flows from admin review to cited chat and revocation
     await userPage.getByRole("button", { name: "Новый чат" }).click()
     const workbookTask = "Item: Example A; Count: 7"
     await userPage.getByRole("textbox", { name: "Ваша задача" }).fill(workbookTask)
-    const workbookAnswerResponse = userPage.waitForResponse((response) => response.url().includes("/api/v1/chats/") && response.url().endsWith("/messages") && response.request().method() === "POST")
+    const workbookAnswerResponse = userPage.waitForResponse((response) => response.url().includes("/api/v1/chats/") && response.url().endsWith("/messages/stream") && response.request().method() === "POST")
     await userPage.getByRole("button", { name: "Отправить" }).click()
-    const workbookAnswer = (await (await workbookAnswerResponse).json()) as {
+    const workbookAnswer = await completedStreamTurn<{
       evidence_status: string; citations: { revision_id: string; segment_id: string; sheet: string; row_start: number; column_start: number }[]
-    }
+    }>(await workbookAnswerResponse)
     expect(workbookAnswer.evidence_status).toBe("grounded")
     expect(workbookAnswer.citations).toHaveLength(1)
     expect(workbookAnswer.citations[0].revision_id).toBe(approvedRevisionId)
@@ -345,6 +356,7 @@ test("live synthetic source flows from admin review to cited chat and revocation
     await expect(userPage.getByRole("heading", { name: "Подтверждено источником" })).toBeVisible()
     await userPage.getByRole("button", { name: new RegExp(`Источник · таблица ${workbookAnswer.citations[0].sheet}, строка ${workbookAnswer.citations[0].row_start}`) }).click()
     await expect(userPage.locator(`#segment-${workbookAnswer.citations[0].segment_id}`)).toBeFocused()
+    await expect(userPage.locator(`#segment-${workbookAnswer.citations[0].segment_id} mark`)).toContainText("Item: Example A; Count: 7")
     const workbookRevoke = adminPage.getByRole("form", { name: "Отзыв ревизии" })
     await workbookRevoke.getByLabel("Причина отзыва").fill("Synthetic workbook test completed")
     await workbookRevoke.getByRole("button", { name: "Отозвать эту ревизию" }).click()
@@ -413,18 +425,19 @@ test("live synthetic source flows from admin review to cited chat and revocation
     const proseTask = "Synthetic second page copper discs seven"
     await userPage.getByRole("button", { name: "Новый чат" }).click()
     await userPage.getByRole("textbox", { name: "Ваша задача" }).fill(proseTask)
-    const proseAnswerResponse = userPage.waitForResponse((response) => response.url().includes("/api/v1/chats/") && response.url().endsWith("/messages") && response.request().method() === "POST")
+    const proseAnswerResponse = userPage.waitForResponse((response) => response.url().includes("/api/v1/chats/") && response.url().endsWith("/messages/stream") && response.request().method() === "POST")
     await userPage.getByRole("button", { name: "Отправить" }).click()
-    const proseAnswer = (await (await proseAnswerResponse).json()) as {
+    const proseAnswer = await completedStreamTurn<{
       evidence_status: string; citations: { revision_id: string; segment_id: string; page: number }[]
-    }
+    }>(await proseAnswerResponse)
     expect(proseAnswer.evidence_status).toBe("grounded")
     expect(proseAnswer.citations).toEqual([expect.objectContaining({
       revision_id: approvedRevisionId, segment_id: proseSegments[1].segment_id, page: 2,
     })])
     await userPage.getByRole("button", { name: "Источник · страница 2" }).click()
-    await expect(userPage.getByRole("heading", { name: "Страница 2" })).toBeVisible()
+    await expect(userPage.getByRole("article", { name: `Текст документа «${proseTitle}»` })).toContainText("Synthetic second page copper discs seven")
     await expect(userPage.locator(`#segment-${proseSegments[1].segment_id}`)).toBeFocused()
+    await expect(userPage.locator(`#segment-${proseSegments[1].segment_id} mark`)).toContainText("Synthetic second page copper discs seven")
     await expect(userPage.getByRole("link", { name: "Открыть страницу 2 в источнике" })).toHaveAttribute(
       "href", `/api/v1/materials/${approvedRevisionId}/original#page=2`,
     )

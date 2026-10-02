@@ -10,6 +10,7 @@ from app.application.generation import (
     GenerationService,
     GenerationUnavailable,
     ModelCall,
+    _AnswerPreview,
     wants_image_prompt,
 )
 from app.application.retrieval import EvidenceSegment, RetrievalService
@@ -100,6 +101,23 @@ def test_explicit_image_request_detection(brief: str, expected: bool) -> None:
     assert wants_image_prompt(brief) is expected
 
 
+def test_stream_preview_emits_readable_provisional_prose_across_json_chunks() -> None:
+    preview = _AnswerPreview()
+    raw = json.dumps({
+        "fact": "A cited fact.",
+        "interpretation": "An interpretation.",
+        "creative": "A new idea.",
+        "citations": ["synthetic-id"],
+    })
+    rendered = "".join(preview.feed(raw[i:i + 3]) for i in range(0, len(raw), 3))
+    assert rendered == (
+        "Подтверждено источником: A cited fact.\n\n"
+        "Интерпретация: An interpretation.\n\n"
+        "Творческий результат: A new idea."
+    )
+    assert "citations" not in rendered
+
+
 def test_image_request_returns_model_agnostic_prompt_with_exact_citation() -> None:
     async def check() -> None:
         revision_id, segment_id = uuid4(), uuid4()
@@ -132,6 +150,10 @@ def test_image_request_returns_model_agnostic_prompt_with_exact_citation() -> No
         assert payload["requested_output"] == "image_prompt"
         assert "any image generator" in model.calls[0].system
         assert payload["evidence"][0]["id"] == str(segment_id)
+        assert payload["fact_options"] == [{
+            "id": str(segment_id),
+            "quote": "The synthetic gift box has a blue lid.",
+        }]
 
     asyncio.run(check())
 
@@ -176,6 +198,44 @@ def test_fake_grounded_answer_validates_exact_citation_and_ignores_source_instru
         resolver.citation = None
         with pytest.raises(GenerationUnavailable):
             await service.generate(Actor("user-1", Role.USER), "Count brief", "turn-2")
+
+    asyncio.run(check())
+
+
+def test_generation_uses_multiple_bounded_substantive_passages() -> None:
+    async def check() -> None:
+        revision_id = uuid4()
+        locator = Locator(page=1)
+        segments = tuple(
+            EvidenceSegment(
+                revision_id, uuid4(), "Synthetic costume source", None, locator,
+                (
+                    "Synthetic costume source" if ordinal == 0
+                    else "A short documented fact." if ordinal == 2
+                    else f"Synthetic paragraph {ordinal} is documented. "
+                    + "documented detail " * 42
+                ),
+                0.9 - ordinal * 0.01,
+            )
+            for ordinal in range(11)
+        )
+        provider = CaptureGroundedFakeProvider()
+        service = GenerationService(
+            RetrievalService(StaticSearch(segments)),
+            GatewayModelPort(ModelGateway(provider, AllowQuota())),
+            CurrentCitation(Citation(revision_id, segments[1].segment_id, locator)),
+        )
+        result = await service.generate(
+            Actor("user-1", Role.USER), "Create a costume concept", "turn-many"
+        )
+        prompt = json.loads(provider.prompts[0])
+        assert result.evidence_status == "grounded"
+        assert len(prompt["evidence"]) == 8
+        assert [item["id"] for item in prompt["evidence"]] == [
+            str(item.segment_id) for item in segments[1:9]
+        ]
+        assert prompt["evidence"][1]["excerpt"] == "A short documented fact."
+        assert sum(len(item["excerpt"]) for item in prompt["evidence"]) <= 12_000
 
     asyncio.run(check())
 
@@ -325,7 +385,7 @@ def test_fabricated_model_citation_causes_safe_failure() -> None:
     asyncio.run(check())
 
 
-def test_authorized_citation_does_not_validate_an_unsupported_fact() -> None:
+def test_unsupported_model_fact_is_discarded_for_exact_cited_quote() -> None:
     async def check() -> None:
         revision_id, segment_id = uuid4(), uuid4()
         locator = Locator(page=1)
@@ -341,14 +401,46 @@ def test_authorized_citation_does_not_validate_an_unsupported_fact() -> None:
         }))
         resolver = CurrentCitation(Citation(revision_id, segment_id, locator))
         service = GenerationService(RetrievalService(StaticSearch((evidence,))), model, resolver)
-        with pytest.raises(GenerationUnavailable):
-            await service.generate(Actor("user-1", Role.USER), "Count brief", "turn-1")
+        answer = await service.generate(Actor("user-1", Role.USER), "Count brief", "turn-1")
+        assert "Подтверждено источником: The synthetic count is seven." in answer.text
+        assert "ninety-nine" not in answer.text
+
+    asyncio.run(check())
+
+
+def test_near_verbatim_fact_is_replaced_by_exact_cited_source_span() -> None:
+    async def check() -> None:
+        revision_id, segment_id = uuid4(), uuid4()
+        locator = Locator(page=1)
+        source = (
+            "The synthetic garment uses linen, wool, and a blue fastening; "
+            "the documented version has a narrow collar and a woven belt."
+        )
+        model_fact = source.replace("linen, wool", "linen; wool")
+        assert model_fact != source
+        model = CaptureModel(json.dumps({
+            "fact": model_fact,
+            "interpretation": "The source describes visible materials.",
+            "creative": "Make a contemporary concept with a narrow collar.",
+            "citations": [str(segment_id)],
+        }))
+        service = GenerationService(
+            RetrievalService(StaticSearch((EvidenceSegment(
+                revision_id, segment_id, "Synthetic source", None, locator,
+                source, 0.9,
+            ),))),
+            model,
+            CurrentCitation(Citation(revision_id, segment_id, locator)),
+        )
+        answer = await service.generate(Actor("user-1", Role.USER), "Brief", "turn-1")
+        assert f"Подтверждено источником: {source}" in answer.text
+        assert model_fact not in answer.text
 
     asyncio.run(check())
 
 
 @pytest.mark.parametrize("source_text", ["Count: 70", "Count: 7.0"])
-def test_fact_must_not_match_only_a_numeric_prefix(source_text: str) -> None:
+def test_numeric_prefix_does_not_enter_persisted_fact(source_text: str) -> None:
     async def check() -> None:
         revision_id, segment_id = uuid4(), uuid4()
         locator = Locator(sheet="Synthetic", row_start=2, row_end=2,
@@ -365,8 +457,8 @@ def test_fact_must_not_match_only_a_numeric_prefix(source_text: str) -> None:
         }))
         resolver = CurrentCitation(Citation(revision_id, segment_id, locator))
         service = GenerationService(RetrievalService(StaticSearch((evidence,))), model, resolver)
-        with pytest.raises(GenerationUnavailable):
-            await service.generate(Actor("user-1", Role.USER), "Count brief", "turn-1")
+        answer = await service.generate(Actor("user-1", Role.USER), "Count brief", "turn-1")
+        assert f"Подтверждено источником: {source_text}" in answer.text
         assert json.loads(model.calls[0].prompt)["evidence"][0]["locator"] == {
             "page": None, "section": None, "sheet": "Synthetic", "table": None,
             "row_start": 2, "row_end": 2, "column_start": 2, "column_end": 2,

@@ -2,10 +2,10 @@
 
 The owner supplied three PDF files on 2026-09-30 for local extraction and
 retrieval studies. Place unchanged personal copies at the `raw/` paths below.
-Those PDF paths are Git-ignored and are absent from a clean checkout. The files
-are **candidate test material**, not an approved user-facing corpus. Offline
-studies verify their SHA-256 hashes before processing; CI uses self-authored
-synthetic PDFs and does not need the personal copies.
+Those PDF paths are Git-ignored and are absent from a clean checkout. The user
+has authorized these files for local application and model-backed testing. They
+must never be added to Git. Offline studies verify their SHA-256 hashes before
+processing; CI uses self-authored synthetic PDFs and does not need personal copies.
 
 ## Inventory
 
@@ -28,11 +28,10 @@ title or authorship.
   locators need checking before using it in citation tests.
 - No spreadsheet or standalone table fixture is included. Format coverage and
   extraction fidelity remain open in [task S04](../../docs/exec-plans/active/creative-rag-mvp.md).
-- Rights, source credibility, cultural sensitivity and approval for user-visible
-  retrieval have **not** been reviewed. None of these files should be exposed as
-  a verified source or sent to an external model until the source policy and
-  per-document review are complete. PDF-01 contains an author's interpretation
-  of culture and religion; attribute its claims to the author.
+- Source credibility, cultural sensitivity and extraction fidelity still need
+  review before presenting specific claims as verified. The files may be used
+  for local model-backed testing under the user's authorization. PDF-01 contains
+  an author's interpretation of culture and religion; attribute its claims.
 
 To verify local copies, run `sha256sum data/retrieval-fixtures/raw/*.pdf`
 from the repository root and compare the results with the inventory above.

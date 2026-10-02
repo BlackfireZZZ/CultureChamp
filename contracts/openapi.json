@@ -1284,6 +1284,21 @@
         "title": "MetadataInput",
         "type": "object"
       },
+      "RenameInput": {
+        "properties": {
+          "title": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "title"
+        ],
+        "title": "RenameInput",
+        "type": "object"
+      },
       "RequestStatisticsView": {
         "properties": {
           "daily_requests": {
@@ -2548,6 +2563,57 @@
         "tags": [
           "chats"
         ]
+      },
+      "patch": {
+        "operationId": "rename_chat_api_v1_chats__chat_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "chat_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Chat Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RenameInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatSummaryView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Rename Chat",
+        "tags": [
+          "chats"
+        ]
       }
     },
     "/api/v1/chats/{chat_id}/messages": {
@@ -2598,6 +2664,57 @@
           }
         },
         "summary": "Send Message",
+        "tags": [
+          "chats"
+        ]
+      }
+    },
+    "/api/v1/chats/{chat_id}/messages/stream": {
+      "post": {
+        "operationId": "stream_message_api_v1_chats__chat_id__messages_stream_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "chat_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Chat Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SendInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Stream Message",
         "tags": [
           "chats"
         ]

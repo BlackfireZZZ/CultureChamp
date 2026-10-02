@@ -52,7 +52,7 @@ memory, and index-size budgets.
 | [BGE-M3 paper](https://arxiv.org/abs/2402.03216) and [model card](https://huggingface.co/BAAI/bge-m3) | Multilingual 1024-dimensional embeddings, up to 8192 tokens, and dense/sparse/late-interaction signals; its authors recommend hybrid retrieval and reranking. | Language coverage is not proof of quality on our communities, names, and historical material. |
 | [Multilingual-E5-large model card](https://huggingface.co/intfloat/multilingual-e5-large) | The same query/passage prefix family as the current small model, 1024 dimensions and a 512-token input limit; the authors report stronger Russian Mr.TyDi ranking than E5-small. | A same-family capacity increase is a cleaner model ablation than changing training family; benchmark local passages and GPU memory rather than inheriting the public score. |
 | [Qwen3-Embedding-0.6B model card](https://huggingface.co/Qwen/Qwen3-Embedding-0.6B) | 0.6B parameters, 1024 dimensions and long context with task instruction format. | Compare exact model preprocessing and measured VRAM on the local 12 GiB RTX 4070 Ti; do not assume longer input should replace passage search. |
-| [Qdrant hybrid guidance](https://qdrant.tech/documentation/search-tuning/how-to-tune-hybrid-search/) | Compare dense and sparse legs before RRF/DBSF fusion; candidate depth and scoring depend on the collection and labels. | Keep PostgreSQL rights checks authoritative after retrieval; fusion must not become a rights bypass. |
+| [Qdrant hybrid guidance](https://qdrant.tech/documentation/search-tuning/how-to-tune-hybrid-search/) | Compare dense and sparse legs before RRF/DBSF fusion; candidate depth and scoring depend on the collection and labels. | Keep PostgreSQL approved-source visibility authoritative after retrieval; fusion must not expose hidden revisions. |
 
 ## Ordered implementation and gates
 
@@ -79,7 +79,7 @@ memory, and index-size budgets.
    Use versioned Qdrant collections and model snapshots; no score threshold
    transfers between models.
 5. **Select and integrate.** Require expert-held-out Recall@5/10, nDCG@10,
-   no-evidence false-positive rate, locator accuracy, rights/revocation checks,
+   no-evidence false-positive rate, locator accuracy, current-visibility checks,
    p50/p95 latency, peak VRAM, and bytes per indexed source. Roll out with a
    replayable new index generation. Keep the current runtime active until this
    gate is met; do not enable generative claims from provisional retrieval.
@@ -89,7 +89,7 @@ memory, and index-size budgets.
 The local GPU reports 12,282 MiB total and 11,126 MiB free at plan creation;
 available VRAM changes with other workloads. The three PDFs may be processed
 locally for internal validation per the owner's instruction. Expert review,
-rights-cleared user release, real table material and provider transfer remain
+approved-source user release, real table material and external-model integration remain
 separate external decisions. A preliminary result from eight agent-labelled
 questions is only an engineering diagnostic, never release evidence.
 
@@ -201,3 +201,26 @@ already used in preliminary comparisons, so the result cannot establish corpus
 recall, a held-out threshold, or model/chunking selection. A second question
 set, written before new tuning and split by source and question family, remains
 required.
+
+## 2026-10-02 local costume-chat regression
+
+The approved local costume TXT contains 13 segments and approximately 4,961
+characters. For the user's image-prompt request, the title-only segment scored
+0.8724, while body segments scored 0.8287, 0.8197, 0.8177 and below. The
+provisional 0.84 gate therefore passed the title and several unrelated PDF
+passages while excluding the source paragraphs needed for an answer. A shorter
+topic-only query ranked the costume body much higher, showing that task wording
+affects this retriever.
+
+The immediate regression fix retains the existing gate for general matches and
+allows a bounded lower-score path when at least two query terms agree with a
+revision title. It reranks those candidates and sends at most eight substantive
+segments and 12,000 excerpt characters to generation. This is a local heuristic,
+not a calibrated relevance classifier: it can still admit unrelated text or miss
+relevant passages. The held-out passage and no-evidence gates above remain
+necessary before treating the retrieval quality as validated.
+
+With the original user request against the running local index, the revised
+retrieval returned nine costume segments (the title and eight body segments) in
+its first ten hits. Generation drops the title-only segment when substantive
+passages are present, leaving eight costume paragraphs in the bounded prompt.

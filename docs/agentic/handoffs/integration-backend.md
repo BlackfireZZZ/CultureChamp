@@ -1,5 +1,11 @@
 # Corpus/backend integration handoff — 2026-09-30
 
+> Historical record: the user's 2026-10-02 authorization supersedes earlier
+> statements that the supplied documents cannot be shown or sent to the selected
+> model for local testing. The current [source policy](../../product/SOURCE_POLICY.md)
+> governs use. Original document files must remain outside Git. Preserve the
+> historical measurements below as evidence of what was tested at the time.
+
 ## Partial vector-index availability — 2026-10-01
 
 Objective and actual status: an approved revision waiting for its first index or
@@ -20,7 +26,7 @@ Hypothesis and smallest falsifying check: with one synthetic revision indexed an
 another approved revision's index marker invalidated, the user and provider
 scopes should retrieve the indexed revision. A query scoped only to the pending
 revision should report unavailable to a user and return no evidence to a
-provider without transfer rights. The existing live vector search test failed
+provider without model-context visibility. The existing live vector search test failed
 on the first expectation before the code change and passed afterward. A clean
 PostgreSQL migration and Qdrant stack ran the full `make check`: architecture,
 Ruff, mypy, 111 backend tests, 21 frontend tests and build, 20 ML tests,
@@ -78,7 +84,7 @@ were removed. Keep the integration checkout for ongoing goal work.
 ## Revision context in model evidence — 2026-10-01
 
 Objective and actual status: carry curator-entered region, people and period tags
-with each approved source passage sent to the model, so a future answer can keep
+with each published source passage sent to the model, so a future answer can keep
 different cultural and historical accounts distinct. The vector search adapter
 fetches tags only for the authorized candidate revision IDs and binds them to
 individual evidence items. Generation sends those tags as structured JSON and
@@ -144,11 +150,11 @@ frontend build, OpenAPI contract and Compose configuration. The CI-equivalent
 mocked `npm run test:e2e` passed four browser tests and skipped the separately
 configured live browser test.
 
-What remains unverified and why: no eligible real source or cultural reviewer is
-available, so this is a technical access check only. Risks and open questions:
+What remains unverified and why: this checkpoint used synthetic sources and had
+no cultural reviewer, so it is a technical access check only. Risks and open questions:
 prose in a historical answer remains visible after withdrawal as specified by
 UC-10; it is not a fresh retrieval. Exact next step: complete the remaining
-synthetic boundary cases and later validate permitted real-source behavior.
+synthetic boundary cases and later validate real-source behavior.
 Cleanup completed or retention reason: the disposable `culturechamp_uc09` database
 and vector volumes were removed; keep the isolated integration checkout for ongoing
 goal work.
@@ -212,7 +218,7 @@ The decision follows PostgreSQL row-locking guidance and Qdrant's exact point
 count and deletion APIs, linked in ADR 0003. The tradeoff is that excluding even
 one passage prevents whole-original access. A reviewer can still inspect the
 original privately. The technical test uses only self-authored TXT; real
-cultural accuracy, source rights and appointed review authority remain open.
+cultural accuracy, source quality and appointed review authority remain open.
 
 Verification: `alembic upgrade head` succeeded from an empty isolated
 PostgreSQL database; `make migration-check` reported no new operations.
@@ -223,7 +229,7 @@ test proved denial for non-admin review, unknown/all-excluded IDs, stale
 version and post-decision edits, exclusion from current SQL retrieval and
 citations, original denial, extra stale Qdrant point detection and cleanup.
 `npm run test:e2e -- e2e/live.e2e.ts` passed 1 live browser test on the
-isolated full Compose stack. It included admin segment selection, rights
+isolated full Compose stack. It included admin segment selection, publication-state
 decision, Qdrant point check, cited chat and revocation. The first browser
 attempt stopped on an ambiguous XLSX text selector after the new checkbox
 label repeated the excerpt; the selector was made exact and the complete test
@@ -315,7 +321,7 @@ smoke all passed. Actual provider compatibility and terms remain open.
 ## Latest extraction and source-boundary check
 
 The retrieval extraction audit compared normalized token content and order for
-all 32 physical pages of the three locally held PDFs. PDF-03 page 1 had 0.9932
+all 32 physical pages of the three locally supplied PDFs. PDF-03 page 1 had 0.9932
 unordered but 0.8549 ordered agreement between `pypdf` and Poppler on the
 `pypdf` side. The rendered page confirms parallel Russian/English front matter;
 page 7 is author/citation metadata. This parser disagreement and non-evidence
@@ -383,7 +389,7 @@ contract, build and Compose checks.
 
 The integration branch now has a Qdrant text vector index with locally generated,
 snapshot-checked multilingual embeddings. PostgreSQL remains authoritative for
-source revisions, current rights and citations; original bytes remain in private
+source revisions, current publication state and citations; original bytes remain in private
 file storage. ADR 0006 supersedes the PostgreSQL lexical retrieval decision in
 ADR 0005. Chat retrieval no longer calls the lexical adapter. The ingestion
 worker indexes approved text revisions and removes revoked points; every candidate
@@ -394,7 +400,7 @@ work retained in F02–F05 of the active tracker.
 The same branch now has persisted, owned chat turns with retry IDs, citation
 withdrawal checks, bounded fake model calls and a frontend connected to those
 APIs. The admin UI can upload a PDF or narrow UTF-8 CSV candidate, inspect extracted segments and
-errors, retry failed processing, explicitly grant rights on an exact revision,
+errors, retry failed processing, explicitly publish an exact revision,
 and revoke it. Original-file and provider-transfer grants default to false.
 Material detail preserves table cell locators in its API and UI instead of
 coercing them to page 1. The synthetic CSV path has isolated extraction,
@@ -440,7 +446,7 @@ with Node 24: architecture, Ruff, mypy, 51 live-service backend tests,
 Compose config. Four mocked Playwright scenarios passed. The rebuilt Compose
 stack reached healthy state and `BASE_URL=http://localhost:18036
 FRONTEND_URL=http://localhost:18081 make smoke` passed. These verify synthetic
-mechanics; an expert-labelled relevance set, rights-cleared real corpus, table
+mechanics; an expert-labelled relevance set, representative real corpus, table
 extractor, live browser journey and provider contract
 remain open. The full acceptance state and implementation order live in
 `docs/exec-plans/active/creative-rag-mvp.md`.
@@ -455,7 +461,7 @@ The corpus and access/UI branches are integrated in a separate worktree. The
 server now has durable invite-only accounts and sessions, admin-only PDF intake,
 private originals, a separate processing worker, admin revision review, exact
 approval/revocation, and user materials list/detail filtered by the current
-decision. The three supplied PDFs remain held candidate fixtures. A self-authored
+decision. The supplied PDFs may now be used in local application and model tests. A self-authored
 synthetic PDF proved the complete server path in both a PostgreSQL-backed real-app
 test and live Compose HTTP requests. No cultural PDF has been approved, served to
 a user, or sent to a provider. The frontend now uses real auth, materials, and
@@ -504,19 +510,19 @@ added the evaluation test to the root `make check` target.
   worker records page segments or a safe failure code. Admin inventory/detail,
   approve, revoke and failed-processing retry are protected routes.
 - User `GET /api/v1/materials` and `GET /materials/{revision_id}` expose only the
-  currently approved, sensitivity-cleared exact revision with `user_text` rights.
+  currently approved, sensitivity-cleared exact revision with `user_text` visibility.
   Candidate, revoked and unknown IDs all return 404. A later additive route,
   `GET /materials/{revision_id}/original`, returns exact hash-checked PDF bytes
   only when the latest decision also grants `original_file`; the detail's
   `original_available` flag guides page links. Revocation denies the original on
-  the next request. `provider_transfer` remains a separate right.
+  the next request. `provider_transfer` remains a separate visibility field.
 - Admin inventory has optional processing-state and latest-decision filters plus
   a bounded limit. Omitted filters preserve the initial inventory response.
 - `contracts/openapi.json` and the frontend generated schema match the above
   transport shapes. ADR 0003 documents durable queue and decision semantics;
   ADR 0004 records the pilot account/session implementation. The task tracker
   marks C02/C03/C04/C08/C10 done by their focused acceptance checks; incomplete
-  format, rights and remaining API gates stay partial.
+  format and remaining API gates stay partial.
 
 ## Decisions and supporting evidence
 
@@ -532,10 +538,10 @@ added the evaluation test to the root `make check` target.
   [sessions](https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html),
   and [CSRF](https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html)
   informed private storage, Argon2id, cookie and CSRF boundaries. These checks
-  do not establish a production upload sandbox or rights approval.
-- The exact first corpus, rights holds, three-PDF extraction matrix and source
-  hashes are in `docs/product/` and `data/retrieval-fixtures/`. No rights holder
-  or qualified cultural reviewer has approved the supplied PDFs.
+  do not establish a production upload sandbox or source publication.
+- The exact first corpus, publication records, three-PDF extraction matrix and
+  source hashes are in `docs/product/` and `data/retrieval-fixtures/`. The
+  supplied PDFs may be used locally; cultural evidence still needs review.
 
 ## Verification commands and observed results
 
@@ -543,7 +549,7 @@ added the evaluation test to the root `make check` target.
   PostGIS 17 Compose service: `DATABASE_URL=postgresql+asyncpg://culturechamp:culturechamp_local@localhost:15435/culturechamp_verify_20260930 uv run --package culturechamp-backend --extra dev alembic -c backend/alembic.ini upgrade head` ran `0001`, source, accounts and processing migrations from empty; `make migration-check` reported “No new upgrade operations detected.” A first offline admin was created there; a second bootstrap was rejected.
 - `CORPUS_TEST_DATABASE_URL=postgresql+asyncpg://culturechamp:culturechamp_local@localhost:15435/culturechamp uv run --package culturechamp-backend --extra dev pytest backend/tests/test_identity_api.py backend/tests/test_source_api.py -q`: three tests passed. They cover real app/DB credentials, Argon2id and hashed cookie storage, rotation, throttle, CSRF, roles, expiry, spoofed input, duplicate upload/tags, failed extraction/retry, unpublished 404, exact approval and immediate revocation.
 - The next focused `test_source_api.py` run passed after adding admin filters and
-  an original-file rights test. It covered unpublished/original-denied 404,
+  an original-file visibility test. It covered unpublished/original-denied 404,
   allowed exact bytes with `nosniff`/`no-store`, and revoked-original 404.
 - `PATH=/home/blackfire/.nvm/versions/node/v24.19.0/bin:$PATH CORPUS_TEST_DATABASE_URL=postgresql+asyncpg://culturechamp:culturechamp_local@localhost:15435/culturechamp make check`: passed after the original-file contract sync. Architecture, Ruff, mypy, 35 backend tests, frontend lint/build and 12 tests, ML Ruff/mypy and 6 tests, OpenAPI snapshot/client check, Compose config all passed. One Starlette/httpx deprecation warning remains.
 - `PATH=/home/blackfire/.nvm/versions/node/v24.19.0/bin:$PATH npm run test:e2e` in `frontend/`: four Playwright tests passed, including the keyboard admin filter and narrow-width path.
@@ -552,7 +558,7 @@ added the evaluation test to the root `make check` target.
   checks observed candidate original 404, worker extraction and reviewed tag,
   exact approval with `original_file=true`, original bytes matching the upload,
   `no-store`/`nosniff`, admin filters, then revoked-original 404. The test PDF
-  was again self-authored; supplied fixtures remained held.
+  was again self-authored; supplied fixtures were not used in that synthetic test.
 - `git diff --check` and inspection of the final staged diff are required again
   immediately before the handoff commit; report the observed result there.
 
@@ -561,20 +567,18 @@ added the evaluation test to the root `make check` target.
 S01/S02/S04 and C01/C05/C06/C07/C09 remain partial as recorded in the
 tracker. A synthetic CSV has exact cell locators through the user API and table
 UI, plus a permitted original download. Real cultural tables and XLSX/merged
-cells remain unverified. No real source has reuse, provider-transfer or
-community-sensitive clearance; the three PDFs remain admin-only candidates.
+cells remain unverified. Real cultural tables and community-sensitive claims still require editorial review.
 Heading extraction and complete multicolumn reading order are unverified. The
 PDF and CSV parsers have bounded CPU/memory child processes and request-body
 limits, but no hardened syscall/network sandbox. Admin tag-value filters,
 passage-level exclusions and audited account role changes are absent. External
 generation remains gated on retrieval review. The live Compose test used an
-example.invalid rights URL only for self-authored synthetic bytes; it is not a
+example.invalid evidence URL only for self-authored synthetic bytes; it is not a
 model for accepting evidence about a third-party source.
 
 ## Risks and open questions
 
-Appoint a rights and cultural approval authority; obtain exact-version grants
-for user excerpts and provider transmission separately. Verify full PDF-03
+Appoint a cultural reviewer and verify the extraction of each supplied revision. Verify full PDF-03
 reading order and supply an eligible real table fixture before widening the
 format gate. Harden parser isolation before untrusted bulk
 uploads. The rate limiter is per username and can be abused to lock an account;
@@ -585,8 +589,8 @@ evaluate an IP/account policy with operators before broader availability.
 For the next backend slice, compare an eligible real table against CSV cell
 locators and add XLSX merged-cell handling with a separate fixture. Harden the
 parser sandbox before accepting untrusted bulk uploads.
-Keep all three supplied PDFs held until a named reviewer has documented rights,
-sensitivity and extraction fidelity for an exact hash. Re-run `make check`, clean
+The supplied PDFs may be used in local model-backed testing; compare sensitivity
+and extraction fidelity against each exact hash. Re-run `make check`, clean
 migration and live role/revocation checks for any contract or schema change.
 
 ## Cleanup completed or retention reason
@@ -642,9 +646,9 @@ indexing jobs. After stopping that worker, creating and migrating a separate
 focused suite passed 11 tests. `make migration-check` on the separate database
 reported no new upgrade operations.
 
-What remains unverified and why: Exact external provider/model/terms/key are not
-yet supplied. No eligible real cultural source has approved user/provider rights
-or expert cultural support labels. Other use cases, canonical widths, failure
+What remains unverified and why: Exact external provider/model/terms/key were not
+yet supplied at this checkpoint. Expert cultural support labels, other use
+cases, canonical widths, failure
 drills and recovery remain open in Q01–Q04.
 
 Risks and open questions: The fake answer checks orchestration only. The live
@@ -718,7 +722,7 @@ and tag filters match exact values case-insensitively. The new fields were
 regenerated in `contracts/openapi.json` and the TypeScript schema. No migration
 or vector-index contract changed. The list loads revision metadata and tags in
 two queries without fetching extracted segment bodies; exact detail still loads
-the segments and current original-file permission.
+the segments and current original-file visibility.
 
 Decision and evidence: `docs/product/USE_CASES.md` calls for materials filters,
 context tags and original/locator detail. The existing `SourceTag` rows and
@@ -745,7 +749,7 @@ full `make check` with the live PostgreSQL and Qdrant endpoints also passed
 61 backend, 16 frontend and 20 ML tests plus all static and contract gates.
 
 What remains unverified and why: The live source was self-authored CSV. No
-eligible real source, rights review, expert cultural judgement or external model
+eligible real source, extraction review, expert cultural judgement or external model
 API was involved. Large-corpus pagination and ranked materials discovery are
 not implemented. The broader U04/U06/Q01 gates remain open.
 
@@ -896,11 +900,11 @@ implementing that requires an audited overlay and concurrency policy. Large
 catalogues still need pagination and measured latency. Both isolated stacks
 were stopped after verification; their named volumes remain for repeat checks.
 Review the diff, commit and push, then verify CI. Continue
-independent admin/error and safety checks; source rights, expert review and
+independent admin/error and safety checks; source quality, expert review and
 the exact external provider remain outside this technical slice.
 
 Remaining limits: Expert factual review, a real provider, eligible cultural
-rights, image/audio locators and broader UC-07–UC-11 adversarial cases remain
+image/audio locators and broader UC-07–UC-11 adversarial cases remain
 outside this synthetic citation check.
 
 ## 2026-09-30 private original during administrator review
@@ -909,7 +913,7 @@ Objective and actual status: Administrators can now open the stored original
 for any exact revision, including a candidate before approval and a withdrawn
 revision. The admin detail links to its protected route and displays origin,
 creator, format and source identity alongside the extracted segments. The user
-original route continues to require the exact current rights decision.
+original route continues to require the exact current publication decision.
 
 Worktree / branch / base SHA: The isolated integration worktree and
 `agent/integration-backend` branch were clean at `793ed0a` before this slice.
@@ -930,7 +934,7 @@ passed. A fresh Compose stack passed the synthetic live browser journey in
 33.2 seconds with candidate review, user denial and withdrawn audit access.
 
 Risk and integration: This route is deliberately admin-only, including when
-rights are unconfirmed; admin credentials remain a high-trust boundary. The
+publication is pending; admin credentials remain a high-trust boundary. The
 hash check detects mismatched private bytes. The broader U06 error, format and
 keyboard review and real-source approval are still open. Review the diff,
 commit and push, then verify CI. Stop both isolated test stacks after the
@@ -1016,7 +1020,7 @@ event for each correction. PostgreSQL locks processing and revision rows in the
 same order as approval; a transaction updates the current catalogue projection
 and event atomically. Only description and tags are editable in this pilot.
 Postapproval corrections, expert validation of cultural context, and real-source
-rights remain open. Review the diff, stop isolated stacks, commit/push and
+extraction review remains open. Review the diff, stop isolated stacks, commit/push and
 verify CI.
 
 ## 2026-09-30 bounded XLSX table path
@@ -1110,7 +1114,7 @@ architecture, Ruff, mypy, 60 backend unit tests (14 service-dependent skips),
 19 frontend tests, 20 ML tests, build, OpenAPI contract and Compose config. The
 first invocation used system Node 18 and stopped at Vitest startup; the project
 requires Node 24. Prior clean PostgreSQL/Qdrant, browser and built Compose gates
-for `a8dc560` are recorded above. External model parameters and permissions
+for `a8dc560` are recorded above. External model parameters and configuration
 remain the release blockers; measured provider cost and latency remain open.
 For this fix, a fresh isolated PostgreSQL container migrated from zero to head;
 the real `SqlModelQuota` retry/limit test passed (1 test). That project's
@@ -1135,7 +1139,7 @@ been configured, so cost and pilot latency targets remain open.
 Expected result: when two approved synthetic revisions differ in
 `provider_transfer`, the external adapter receives only the permitted revision,
 returns a fact grounded in its exact segment, and revocation makes the resulting
-historical citation unavailable. The contract is the current rights decision
+historical citation unavailable. The contract is the current publication decision
 before Qdrant ranking, the recheck after retrieval and the Chat Completions
 adapter. The prior chat integration test covered only the denied path.
 

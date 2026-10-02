@@ -34,8 +34,8 @@ owner approved the dependency edit and cherry-picked it as `6127ba0`.
 
 - [ADR 0004](../../decisions/0004-access-model-data.md): invite-only users, no
   guest chat, offline first-admin bootstrap, server session, role/owner/revision
-  checks, 30-day active chat retention, separate source rights for provider
-  transfer, backend-held key and pilot limits.
+  checks, 30-day active chat retention, separate source visibility for model
+  context, backend-held key and pilot limits.
 - [UX plan](../../product/UX_CHAT_MVP.md): default chat, secondary materials,
   admin inventory and citation navigation at 360/768/1280/1440 px, with
   keyboard and state paths. It uses the final S01 proposal and states that the
@@ -58,7 +58,7 @@ prompt-injection guidance. [HTTPX timeouts](https://www.python-httpx.org/advance
 and [mock transports](https://www.python-httpx.org/advanced/transports/) informed
 the adapter and deterministic tests. The [pypdf PyPI release](https://pypi.org/project/pypdf/6.19.0/)
 supports the corpus owner's pinned runtime dependency. The corpus owner confirmed
-that `user_text`, `original_file`, and `provider_transfer` are separate rights
+that `user_text`, `original_file`, and `provider_transfer` are separate visibility fields
 scopes and that the user lookup filters exact approved revisions before ranking.
 
 ## Verification commands and observed results
@@ -89,7 +89,7 @@ scopes and that the user lookup filters exact approved revisions before ranking.
 - G01 has a `Quota` protocol, not a shared durable limiter. Concurrency,
   per-user/global daily spend and exact input token accounting are unimplemented.
   Keep `policy_approved=False` until these and provider data terms are verified.
-- No chat persistence, deletion purge, backup expiry, rights-approved source,
+- No chat persistence, deletion purge, backup expiry, published source,
   external provider, citation API, or admin inventory API exists. U02/U04/U06
   remain open. The preview send is local-only and cannot substantiate an answer.
 - Visual screenshots at 1280 and 360 px were inspected; tablet/wide widths were
@@ -99,13 +99,13 @@ scopes and that the user lookup filters exact approved revisions before ranking.
 ## Risks and open questions
 
 The pilot's 30-day retention and numeric limits are unvalidated assumptions.
-Appoint the first admin and source/rights reviewers before enabling ingestion or
-provider transfer. Do not use PDF candidates for external generation. The HTTP
+Appoint the first admin and source reviewers before enabling ingestion or
+model context. The user has authorized supplied PDFs for local external-model testing. The HTTP
 wire shape is OpenAI-compatible as a seam, not a selected provider contract.
 
 ## Exact next step
 
-Integrate the corpus branch's revision/rights contract with a durable account and
+Integrate the corpus branch's revision/publication contract with a durable account and
 session store plus login/logout/bootstrap, wire protected user/admin source routes,
 and add direct API tests for guessed unpublished IDs and expired sessions in the
 real app. Implement a shared quota reservation before changing the HTTP adapter's

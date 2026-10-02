@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import time
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from typing import Protocol
 
@@ -160,6 +161,65 @@ class ModelGateway:
                     outcome,
                     (time.monotonic_ns() - started_ns) // 1_000_000,
                     attempts,
+                    observed_result.input_tokens if observed_result else None,
+                    observed_result.output_tokens if observed_result else None,
+                )
+
+    async def generate_stream(
+        self, request: ModelRequest, on_delta: Callable[[str], Awaitable[None]]
+    ) -> ModelResult:
+        """Stream model text while retaining quota and usage accounting."""
+        if not request.prompt.strip() or len(request.prompt) > 24_000:
+            raise ModelFailure("invalid_input")
+        if len(request.prompt.split()) > 8_000:
+            raise ModelFailure("invalid_input")
+        if request.max_output_tokens < 1 or request.max_output_tokens > 2_000:
+            raise ModelFailure("invalid_input")
+        if not await self.quota.reserve(request.subject_id, request.idempotency_key):
+            raise ModelFailure("quota_exceeded")
+
+        started_ns = time.monotonic_ns()
+        observed_result: ModelResult | None = None
+        accepted_result: ModelResult | None = None
+        outcome = "provider_unavailable"
+        try:
+            stream = getattr(self.provider, "generate_stream", None)
+            if stream is None:
+                result = await asyncio.wait_for(
+                    self.provider.generate(request), timeout=self.deadline_seconds
+                )
+            else:
+                result = await asyncio.wait_for(
+                    stream(request, on_delta), timeout=self.deadline_seconds
+                )
+            observed_result = result
+            if result.output_tokens > request.max_output_tokens:
+                raise ModelFailure("provider_unavailable")
+            accepted_result = result
+            outcome = "ok"
+            return result
+        except TimeoutError as exc:
+            outcome = "timeout"
+            raise ModelFailure("timeout") from exc
+        except ModelFailure as exc:
+            outcome = exc.code if exc.code in {
+                "provider_unavailable", "provider_disabled", "timeout"
+            } else "provider_unavailable"
+            raise
+        except Exception as exc:
+            raise ModelFailure("provider_unavailable") from exc
+        finally:
+            try:
+                await self.quota.finish(
+                    request.subject_id, request.idempotency_key, observed_result,
+                    accepted=accepted_result is not None,
+                )
+            finally:
+                logger.info(
+                    "model_call outcome=%s duration_ms=%d attempts=1 "
+                    "input_tokens=%s output_tokens=%s",
+                    outcome,
+                    (time.monotonic_ns() - started_ns) // 1_000_000,
                     observed_result.input_tokens if observed_result else None,
                     observed_result.output_tokens if observed_result else None,
                 )

@@ -35,7 +35,7 @@ make smoke
 
 The frontend is at `http://localhost:8080`; the API is at
 `http://localhost:8000/api/v1/health/live`. The local Qdrant endpoint is bound
-to `127.0.0.1:6333`. The first approved text revision triggers a one-time
+to `127.0.0.1:6333`. The first published text revision triggers a one-time
 download of the configured embedding model into the private Compose volume.
 `make down` stops the stack.
 

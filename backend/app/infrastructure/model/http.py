@@ -1,4 +1,5 @@
 import json
+from collections.abc import Awaitable, Callable
 from urllib.parse import urlparse
 
 import httpx
@@ -103,6 +104,101 @@ class HttpModelProvider:
         except (httpx.TimeoutException, httpx.RequestError) as exc:
             raise TemporaryModelFailure("provider_unavailable") from exc
         except (KeyError, IndexError, TypeError, ValueError) as exc:
+            raise ModelFailure("provider_unavailable") from exc
+        finally:
+            if owned_client:
+                await client.aclose()
+
+    async def generate_stream(
+        self, request: ModelRequest, on_delta: Callable[[str], Awaitable[None]]
+    ) -> ModelResult:
+        if not self.policy_approved or not request.provider_transfer_permitted:
+            raise ModelFailure("provider_disabled")
+        if not self.api_key:
+            raise ModelFailure("provider_unavailable")
+        owned_client = self.client is None
+        client = self.client or httpx.AsyncClient(
+            timeout=httpx.Timeout(60.0, connect=5.0, pool=2.0),
+            follow_redirects=False, trust_env=False,
+        )
+        try:
+            async with client.stream(
+                "POST", self.endpoint,
+                headers={
+                    "Authorization": f"Bearer {self.api_key}",
+                    "Idempotency-Key": request.idempotency_key,
+                },
+                json={
+                    "model": self.model,
+                    "messages": [
+                        *(
+                            [{"role": "system", "content": request.system_prompt}]
+                            if request.system_prompt else []
+                        ),
+                        {"role": "user", "content": request.prompt},
+                    ],
+                    "max_tokens": request.max_output_tokens,
+                    "response_format": {"type": "json_object"},
+                    "stream": True,
+                    "stream_options": {"include_usage": True},
+                },
+            ) as response:
+                if response.status_code != 200:
+                    raise ModelFailure("provider_unavailable")
+                pieces: list[str] = []
+                received_bytes = 0
+                finished = False
+                done = False
+                usage: object = None
+                async for line in response.aiter_lines():
+                    received_bytes += len(line.encode("utf-8"))
+                    if received_bytes > 1_000_000:
+                        raise ModelFailure("provider_unavailable")
+                    if not line.startswith("data:"):
+                        continue
+                    data = line.removeprefix("data:").strip()
+                    if data == "[DONE]":
+                        done = True
+                        break
+                    event = json.loads(data)
+                    if not isinstance(event, dict):
+                        raise ValueError("invalid stream event")
+                    if event.get("usage") is not None:
+                        usage = event["usage"]
+                    choices = event.get("choices")
+                    if not isinstance(choices, list):
+                        raise ValueError("invalid stream choices")
+                    if not choices:
+                        continue
+                    choice = choices[0]
+                    if not isinstance(choice, dict):
+                        raise ValueError("invalid stream choice")
+                    reason = choice.get("finish_reason")
+                    if reason is not None:
+                        if reason != "stop":
+                            raise ValueError("completion did not finish normally")
+                        finished = True
+                    delta = choice.get("delta")
+                    if not isinstance(delta, dict):
+                        raise ValueError("invalid stream delta")
+                    piece = delta.get("content")
+                    if piece is not None:
+                        if not isinstance(piece, str):
+                            raise ValueError("invalid stream content")
+                        pieces.append(piece)
+                        await on_delta(piece)
+            if not done or not finished or not pieces or not isinstance(usage, dict):
+                raise ModelFailure("provider_unavailable")
+            input_tokens = usage.get("prompt_tokens")
+            output_tokens = usage.get("completion_tokens")
+            if (
+                type(input_tokens) is not int or type(output_tokens) is not int
+                or input_tokens < 1 or output_tokens < 1
+            ):
+                raise ModelFailure("provider_unavailable")
+            return ModelResult("".join(pieces), input_tokens, output_tokens)
+        except (httpx.TimeoutException, httpx.RequestError, KeyError, IndexError,
+                TypeError, ValueError, json.JSONDecodeError) as exc:
             raise ModelFailure("provider_unavailable") from exc
         finally:
             if owned_client:

@@ -196,7 +196,7 @@ The embroidery language is deliberately **pan-regional and abstract**.
 - Use geometric, botanical, animal, star, branch, grain, and textile-grid forms only when they are either generic abstractions or based on a documented source.
 - MUST NOT invent a symbol and label it as belonging to a specific people, region, religion, or tradition.
 - MUST NOT mix recognizable sacred, ritual, heraldic, or culturally specific symbols merely for decoration.
-- When a motif is explicitly tied to a named tradition, the asset SHOULD carry provenance in its source file or metadata: origin, source/reference, and author/license if applicable.
+- When a motif is explicitly tied to a named tradition, the asset SHOULD carry provenance in its source file or metadata: origin, source/reference, and creator attribution if applicable.
 - Cultural photography and illustrations MUST be credited when the source requires it.
 - Avoid a fake “old Russia” or “folk theme park” aesthetic. The product is about living culture, including contemporary local scenes.
 
@@ -210,6 +210,14 @@ Agents follow budgets better than vague adjectives. Apply these limits:
 - **At most one display-font hero moment per page.**
 - Decorative embroidery SHOULD occupy **no more than ~25% of the visible area** on ordinary content pages. Landing/manifesto pages MAY reach ~35%.
 - Cards, controls, and map UI MUST NOT each receive their own unique folk decoration.
+
+On the empty desktop chat, the asymmetric stitched tree frames the right edge and
+the stitched bear anchors the lower left. Both are code-native crosses drawn from
+visual references. Keep their silhouettes recognizable at normal viewport size,
+their colors within the existing thread palette, and all controls unobstructed.
+The motifs recede smoothly when the user starts typing and leave the composition
+when the first message opens a conversation. On narrow screens, use the compact
+embroidery band instead of the large edge motifs.
 
 ### Source-of-truth behavior for agents
 

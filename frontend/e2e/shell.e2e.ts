@@ -11,12 +11,12 @@ test("responsive persisted chat, starter keyboard path and theme", async ({ page
       return route.fulfill({ status: 201, json: { id: chat.id, title: chat.title, updated_at: "2026-09-30T00:00:00Z" } })
     }
     if (path === "/api/v1/chats/chat-test" && request.method() === "GET") return route.fulfill({ json: { ...chat, updated_at: "2026-09-30T00:00:00Z" } })
-    if (path === "/api/v1/chats/chat-test/messages" && request.method() === "POST") {
+    if (path === "/api/v1/chats/chat-test/messages/stream" && request.method() === "POST") {
       const body = request.postDataJSON() as { text: string; request_id: string }
       const turn = { request_id: body.request_id, ordinal: 0, user_text: body.text, assistant_text: "Нет одобренных источников для культурного утверждения.", evidence_status: "insufficient", status: "complete", citations: [], rating: null, feedback_comment: null }
       chat!.turns.push(turn)
       chat!.title = body.text
-      return route.fulfill({ json: turn })
+      return route.fulfill({ contentType: "text/event-stream", body: `event: delta\ndata: ${JSON.stringify({ text: turn.assistant_text })}\n\nevent: complete\ndata: ${JSON.stringify({ turn })}\n\n` })
     }
     if (path.endsWith("/feedback") && request.method() === "PUT") {
       const body = request.postDataJSON() as { rating: "up" | "down" | null; comment: string | null }

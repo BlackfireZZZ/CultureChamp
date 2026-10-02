@@ -98,7 +98,7 @@ there were no conflict resolutions or copied artifacts.
 - The backend does not yet provide aggregate request statistics; the exact
   endpoint contract above needs backend ownership and OpenAPI generation before
   production counts can appear.
-- External model activation, reviewed real cultural sources and rights, expert
+- External model activation, reviewed real cultural sources, expert
   evaluation, and target-user validation remain product/release dependencies
   outside this frontend slice. The live journey uses the fake provider and
   explicitly synthetic sources.

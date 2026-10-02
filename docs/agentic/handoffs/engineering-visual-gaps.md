@@ -28,7 +28,7 @@ governed search API and frontend mode implement the visual pilot.
 
 Decisions and supporting evidence: ADR 0008 records official comparables and
 the synthetic E5 caption, CLIP region and rendered-page comparison. The
-YandexGPT live path used only self-authored text, and no real source permissions
+YandexGPT live path used only self-authored text, and no real source content
 were assumed.
 
 Verification commands and observed results: Clean isolated PostgreSQL upgraded
@@ -51,7 +51,7 @@ when empty and 728 KiB after indexing. An initial live browser run exposed a
 cached-citation focus race; deferring focus until after the view switch fixed it.
 
 What remains unverified and why: Cultural relevance, Russian-language visual
-retrieval quality, real-source permissions, expert answer review, actual target
+retrieval quality, real-source testing, expert answer review, actual target
 user behavior and external-provider terms require human evidence. Synthetic
 checks cannot establish them.
 

@@ -23,7 +23,11 @@ from app.infrastructure.db.source_models import (
     SourceVectorIndex,
 )
 from app.infrastructure.db.source_repository import SourceRepository
-from app.infrastructure.db.vector_search import SqlGovernedVectorSearch
+from app.infrastructure.db.vector_search import (
+    SqlGovernedVectorSearch,
+    _rank_candidate,
+    _topic_terms,
+)
 from app.infrastructure.vector.indexing import ApprovedTextIndexer
 from app.infrastructure.vector.text_vectors import (
     DIMENSIONS,
@@ -49,6 +53,18 @@ class CrowdingEmbedder(ConstantEmbedder):
             + [0.0] * (DIMENSIONS - 2)
             for text in texts
         ]
+
+
+def test_title_agreement_recovers_costume_body_without_opening_unrelated_hits() -> None:
+    terms = _topic_terms(
+        "Составь промпт для изображения национального русского костюма"
+    )
+    costume = _rank_candidate(terms, "Традиционный русский костюм", 0.8197)
+    unrelated = _rank_candidate(terms, "Русская культура как феномен", 0.8475)
+    assert costume is not None and unrelated is not None
+    assert costume > unrelated
+    assert _rank_candidate(terms, "Русская культура как феномен", 0.82) is None
+    assert _rank_candidate(terms, "Традиционный русский костюм", 0.75) is None
 
 
 def test_vector_index_batches_large_revision_without_losing_points() -> None:
@@ -88,7 +104,8 @@ def test_vector_index_batches_large_revision_without_losing_points() -> None:
         finally:
             async with httpx.AsyncClient(timeout=15) as client:
                 response = await client.delete(f"{vector_url}/collections/{collection}")
-                response.raise_for_status()
+                if response.status_code != 404:
+                    response.raise_for_status()
 
     asyncio.run(check())
 
@@ -120,7 +137,8 @@ def test_multilingual_vector_paraphrase_ranks_relevant_passage_first() -> None:
 
     async def check() -> None:
         gift_id, concert_id = uuid4(), uuid4()
-        index = QdrantTextIndex(vector_url, LocalTextEmbedder())
+        collection = f"culture_test_paraphrase_{uuid4().hex}"
+        index = QdrantTextIndex(vector_url, LocalTextEmbedder(), collection=collection)
         try:
             await index.upsert(
                 [
@@ -136,7 +154,9 @@ def test_multilingual_vector_paraphrase_ranks_relevant_passage_first() -> None:
             scores = dict(results)
             assert scores[gift_id] > scores[concert_id]
         finally:
-            await index.delete([gift_id, concert_id])
+            async with httpx.AsyncClient(timeout=15) as client:
+                response = await client.delete(f"{vector_url}/collections/{collection}")
+                response.raise_for_status()
 
     asyncio.run(check())
 

@@ -26,13 +26,12 @@ The audit reports parser agreement only; it cannot decide which parser is right
 without a rendered-page comparison. Numeric per-page output is local and
 contains no excerpts.
 
-The raw files remain candidate test material. Rights for processing, display and
-model transmission are unresolved in the [source policy](SOURCE_POLICY.md).
+The supplied files may be used for local application and model testing. Keep the original documents outside Git. The [source policy](SOURCE_POLICY.md) describes publication and extraction review.
 
 | Format | Supplied fixture | Tested fidelity/locator | MVP stance |
 |---|---|---|---|
 | Text-layer PDF, single-column prose | PDF-01 and PDF-02 | Nonempty page text; page index survives; heading and footnote semantics incomplete | Implement only with explicit page locator and review flag. |
-| Text-layer PDF, parallel/multicolumn | PDF-03 | Text exists; Poppler layout fails page 2 reading order, while sampled `pypdf` content order is better | Hold from user publication until full reading-order review. |
+| Text-layer PDF, parallel/multicolumn | PDF-03 | Text exists; Poppler layout fails page 2 reading order, while sampled `pypdf` content order is better | Compare displayed passages against rendered pages when citation precision matters. |
 | Scanned/image-only PDF | None | No OCR or page-text test | Unsupported; reject or hold for separate OCR decision. |
 | UTF-8 plain TXT | Self-authored synthetic file only | Original CRLF bytes stay intact; extracted paragraphs carry one-based line ranges; strict decoding rejects malformed bytes; governed API, Qdrant and revocation check pass | Technical bounded TXT path is implemented. Real textual fidelity and cultural suitability remain unverified. |
 | Markdown/DOCX/HTML | None | No fixture or fidelity test | Unsupported in this slice. |

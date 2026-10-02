@@ -175,6 +175,26 @@ async def _check_chat(url: str, tmp_path: Path) -> None:
             assert owner.get("/api/v1/chats").headers["cache-control"] == "no-store"
             assert [row["id"] for row in owner.get("/api/v1/chats").json()] == [chat_id]
             assert other.get(f"/api/v1/chats/{chat_id}").status_code == 404
+            assert owner.patch(
+                f"/api/v1/chats/{chat_id}", headers=owner_headers,
+                json={"title": "   "},
+            ).status_code == 422
+            assert other.patch(
+                f"/api/v1/chats/{chat_id}", headers=other_headers,
+                json={"title": "Foreign title"},
+            ).status_code == 404
+            assert admin.patch(
+                f"/api/v1/chats/{chat_id}", headers=admin_headers,
+                json={"title": "Admin title"},
+            ).status_code == 403
+            renamed = owner.patch(
+                f"/api/v1/chats/{chat_id}", headers=owner_headers,
+                json={"title": "  Russian costume idea  "},
+            )
+            assert renamed.status_code == 200
+            assert renamed.headers["cache-control"] == "no-store"
+            assert renamed.json()["title"] == "Russian costume idea"
+            assert owner.get(f"/api/v1/chats/{chat_id}").json()["title"] == "Russian costume idea"
             assert (
                 other.delete(f"/api/v1/chats/{chat_id}", headers=other_headers).status_code == 404
             )

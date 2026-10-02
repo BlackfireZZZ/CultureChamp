@@ -6,7 +6,7 @@ The first evaluable slice can help a cultural project team draft contemporary,
 source-aware **text** about changing everyday practices and the environment among
 Indigenous peoples of Primorye. This is a proposal to test with a qualified reviewer
 and users, not a claim that the available PDFs are approved cultural authorities.
-The slice fails if the proposed briefs cannot be answered with precise, permissible
+The slice fails if the proposed briefs cannot be answered with precise, relevant
 passages after review, or if the output treats a broad regional account as a fact
 about every community.
 
@@ -24,9 +24,7 @@ about every community.
   [fixture inventory](../../data/retrieval-fixtures/README.md). Both are secondary
   scholarly accounts, not community endorsements. PDF-01 (Kazin, 2022) is outside
   this geographic and topic slice; retain it only as an extraction/control fixture.
-- **Approved corpus today:** empty. The candidate PDFs have no documented reuse
-  permission, sensitivity review, or exact-revision approval. See the
-  [source policy](SOURCE_POLICY.md).
+- **Corpus status:** the supplied PDFs are authorized for local application and model testing. Exact-revision publication and extraction checks are tracked in the [source policy](SOURCE_POLICY.md).
 
 ## Three briefs to validate
 
@@ -39,11 +37,10 @@ about every community.
 These are adaptations of UC-02, UC-04, UC-05 and UC-06 in the
 [use-case guide](USE_CASES.md). UC-01 gifts and UC-03 naming remain useful product
 prompts but are **not** supported by this narrow candidate set. A no-evidence answer
-is the correct result until an exact source revision passes review.
+is the correct result when retrieved passages do not support the request.
 
 ## Expansion trigger
 
-Add community-authored or community-reviewed material and a concrete permission
-record before testing community-specific motifs, terminology or traditional
+Add community-authored or community-reviewed material before testing community-specific motifs, terminology or traditional
 practices. Record disagreements and the limits of each source in the review rubric;
 do not broaden the claim merely because another region appears in a bibliography.

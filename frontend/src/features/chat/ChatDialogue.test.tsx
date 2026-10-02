@@ -9,15 +9,17 @@ const detail = { ...summary, turns: [{ request_id: "turn-test", ordinal: 0, user
 
 afterEach(cleanup)
 
+const renameProps = { onRename: vi.fn().mockResolvedValue(undefined), renaming: false }
+
 test("separates source support, interpretation, and new work", () => {
-  render(<ChatDialogue summary={summary} detail={detail} pending={false} error={false} onRetry={vi.fn()} onCitation={vi.fn()} onDelete={vi.fn()} deleting={false} onRate={vi.fn()} />)
+  render(<ChatDialogue {...renameProps} summary={summary} detail={detail} pending={false} error={false} onRetry={vi.fn()} onCitation={vi.fn()} onDelete={vi.fn()} deleting={false} onRate={vi.fn()} />)
   for (const title of ["Подтверждено источником", "Интерпретация", "Новая творческая идея"]) expect(screen.getByRole("heading", { name: title })).toBeInTheDocument()
   expect(screen.getByText("Synthetic excerpt.")).toBeInTheDocument()
 })
 
 test("image request shows a copyable prompt and optional external example", () => {
   const imageDetail = { ...detail, turns: [{ ...detail.turns[0], user_text: "Сгенерируй фото", assistant_text: "Source-supported: Synthetic blue lid.\n\nInterpretation: Contemporary studio setting.\n\nImage prompt: Фотореалистичная предметная фотография коробки с синей крышкой, мягкий боковой свет." }] } as ChatDetail
-  render(<ChatDialogue summary={summary} detail={imageDetail} pending={false} error={false} onRetry={vi.fn()} onCitation={vi.fn()} onDelete={vi.fn()} deleting={false} onRate={vi.fn()} />)
+  render(<ChatDialogue {...renameProps} summary={summary} detail={imageDetail} pending={false} error={false} onRetry={vi.fn()} onCitation={vi.fn()} onDelete={vi.fn()} deleting={false} onRate={vi.fn()} />)
   expect(screen.getByRole("heading", { name: "Промпт для изображения" })).toBeInTheDocument()
   expect(screen.getByText(/Фотореалистичная предметная фотография/)).toBeInTheDocument()
   expect(screen.getByRole("link", { name: "GigaChat" })).toHaveAttribute("href", "https://giga.chat/")
@@ -26,7 +28,7 @@ test("image request shows a copyable prompt and optional external example", () =
 
 test("requires explicit deletion and restores focus after cancellation", () => {
   const onDelete = vi.fn()
-  render(<ChatDialogue summary={summary} detail={detail} pending={false} error={false} onRetry={vi.fn()} onCitation={vi.fn()} onDelete={onDelete} deleting={false} onRate={vi.fn()} />)
+  render(<ChatDialogue {...renameProps} summary={summary} detail={detail} pending={false} error={false} onRetry={vi.fn()} onCitation={vi.fn()} onDelete={onDelete} deleting={false} onRate={vi.fn()} />)
   const trigger = screen.getByRole("button", { name: "Удалить чат" })
   fireEvent.click(trigger)
   const confirmation = screen.getByRole("group", { name: "Подтверждение удаления чата" })
@@ -41,7 +43,7 @@ test("requires explicit deletion and restores focus after cancellation", () => {
 
 test("rates an answer, submits a comment, and can clear the rating", async () => {
   const onRate = vi.fn().mockResolvedValue(undefined)
-  const props = { summary, pending: false, error: false, onRetry: vi.fn(), onCitation: vi.fn(), onDelete: vi.fn(), deleting: false, onRate }
+  const props = { ...renameProps, summary, pending: false, error: false, onRetry: vi.fn(), onCitation: vi.fn(), onDelete: vi.fn(), deleting: false, onRate }
   const view = render(<ChatDialogue {...props} detail={detail} />)
   fireEvent.click(screen.getByRole("button", { name: "Нравится ответ" }))
   await waitFor(() => expect(onRate).toHaveBeenCalledWith("turn-test", "up", null))
@@ -60,4 +62,23 @@ test("rates an answer, submits a comment, and can clear the rating", async () =>
   expect(screen.getByRole("textbox", { name: "Что стоит улучшить или сохранить?" })).toHaveValue("")
   fireEvent.click(screen.getByRole("button", { name: "Не нравится ответ" }))
   await waitFor(() => expect(onRate).toHaveBeenCalledWith("turn-test", null, null))
+})
+
+test("renames a chat inline and returns focus to the pencil control", async () => {
+  const onRename = vi.fn().mockResolvedValue(undefined)
+  render(<ChatDialogue summary={summary} detail={detail} pending={false} error={false} onRetry={vi.fn()} onCitation={vi.fn()} onDelete={vi.fn()} deleting={false} onRename={onRename} renaming={false} onRate={vi.fn()} />)
+  const trigger = screen.getByRole("button", { name: "Переименовать чат" })
+  fireEvent.click(trigger)
+  const input = screen.getByRole("textbox", { name: "Название чата" })
+  expect(input).toHaveFocus()
+  fireEvent.change(input, { target: { value: "  Новый заголовок  " } })
+  fireEvent.click(screen.getByRole("button", { name: "Сохранить" }))
+  await waitFor(() => expect(onRename).toHaveBeenCalledWith("Новый заголовок"))
+  await waitFor(() => expect(trigger).toHaveFocus())
+  expect(screen.queryByRole("textbox", { name: "Название чата" })).not.toBeInTheDocument()
+})
+
+test("shows incoming answer before the completed turn and its citations arrive", () => {
+  render(<ChatDialogue {...renameProps} summary={summary} detail={{ ...detail, turns: [] }} pending={false} error={false} onRetry={vi.fn()} onCitation={vi.fn()} onDelete={vi.fn()} deleting={false} onRate={vi.fn()} isGenerating streamingText="Начало ответа модели" />)
+  expect(screen.getByRole("article", { name: "Ответ формируется" })).toHaveTextContent("Начало ответа модели")
 })

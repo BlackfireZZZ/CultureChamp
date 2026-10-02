@@ -1,0 +1,42 @@
+/* The two large motifs frame the opening stage; conversation content is kept clear. */
+.chat-main.is-empty > .bear-ornament {
+  position: fixed;
+  left: clamp(288px, 21vw, 380px);
+  bottom: clamp(28px, 5vh, 64px);
+  width: clamp(280px, 22vw, 340px);
+  height: auto;
+  pointer-events: none;
+  fill: none;
+  stroke-linecap: square;
+  opacity: .78;
+  transition: opacity .36s ease, transform .36s cubic-bezier(.2,.7,.2,1);
+}
+.chat-main.is-empty > .tree-ornament {
+  transition: opacity .36s ease, transform .36s cubic-bezier(.2,.7,.2,1);
+}
+.chat-main.is-empty.is-drafting > .bear-ornament {
+  opacity: .18;
+  transform: translate(-14px, 6px);
+}
+.chat-main.is-empty.is-drafting > .tree-ornament {
+  opacity: .19;
+  transform: translate(12px, -6px);
+}
+.bear-thread-outline { stroke: var(--color-accent-strong); stroke-width: 1.25; }
+.bear-thread-body { stroke: var(--color-accent); stroke-width: 1.2; }
+.bear-thread-highlight { stroke: var(--color-border); stroke-width: 1.15; }
+:root[data-theme="dark"] .chat-main.is-empty > .bear-ornament { opacity: .87; }
+@media (min-width: 1361px) and (min-height: 681px) {
+  .chat-main.is-empty .chat-empty > .embroidery-band { display: none; }
+}
+@media (min-width: 1361px) and (max-width: 1520px) {
+  .chat-main.is-empty > .bear-ornament { left: 294px; width: 260px; bottom: 24px; }
+  .chat-main.is-empty > .tree-ornament { right: -120px; }
+}
+@media (max-width: 1360px), (max-height: 680px) {
+  .chat-main.is-empty > .bear-ornament { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .chat-main.is-empty > .bear-ornament,
+  .chat-main.is-empty > .tree-ornament { transition: none; }
+}

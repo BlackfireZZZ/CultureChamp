@@ -293,7 +293,8 @@ export interface paths {
         readonly delete: operations["delete_chat_api_v1_chats__chat_id__delete"];
         readonly options?: never;
         readonly head?: never;
-        readonly patch?: never;
+        /** Rename Chat */
+        readonly patch: operations["rename_chat_api_v1_chats__chat_id__patch"];
         readonly trace?: never;
     };
     readonly "/api/v1/chats/{chat_id}/messages": {
@@ -324,6 +325,23 @@ export interface paths {
         /** Rate Message */
         readonly put: operations["rate_message_api_v1_chats__chat_id__messages__request_id__feedback_put"];
         readonly post?: never;
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
+    };
+    readonly "/api/v1/chats/{chat_id}/messages/stream": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly get?: never;
+        readonly put?: never;
+        /** Stream Message */
+        readonly post: operations["stream_message_api_v1_chats__chat_id__messages_stream_post"];
         readonly delete?: never;
         readonly options?: never;
         readonly head?: never;
@@ -839,6 +857,11 @@ export interface components {
             readonly reason: string;
             /** Tags */
             readonly tags: readonly components["schemas"]["TagView"][];
+        };
+        /** RenameInput */
+        readonly RenameInput: {
+            /** Title */
+            readonly title: string;
         };
         /** RequestStatisticsView */
         readonly RequestStatisticsView: {
@@ -1581,6 +1604,41 @@ export interface operations {
             };
         };
     };
+    readonly rename_chat_api_v1_chats__chat_id__patch: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly chat_id: string;
+            };
+            readonly cookie?: never;
+        };
+        readonly requestBody: {
+            readonly content: {
+                readonly "application/json": components["schemas"]["RenameInput"];
+            };
+        };
+        readonly responses: {
+            /** @description Successful Response */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["ChatSummaryView"];
+                };
+            };
+            /** @description Validation Error */
+            readonly 422: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     readonly send_message_api_v1_chats__chat_id__messages_post: {
         readonly parameters: {
             readonly query?: never;
@@ -1639,6 +1697,41 @@ export interface operations {
                 };
                 content: {
                     readonly "application/json": components["schemas"]["ChatTurnView"];
+                };
+            };
+            /** @description Validation Error */
+            readonly 422: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    readonly stream_message_api_v1_chats__chat_id__messages_stream_post: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly chat_id: string;
+            };
+            readonly cookie?: never;
+        };
+        readonly requestBody: {
+            readonly content: {
+                readonly "application/json": components["schemas"]["SendInput"];
+            };
+        };
+        readonly responses: {
+            /** @description Successful Response */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": unknown;
                 };
             };
             /** @description Validation Error */

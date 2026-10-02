@@ -32,6 +32,8 @@ export function App() {
   const [guideOpen, setGuideOpen] = useState(false)
   const [listOpen, setListOpen] = useState(false)
   const [pending, setPending] = useState(false)
+  const [streamingText, setStreamingText] = useState("")
+  const [streamingChatId, setStreamingChatId] = useState<string | null>(null)
   const [sendError, setSendError] = useState(false)
   const [pendingRequest, setPendingRequest] = useState<{ text: string; id: string; chatId: string | null; starterId: string | null } | null>(null)
   const composerRef = useRef<HTMLTextAreaElement>(null)
@@ -95,14 +97,18 @@ export function App() {
       setPendingRequest(request)
       const chatId = request.chatId ?? (await actions.create.mutateAsync()).id
       setSelectedId(chatId)
+      setStreamingChatId(chatId)
+      setStreamingText("")
       setPendingRequest({ ...request, chatId })
-      await actions.send.mutateAsync({ chatId, text, requestId: request.id, starterId: request.starterId ?? undefined })
+      await actions.stream.mutateAsync({ chatId, text, requestId: request.id, starterId: request.starterId ?? undefined, onDelta: (delta) => setStreamingText((current) => current + delta) })
       setDraft("")
       setStarterId(null)
       setPendingRequest(null)
     } catch {
       setSendError(true)
     } finally {
+      setStreamingText("")
+      setStreamingChatId(null)
       setPending(false)
     }
   }
@@ -146,16 +152,16 @@ export function App() {
         {chats.isSuccess && allChats.length === 0 && <p>Пока нет чатов. Начните с задачи.</p>}
         <ul>{allChats.map((chat) => <li key={chat.id}><button aria-current={selectedId === chat.id ? "page" : undefined} type="button" onClick={() => { setSelectedId(chat.id); setPendingRequest(null); setListOpen(false) }}>{chat.title}</button></li>)}</ul>
       </aside>
-      <div className={`chat-main ${selected ? "has-chat" : "is-empty"}`}>
+      <div className={`chat-main ${selected ? "has-chat" : "is-empty"} ${draft.trim() ? "is-drafting" : ""}`}>
         {!selected && <TreeOrnament />}
         <div className="chat-topline"><button ref={listTriggerRef} className="mobile-list" type="button" aria-expanded={listOpen} onClick={() => setListOpen(!listOpen)}>Чаты</button>{selected && <span>Чат</span>}{selected && <button ref={guideTriggerRef} type="button" onClick={() => setGuideOpen(true)}>Что можно сделать?</button>}</div>
-        {selected ? <ChatDialogue summary={selected} detail={detail.data} pending={detail.isPending} error={detail.isError} onRetry={() => void detail.refetch()} onCitation={(citation) => { setCitationTarget(citation); setView("materials") }} onDelete={() => { void actions.remove.mutateAsync(selected.id).then(() => setSelectedId(null)).catch(() => setSendError(true)) }} deleting={actions.remove.isPending} onRate={(requestId, rating, comment) => actions.rate.mutateAsync({ chatId: selected.id, requestId, rating, comment })} /> : <div className="chat-launch"><section className="chat-empty"><Embroidery variant="band" /><p className="eyebrow">Творческая задача</p><h1>Идея с культурным контекстом</h1><p>Что вы хотите создать?</p></section>
+        {selected ? <ChatDialogue summary={selected} detail={detail.data} pending={detail.isPending} error={detail.isError} onRetry={() => void detail.refetch()} onCitation={(citation) => { setCitationTarget(citation); setView("materials") }} onDelete={() => { void actions.remove.mutateAsync(selected.id).then(() => setSelectedId(null)).catch(() => setSendError(true)) }} deleting={actions.remove.isPending} onRename={async (title) => { await actions.rename.mutateAsync({ chatId: selected.id, title }) }} renaming={actions.rename.isPending} onRate={(requestId, rating, comment) => actions.rate.mutateAsync({ chatId: selected.id, requestId, rating, comment })} streamingText={streamingText} isGenerating={pending && streamingChatId === selected.id} pendingUserText={pendingRequest?.chatId === selected.id ? pendingRequest.text : undefined} pendingUserRequestId={pendingRequest?.chatId === selected.id ? pendingRequest.id : undefined} /> : <div className="chat-launch"><section className="chat-empty"><Embroidery variant="band" /><p className="eyebrow">Творческая задача</p><h1>Идея с культурным контекстом</h1><p>Что вы хотите создать?</p></section>
         <ChatComposer value={draft} onChange={(text) => { setDraft(text); setPendingRequest(null) }} onSubmit={(event) => { void send(event) }} pending={pending} error={sendError} placeholder="Опишите задачу…" inputRef={composerRef} onKeyDown={onComposerKeyDown} />
         {!draft.trim() && <section className="starter-section" aria-label="Идеи для начала"><div className="starter-heading"><span>Попробуйте начать с идеи</span><button ref={guideTriggerRef} type="button" onClick={() => setGuideOpen(true)}>Что можно сделать?</button></div><div className="starter-grid">{starters.slice(0, 3).map((item) => <button key={item.id} type="button" onClick={() => chooseStarter(item.prompt)}>{item.label}</button>)}</div></section>}</div>}
         {selected && <ChatComposer value={draft} onChange={(text) => { setDraft(text); setPendingRequest(null) }} onSubmit={(event) => { void send(event) }} pending={pending} error={sendError} placeholder="Продолжите разговор…" inputRef={composerRef} onKeyDown={onComposerKeyDown} />}
       </div>
     </main>}
-    {effectiveView === "materials" && isUser && <MaterialsView onBack={() => { setView("chat"); window.setTimeout(() => composerRef.current?.focus(), 0) }} citationTarget={citationTarget} />}
+    {effectiveView === "materials" && isUser && <MaterialsView onBack={() => { setView("chat"); window.setTimeout(() => composerRef.current?.focus(), 0) }} citationTarget={citationTarget} citations={citationTarget ? detail.data?.turns.flatMap((turn) => turn.citations) : undefined} />}
     {effectiveView === "admin" && activeSession.user.role === "admin" && <AdminView csrfToken={activeSession.csrf_token} />}
     {guideOpen && <StarterGuide onChoose={chooseStarter} onClose={() => { setGuideOpen(false); guideTriggerRef.current?.focus() }} />}
   </div>

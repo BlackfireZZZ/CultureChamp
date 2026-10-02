@@ -8,8 +8,8 @@ U01 review draft based on [the concept](CONCEPT.md), [use cases](USE_CASES.md),
 of Primorye and three **text** briefs:
 a museum introduction about changing practices, a public conversation about
 environment and ways of life, and an editorial brief on material culture. Two PDF
-articles are candidates only. Neither their rights nor cultural approval is
-established, so the user materials view starts empty. UC-01 gifts and UC-03 naming
+articles are local test materials. Their extraction and cultural claims still
+need review; the user materials view reflects the actual published corpus. UC-01 gifts and UC-03 naming
 remain general product starters, but this candidate corpus does not support them;
 the eventual response must state the evidence gap. Sample interface text must not
 imply approval or community endorsement.
@@ -19,9 +19,9 @@ imply approval or community endorsement.
 1. **Chat** is the signed-in user home: conversation list, current dialogue,
    editable brief, six starter tasks, and a reachable "What can I do?" guide.
 2. **Materials** is secondary: only approved sources, then exact revision detail
-   with author/origin, rights, context, and page/section or table locator.
+   with author/origin, context, and page/section or table locator.
 3. **Administrator / Documents** is a separate server-protected area: inventory,
-   processing/review state, exact revision, structure, tags, rights, sensitivity,
+   processing/review state, exact revision, structure, tags, sensitivity,
    and errors. Approval and revocation are explicit actions after source policy
    and APIs exist. The UI never decides visibility.
 4. A citation carries `revision_id + locator`; opening it preserves the originating

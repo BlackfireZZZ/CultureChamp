@@ -5,13 +5,13 @@
 The pilot UI now uses the server's session API, approved-materials list and exact
 revision detail API, plus a read-only, filterable admin revision inventory. An
 original PDF link is offered only when the exact approved revision has the
-separate original-file right. The chat remains
+original-file visibility state. The chat remains
 an explicitly labelled local preview because no chat or generation API is in the
 agreed OpenAPI snapshot. U02, U04, U05, U06 and R01 are not complete.
 
 S05 has eight provisional, page-located cases and a reviewer rubric in
 [`ml/evals/README.md`](../ml/evals/README.md). No case has expert-confirmed
-ground truth; the candidate PDFs have unknown user-corpus rights.
+ground truth; the supplied PDFs are authorized for local application and model testing.
 
 ## Worktree, ownership, and changed contracts
 
@@ -83,7 +83,7 @@ cd frontend && npm run test:e2e
 
 The integration agent separately observed the real PostgreSQL candidate to
 approval to user-visibility to revocation path, a user-to-admin 403 response,
-exact original PDF bytes only with the extra right, 404 before approval and
+exact original PDF bytes only while the revision is published for original access, 404 before approval and
 after revocation, and clean-database migrations. This agent did not repeat
 those live checks.
 This worktree retains the old backend contract, while its generated frontend
@@ -96,11 +96,11 @@ The frontend browser tests mock HTTP responses; a browser-to-live-backend UI run
 remains to be observed. The admin intake and approval
 actions, persisted chat, source-cited generation, and expert review of qrels
 remain open. The tabular evaluation item is explicitly synthetic because a
-rights-cleared table fixture is unavailable.
+representative table fixture is unavailable.
 
 Cherry-pick the cap-label and this handoff commit, run the combined gate once
 more, and record a final fixed integration SHA. For product progress,
 implement the backend chat and citation API before replacing the labelled local
-preview; obtain expert qrels, a rights-cleared table fixture and a measured
+preview; obtain expert qrels, a representative table fixture and a measured
 retrieval run before claiming R01. Keep this worktree and branch until the
 integration handoff is acknowledged.

@@ -60,6 +60,8 @@ class ChatPort(Protocol):
 
     async def detail(self, owner: str, chat_id: UUID) -> ChatData: ...
 
+    async def rename(self, owner: str, chat_id: UUID, title: str) -> ChatData: ...
+
     async def delete(self, owner: str, chat_id: UUID) -> None: ...
 
     async def claim(
@@ -94,6 +96,13 @@ class ChatService:
     async def detail(self, actor: Actor, chat_id: UUID) -> ChatData:
         require_role(actor, Role.USER)
         return await self.store.detail(actor.subject_id, chat_id)
+
+    async def rename(self, actor: Actor, chat_id: UUID, title: str) -> ChatData:
+        require_role(actor, Role.USER)
+        normalized = title.strip()
+        if not normalized or len(normalized) > 120:
+            raise ValueError("Chat title must contain 1–120 characters")
+        return await self.store.rename(actor.subject_id, chat_id, normalized)
 
     async def delete(self, actor: Actor, chat_id: UUID) -> None:
         require_role(actor, Role.USER)

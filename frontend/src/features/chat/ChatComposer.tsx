@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react"
 import type { FormEvent, KeyboardEvent } from "react"
+import "./chat-controls.css"
 
 type Recognition = {
   lang: string
@@ -67,12 +68,15 @@ export function ChatComposer({ value, onChange, onSubmit, pending, error, placeh
   }
 
   return <form className="composer" onSubmit={onSubmit}>
-    <label htmlFor="task">Ваша задача</label>
-    <textarea id="task" ref={inputRef} value={value} onChange={(event) => onChange(event.target.value)} onKeyDown={onKeyDown} placeholder={placeholder} rows={1} />
-    <div className="composer-actions"><span>Enter — отправить · Shift+Enter — новая строка</span><div className="composer-tools">
+    <label className="composer-label" htmlFor="task">Ваша задача</label>
+    <div className="composer-field">
+      <textarea id="task" ref={inputRef} value={value} onChange={(event) => onChange(event.target.value)} onKeyDown={onKeyDown} placeholder={placeholder} rows={1} />
+      <div className="composer-tools">
       <button className={`composer-icon voice-button ${listening ? "is-listening" : ""}`} type="button" aria-label={listening ? "Остановить голосовой ввод" : "Голосовой ввод"} aria-pressed={listening} title={voiceAvailable ? "Голосовой ввод через браузер" : "Голосовой ввод недоступен в этом браузере"} disabled={!voiceAvailable || pending} onClick={toggleVoice}><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="2" width="6" height="13" rx="3"/><path d="M5 10a7 7 0 0 0 14 0M12 17v5m-4 0h8"/></svg></button>
       <button className="composer-icon send-button" type="submit" aria-label="Отправить" title="Отправить" disabled={!value.trim() || pending}><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 19V5m-6 6 6-6 6 6"/></svg></button>
-    </div></div>
+      </div>
+    </div>
+    <p className="composer-hint">Enter — отправить · Shift+Enter — новая строка</p>
     {listening && <p className="voice-status" role="status">Слушаю… Нажмите на микрофон, чтобы остановить.</p>}
     {voiceError && <p role="alert">{voiceError}</p>}
     {pending && <p role="status">Ищем источники и готовим ответ…</p>}

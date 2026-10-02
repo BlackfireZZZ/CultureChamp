@@ -107,6 +107,9 @@ const branches: { curve: Curve; width: number; side: number }[] = [
   { curve: [[308, 329], [385, 295], [467, 272], [570, 182]], width: 14, side: 1 },
   { curve: [[304, 262], [231, 218], [216, 164], [170, 90]], width: 12, side: -1 },
   { curve: [[304, 194], [362, 139], [409, 110], [443, 38]], width: 10, side: 1 },
+  { curve: [[302, 576], [365, 515], [440, 538], [520, 474]], width: 9, side: 1 },
+  { curve: [[302, 435], [240, 381], [178, 401], [115, 362]], width: 9, side: -1 },
+  { curve: [[307, 275], [351, 230], [398, 217], [460, 160]], width: 8, side: 1 },
 ]
 
 for (const { curve, width, side } of branches) {
@@ -126,12 +129,31 @@ for (const { curve, width, side } of branches) {
   leaf(endX - side * 34, endY + 25, side < 0 ? -.7 : -2.45, 26)
 }
 
+// Secondary sprays vary in reach and angle; the canopy is deliberately uneven.
+for (const [anchor, tip, width] of [
+  [[97, 606], [18, 559], 3], [[166, 656], [129, 701], 2],
+  [[105, 430], [35, 392], 3], [[180, 468], [114, 435], 2],
+  [[111, 261], [34, 220], 2], [[210, 163], [165, 124], 2],
+  [[419, 578], [508, 555], 3], [[488, 562], [573, 486], 2],
+  [[444, 430], [534, 392], 3], [[527, 345], [582, 291], 2],
+  [[438, 250], [513, 216], 2], [[385, 127], [470, 97], 2],
+] as const) {
+  const [ax, ay] = anchor
+  const [tx, ty] = tip
+  stem([[ax, ay], [ax + (tx - ax) * .25, ay - 25], [tx - (tx - ax) * .15, ty + 10], [tx, ty]], width)
+  leaf(tx - Math.sign(tx - ax) * 8, ty + 12, tx < ax ? -2.45 : -.7, 24)
+  flower(tx, ty - 5, 2)
+}
+
 // Unequal clusters and birds echo the reference without mirroring the two sides.
 for (const [x, y, angle, length] of [
   [102, 613, -1.25, 52], [158, 640, -2.15, 46], [223, 618, -.9, 41],
   [77, 448, -.9, 48], [143, 469, -2.2, 51], [195, 485, -1.1, 38],
   [122, 322, -1.15, 44], [188, 294, -2.35, 42],
   [358, 411, -1.1, 48], [410, 520, -2.2, 52], [452, 340, -.75, 44],
+  [66, 593, -2.2, 34], [168, 579, -.5, 35], [101, 407, -1.45, 32],
+  [158, 386, -2.7, 34], [467, 478, -.85, 34], [502, 397, -2.5, 37],
+  [355, 222, -.5, 31], [408, 177, -2.6, 35],
 ] as const) leaf(x, y, angle, length)
 stem([[109, 648], [100, 663], [90, 674], [91, 687]], 2)
 stem([[399, 552], [396, 572], [425, 582], [423, 607]], 2)
@@ -149,7 +171,9 @@ for (const { x, y, thread } of marks.values()) {
 }
 
 export function TreeOrnament() {
-  return <svg className="tree-ornament" viewBox="0 0 620 900" aria-hidden="true" focusable="false">
+  return <><svg className="tree-ornament" viewBox="0 0 620 900" aria-hidden="true" focusable="false">
     {(["bark", "gold", "light"] as const).map((thread) => <path key={thread} className={`tree-thread-${thread}`} d={threadPaths[thread]} />)}
-  </svg>
+  </svg><BearOrnament /></>
 }
+import { BearOrnament } from "./BearOrnament"
+import "./ornaments.css"
