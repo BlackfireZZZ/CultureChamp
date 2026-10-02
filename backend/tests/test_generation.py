@@ -23,6 +23,7 @@ class StaticSearch:
     def __init__(self, evidence: tuple[EvidenceSegment, ...]) -> None:
         self.evidence = evidence
         self.for_provider = False
+        self.limit = 0
 
     async def search(
         self,
@@ -34,6 +35,7 @@ class StaticSearch:
         for_provider: bool,
     ) -> tuple[EvidenceSegment, ...]:
         self.for_provider = for_provider
+        self.limit = limit
         return self.evidence
 
 
@@ -217,11 +219,12 @@ def test_generation_uses_multiple_bounded_substantive_passages() -> None:
                 ),
                 0.9 - ordinal * 0.01,
             )
-            for ordinal in range(11)
+            for ordinal in range(16)
         )
         provider = CaptureGroundedFakeProvider()
+        search = StaticSearch(segments)
         service = GenerationService(
-            RetrievalService(StaticSearch(segments)),
+            RetrievalService(search),
             GatewayModelPort(ModelGateway(provider, AllowQuota())),
             CurrentCitation(Citation(revision_id, segments[1].segment_id, locator)),
         )
@@ -230,12 +233,43 @@ def test_generation_uses_multiple_bounded_substantive_passages() -> None:
         )
         prompt = json.loads(provider.prompts[0])
         assert result.evidence_status == "grounded"
-        assert len(prompt["evidence"]) == 8
+        assert search.limit == 20
+        assert len(prompt["evidence"]) == 14
         assert [item["id"] for item in prompt["evidence"]] == [
-            str(item.segment_id) for item in segments[1:9]
+            str(item.segment_id) for item in segments[1:15]
         ]
         assert prompt["evidence"][1]["excerpt"] == "A short documented fact."
         assert sum(len(item["excerpt"]) for item in prompt["evidence"]) <= 12_000
+
+    asyncio.run(check())
+
+
+def test_dominant_short_source_keeps_its_passages_without_generic_neighbors() -> None:
+    async def check() -> None:
+        main_id, other_id = uuid4(), uuid4()
+        main = tuple(
+            EvidenceSegment(
+                main_id, uuid4(), "Synthetic costume", None, Locator(section=f"Line {i}"),
+                f"Documented costume detail {i}.", 0.9 - i * 0.01,
+            ) for i in range(12)
+        )
+        other = tuple(
+            EvidenceSegment(
+                other_id, uuid4(), "General culture", None, Locator(page=i),
+                f"Generic passage {i}.", 0.82,
+            ) for i in range(1, 3)
+        )
+        search = StaticSearch(main[:9] + other[:1] + main[9:] + other[1:])
+        provider = CaptureGroundedFakeProvider()
+        service = GenerationService(
+            RetrievalService(search),
+            GatewayModelPort(ModelGateway(provider, AllowQuota())),
+            CurrentCitation(Citation(main_id, main[0].segment_id, main[0].locator)),
+        )
+        await service.generate(Actor("user-1", Role.USER), "Costume image", "turn-source")
+        prompt = json.loads(provider.prompts[0])
+        assert len(prompt["evidence"]) == 12
+        assert {item["revision_id"] for item in prompt["evidence"]} == {str(main_id)}
 
     asyncio.run(check())
 

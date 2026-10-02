@@ -13,6 +13,7 @@
   --color-accent-strong: #bc923f; --color-border: #5d4a24; color-scheme: dark;
 }
 * { box-sizing: border-box; }
+html, body { width: 100%; overflow-x: clip; }
 body { margin: 0; background: var(--color-bg); color: var(--color-text); font: 16px/1.5 var(--font-body); }
 a { color: var(--color-accent-strong); text-decoration-line: underline; text-decoration-thickness: 1.5px; text-underline-offset: .18em; }
 a:hover { color: var(--color-accent); text-decoration-thickness: 2px; }
@@ -20,7 +21,7 @@ button, textarea, input, select { font: inherit; }
 button { min-height: 44px; cursor: pointer; }
 button:disabled { cursor: not-allowed; opacity: .6; }
 button:focus-visible, textarea:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible, summary:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 3px; }
-.app-shell { min-height: 100dvh; height: 100dvh; display: flex; flex-direction: column; }
+.app-shell { min-width: 0; width: 100%; min-height: 100dvh; height: 100dvh; display: flex; flex-direction: column; overflow-x: clip; }
 .site-header { display: flex; align-items: center; justify-content: space-between; gap: 24px; max-width: 1280px; width: 100%; margin: 0 auto; padding: 16px 32px; border-bottom: 1px solid var(--color-border); }
 .wordmark { font: 600 25px/1.15 var(--font-display); letter-spacing: .01em; white-space: nowrap; }
 .site-header nav { display: flex; align-items: center; gap: 8px; }
@@ -221,7 +222,7 @@ summary:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 
 .starter-grid button:hover { border-color: var(--color-accent-strong); background: var(--color-surface-raised); }
 
 /* Materials: search leads, advanced controls follow on request. */
-.materials-page { flex: 1 1 auto; min-height: 0; overflow-y: auto; max-width: 1180px; padding-top: 28px; scrollbar-width: thin; scrollbar-color: var(--color-border) transparent; }
+.materials-page { flex: 1 1 auto; min-height: 0; width: 100%; max-width: none; margin: 0; overflow-y: auto; overflow-x: clip; padding-top: 28px; scrollbar-width: thin; scrollbar-color: var(--color-border) transparent; }
 .materials-intro { max-width: 760px; margin: 0 auto; text-align: center; }
 .materials-intro .back-to-chat { display: block; margin-bottom: 18px; padding: 8px 12px; border: 1px solid var(--color-border); border-radius: 4px; background: var(--color-surface); color: var(--color-text); }
 .materials-intro .back-to-chat:hover { background: var(--color-surface-raised); }

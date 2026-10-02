@@ -14,6 +14,7 @@ from app.application.chat import (
     ChatTurnData,
     TurnClaim,
 )
+from app.application.chat_titles import first_turn_title
 from app.application.generation import GeneratedAnswer
 from app.domain.sources import Locator
 from app.infrastructure.db.chat_models import ChatCitation, ChatConversation, ChatTurn
@@ -205,11 +206,7 @@ class SqlChatStore:
                 )
             )
             if chat.title == "New chat":
-                first_line = text.splitlines()[0].strip()
-                if len(first_line) > 60:
-                    chat.title = first_line[:57].rsplit(" ", 1)[0].rstrip(" ,.;:")
-                else:
-                    chat.title = first_line
+                chat.title = first_turn_title(text, starter_id)
             return TurnClaim(1, None)
 
     async def finish(

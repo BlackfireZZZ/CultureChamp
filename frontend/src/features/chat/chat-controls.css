@@ -1,5 +1,5 @@
 .composer .composer-label,
-.chat-title-edit .visually-hidden {
+.rail-rename .visually-hidden {
   position: absolute;
   width: 1px;
   height: 1px;
@@ -88,14 +88,15 @@
   text-transform: none;
 }
 
-.dialogue-heading .chat-title-actions {
-  display: flex;
-  flex: 0 0 auto;
-  gap: 4px;
-  align-items: center;
-}
-
-.dialogue-heading .chat-title-icon {
+.chat-rail .rail-chat-row { display: flex; align-items: center; min-width: 0; border: 1px solid transparent; border-radius: 5px; }
+.chat-rail .chat-rail-item:hover .rail-chat-row,
+.chat-rail .chat-rail-item.is-active .rail-chat-row,
+.chat-rail .rail-chat-row:focus-within { background: var(--color-surface-raised); border-color: var(--color-border); }
+.chat-rail .chat-rail-item .rail-chat-select { flex: 1; min-width: 0; width: auto; padding: 11px 8px 11px 10px; border: 0; background: transparent; text-overflow: ellipsis; white-space: nowrap; overflow: hidden; }
+.chat-rail .chat-rail-item .rail-chat-select:hover,
+.chat-rail .chat-rail-item .rail-chat-select[aria-current] { border: 0; background: transparent; }
+.chat-rail .rail-chat-actions { display: flex; flex: 0 0 auto; gap: 2px; padding-right: 2px; }
+.chat-rail .chat-rail-item .rail-chat-icon {
   display: inline-grid;
   place-items: center;
   width: 44px;
@@ -110,46 +111,36 @@
   transition: background-color 160ms ease, color 160ms ease, border-color 160ms ease;
 }
 
-.dialogue-heading .chat-title-icon svg {
+.chat-rail .rail-chat-icon svg {
   width: 19px;
   height: 19px;
 }
 
-.dialogue-heading .chat-title-icon:hover:not(:disabled),
-.dialogue-heading .chat-title-icon[aria-expanded="true"] {
+.chat-rail .rail-chat-icon:hover:not(:disabled),
+.chat-rail .rail-chat-icon[aria-expanded="true"] {
   border-color: var(--color-accent);
   background: var(--color-surface-raised);
   color: var(--color-text);
 }
 
-.dialogue-heading .chat-title-icon.is-danger:hover:not(:disabled) {
-  border-color: #a64232;
+.chat-rail .rail-chat-icon.is-danger:hover:not(:disabled) {
   color: #a64232;
 }
 
-.chat-title-edit {
-  display: flex;
-  flex: 1 1 auto;
-  flex-wrap: wrap;
-  gap: 8px;
-  min-width: 0;
-}
-
-.chat-title-edit input {
-  flex: 1 1 220px;
-  min-width: 0;
-  min-height: 44px;
+.chat-rail .rail-rename, .chat-rail .rail-delete-confirm { padding: 8px; border: 1px solid var(--color-border); border-radius: 5px; background: var(--color-surface-raised); }
+.chat-rail .rail-rename input { width: 100%; min-width: 0; min-height: 44px;
   padding: 8px 12px;
   border: 1px solid var(--color-accent);
   border-radius: 4px;
   background: var(--color-surface);
   color: var(--color-text);
 }
-
-.chat-title-edit button {
-  padding: 8px 12px;
-  border-radius: 4px;
-}
+.chat-rail .rail-confirm-actions { display: flex; gap: 6px; margin-top: 8px; }
+.chat-rail .rail-confirm-actions button { flex: 1; width: auto; min-height: 44px; padding: 7px 5px; border: 1px solid var(--color-border); background: var(--color-surface); text-align: center; white-space: normal; }
+.chat-rail .rail-confirm-actions button:hover:not(:disabled) { border-color: var(--color-accent); background: var(--color-surface); }
+.chat-rail .rail-confirm-actions button.is-danger { border-color: #a64232; color: #a64232; }
+.chat-rail .rail-delete-confirm p { margin: 0; font-size: 14px; }
+.chat-rail .rail-action-error { margin: 6px 8px; font-size: 13px; color: #a64232; }
 
 .streaming-answer p:last-child {
   white-space: pre-wrap;
@@ -182,16 +173,13 @@
     gap: 6px;
   }
 
-  .dialogue-heading h1 {
-    max-width: calc(100% - 94px);
-    font-size: 27px;
-  }
+  .dialogue-heading h1 { max-width: 100%; font-size: 27px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .composer .composer-field,
   .composer .composer-field .composer-icon,
-  .dialogue-heading .chat-title-icon {
+  .chat-rail .rail-chat-actions, .chat-rail .rail-chat-icon {
     transition: none;
   }
 

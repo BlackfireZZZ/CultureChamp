@@ -68,7 +68,7 @@ test("responsive persisted chat, starter keyboard path and theme", async ({ page
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark")
   await page.getByRole("button", { name: "Чат", exact: true }).click()
   await page.getByRole("button", { name: "Чаты", exact: true }).last().click()
-  await page.getByRole("complementary", { name: "Список чатов" }).getByRole("button", { name: "Пробная задача" }).click()
+  await page.getByRole("complementary", { name: "Список чатов" }).getByRole("button", { name: "Пробная задача", exact: true }).click()
   await expect(page.getByRole("button", { name: "Не нравится ответ" })).toHaveAttribute("aria-pressed", "true")
 })
 
@@ -102,6 +102,13 @@ test("material selection exposes a precise page with keyboard focus at narrow an
   for (const width of [360, 768, 1280, 1440]) {
     await page.setViewportSize({ width, height: 900 })
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width)
+    const geometry = await page.evaluate(() => ({
+      scrollRight: document.querySelector(".materials-page")!.getBoundingClientRect().right,
+      signoutRight: document.querySelector(".site-header .signout")!.getBoundingClientRect().right,
+      viewportRight: window.innerWidth,
+    }))
+    expect(geometry.scrollRight).toBeCloseTo(geometry.viewportRight, 0)
+    expect(geometry.signoutRight).toBeLessThanOrEqual(geometry.viewportRight)
   }
 })
 

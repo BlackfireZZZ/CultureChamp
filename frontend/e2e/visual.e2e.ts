@@ -41,7 +41,7 @@ test("canonical user and admin screens in both themes", async ({ page }) => {
       await page.getByRole("button", { name: "Закрыть подсказки" }).click()
 
       if (width <= 900) await page.getByRole("button", { name: "Чаты", exact: true }).last().click()
-      await page.getByRole("button", { name: "Синтетическая задача" }).click()
+      await page.getByRole("button", { name: "Синтетическая задача", exact: true }).click()
       await expect(page.getByRole("heading", { name: "Подтверждено источником" })).toBeVisible()
       await expect(page.getByRole("textbox", { name: "Ваша задача" })).toBeInViewport()
       await expect(page).toHaveScreenshot(`chat-answer-${key}.png`, { animations: "disabled" })

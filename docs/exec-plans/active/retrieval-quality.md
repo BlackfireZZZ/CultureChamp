@@ -222,5 +222,23 @@ necessary before treating the retrieval quality as validated.
 
 With the original user request against the running local index, the revised
 retrieval returned nine costume segments (the title and eight body segments) in
-its first ten hits. Generation drops the title-only segment when substantive
-passages are present, leaving eight costume paragraphs in the bounded prompt.
+its first ten hits. Generation dropped the title-only segment, leaving eight
+costume paragraphs in the bounded prompt. The answer cited only two passages;
+the citation highlights therefore understated the context sent to the model.
+
+The 2026-10-02 follow-up increased generation retrieval to 20 candidates and
+the passage ceiling to 14 while retaining the 12,000-character excerpt budget.
+On the running local index, this exposed all 12 substantive costume paragraphs,
+including the garment complexes and outerwear that the previous limit omitted.
+The raw top 14 also contained two generic passages from another document. A
+bounded source-concentration rule now keeps one revision when at least six of
+the first 14 substantive hits come from it and it represents at least 75% of
+that window. The same costume request then produced a grounded response from
+the configured external model with three citations. This is an observed local
+regression result, not a measured general retrieval improvement.
+
+Next, build a held-out set with passage-level relevance judgments for broad,
+multi-source and region-specific requests. Compare source-concentrated selection
+with diversification and order-preserving neighboring passages. Measure both
+context recall and answer citation coverage; a highlighted citation means the
+model used a passage, not that it was the only passage supplied.

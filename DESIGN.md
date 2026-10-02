@@ -598,6 +598,12 @@ above unrelated copy: align the control with the content it affects.
 - The composer grows with content up to a bounded height, then scrolls within
   the field. After the first message, the conversation scrolls above the composer.
 - Put the new-chat action in the history rail as an obvious full-row control.
+  Keep rename and delete icon buttons beside the chat they affect in that rail;
+  never place them beside the conversation heading. Give both a persistent
+  visible button treatment and a confirmation step before deletion.
+  Derive an automatic title from the user's specific subject when a starter
+  prompt is edited; generic starter instructions are not useful chat names.
+  Starter labels describe concrete outputs, including an image prompt.
   Keep global navigation and session controls in deliberate, aligned groups.
 - Materials lead with one search field and results. Put secondary filters and
   image search behind clearly labelled disclosure controls. Empty states keep
@@ -605,6 +611,9 @@ above unrelated copy: align the control with the content it affects.
 - Do not create a separately scrolling starter-ideas block. Scrollbars in long
   histories and documents should be subtle but remain operable by mouse,
   touch, and keyboard. Do not suppress focus indicators with scrollbar styling.
+- The materials page scrolls at the viewport's right edge. Center its reading
+  column inside that full-width scroll surface; opening a relevant passage must
+  not move the entire application horizontally or clip header controls.
 
 ### Cards
 

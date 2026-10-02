@@ -47,7 +47,7 @@ class RetrievalService:
         for_provider: bool = False,
     ) -> tuple[EvidenceSegment, ...]:
         require_role(actor, Role.USER)
-        if not query.strip() or len(query) > 2_000 or not 1 <= limit <= 10:
+        if not query.strip() or len(query) > 2_000 or not 1 <= limit <= 20:
             raise ValueError("Invalid search request")
         if any(
             value is not None and (not value.strip() or len(value) > 100)

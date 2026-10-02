@@ -2,6 +2,7 @@
 
 import json
 import re
+from collections import Counter
 from collections.abc import Awaitable, Callable
 from dataclasses import asdict, dataclass
 from typing import Protocol, cast
@@ -47,7 +48,7 @@ IMAGE_ACTION = re.compile(
     r"сгенер|генерац|созда|сдела|нарис|промпт|запрос|generate|create|draw|prompt",
     re.IGNORECASE,
 )
-MAX_EVIDENCE_SEGMENTS = 8
+MAX_EVIDENCE_SEGMENTS = 14
 MAX_EVIDENCE_CHARS = 12_000
 
 
@@ -169,7 +170,7 @@ class GenerationService:
         if not brief.strip() or len(brief) > 2_000 or not request_id.strip():
             raise ValueError("Invalid brief or request ID")
         retrieved = await self.retrieval.search(
-            actor, brief, limit=10, for_provider=self.external
+            actor, brief, limit=20, for_provider=self.external
         )
         clean = tuple(
             item for item in retrieved
@@ -188,6 +189,20 @@ class GenerationService:
             if item.text.strip().casefold() != item.title.strip().casefold()
         )
         candidates = substantive or clean
+        # A narrowly focused query can return many passages from one short
+        # source and a few generic high-cosine passages elsewhere. Keep the
+        # coherent source when it clearly dominates the candidate pool.
+        counts = Counter(
+            item.revision_id for item in candidates[:MAX_EVIDENCE_SEGMENTS]
+        )
+        if counts:
+            dominant_id, dominant_count = counts.most_common(1)[0]
+            if dominant_count >= 6 and dominant_count / min(
+                len(candidates), MAX_EVIDENCE_SEGMENTS
+            ) >= 0.75:
+                candidates = tuple(
+                    item for item in candidates if item.revision_id == dominant_id
+                )
         selected: list[EvidenceSegment] = []
         used_chars = 0
         for candidate in candidates:
