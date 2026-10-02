@@ -2,6 +2,6 @@ import { useQuery } from "@tanstack/react-query"
 
 import { getRequestStatistics } from "../../api/statistics"
 
-export function useRequestStatistics(enabled: boolean) {
-  return useQuery({ queryKey: ["admin", "request-statistics", 30], queryFn: ({ signal }) => getRequestStatistics(signal), enabled, retry: false })
+export function useRequestStatistics(enabled: boolean, days: number) {
+  return useQuery({ queryKey: ["admin", "request-statistics", days], queryFn: ({ signal }) => getRequestStatistics(days, signal), enabled, retry: false })
 }

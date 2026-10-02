@@ -35,6 +35,8 @@ class ChatTurnData:
     evidence_status: str | None
     status: str
     citations: tuple[ChatCitationData, ...]
+    rating: str | None = None
+    feedback_comment: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -70,6 +72,11 @@ class ChatPort(Protocol):
 
     async def fail(self, owner: str, chat_id: UUID, request_id: UUID, attempt: int) -> None: ...
 
+    async def rate(
+        self, owner: str, chat_id: UUID, request_id: UUID,
+        rating: str | None, comment: str | None,
+    ) -> ChatTurnData: ...
+
 
 class ChatService:
     def __init__(self, store: ChatPort, generation: GenerationService) -> None:
@@ -91,6 +98,19 @@ class ChatService:
     async def delete(self, actor: Actor, chat_id: UUID) -> None:
         require_role(actor, Role.USER)
         await self.store.delete(actor.subject_id, chat_id)
+
+    async def rate(
+        self, actor: Actor, chat_id: UUID, request_id: UUID,
+        rating: str | None, comment: str | None,
+    ) -> ChatTurnData:
+        require_role(actor, Role.USER)
+        if rating not in (None, "up", "down") or (rating is None and comment is not None):
+            raise ValueError("Invalid response feedback")
+        if comment is not None:
+            comment = comment.strip() or None
+            if comment is not None and len(comment) > 1_000:
+                raise ValueError("Feedback comment is too long")
+        return await self.store.rate(actor.subject_id, chat_id, request_id, rating, comment)
 
     async def send(
         self, actor: Actor, chat_id: UUID, request_id: UUID, text: str,

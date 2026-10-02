@@ -554,9 +554,35 @@
             ],
             "title": "Evidence Status"
           },
+          "feedback_comment": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Feedback Comment"
+          },
           "ordinal": {
             "title": "Ordinal",
             "type": "integer"
+          },
+          "rating": {
+            "anyOf": [
+              {
+                "enum": [
+                  "up",
+                  "down"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rating"
           },
           "request_id": {
             "format": "uuid",
@@ -579,7 +605,9 @@
           "assistant_text",
           "evidence_status",
           "status",
-          "citations"
+          "citations",
+          "rating",
+          "feedback_comment"
         ],
         "title": "ChatTurnView",
         "type": "object"
@@ -669,6 +697,102 @@
           "evidence_url"
         ],
         "title": "DecisionInput",
+        "type": "object"
+      },
+      "FeedbackInput": {
+        "properties": {
+          "comment": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comment"
+          },
+          "rating": {
+            "anyOf": [
+              {
+                "enum": [
+                  "up",
+                  "down"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rating"
+          }
+        },
+        "required": [
+          "rating"
+        ],
+        "title": "FeedbackInput",
+        "type": "object"
+      },
+      "FeedbackItemView": {
+        "properties": {
+          "comment": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comment"
+          },
+          "evidence_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evidence Status"
+          },
+          "rated_at": {
+            "format": "date-time",
+            "title": "Rated At",
+            "type": "string"
+          },
+          "rating": {
+            "title": "Rating",
+            "type": "string"
+          },
+          "request_id": {
+            "title": "Request Id",
+            "type": "string"
+          },
+          "starter_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Starter Id"
+          }
+        },
+        "required": [
+          "request_id",
+          "rated_at",
+          "rating",
+          "comment",
+          "evidence_status",
+          "starter_id"
+        ],
+        "title": "FeedbackItemView",
         "type": "object"
       },
       "HTTPValidationError": {
@@ -1169,6 +1293,13 @@
             "title": "Daily Requests",
             "type": "array"
           },
+          "feedback": {
+            "items": {
+              "$ref": "#/components/schemas/FeedbackItemView"
+            },
+            "title": "Feedback",
+            "type": "array"
+          },
           "period_end": {
             "format": "date",
             "title": "Period End",
@@ -1178,6 +1309,14 @@
             "format": "date",
             "title": "Period Start",
             "type": "string"
+          },
+          "rated_down": {
+            "title": "Rated Down",
+            "type": "integer"
+          },
+          "rated_up": {
+            "title": "Rated Up",
+            "type": "integer"
           },
           "starter_requests": {
             "items": {
@@ -1191,7 +1330,10 @@
           "period_start",
           "period_end",
           "daily_requests",
-          "starter_requests"
+          "starter_requests",
+          "rated_up",
+          "rated_down",
+          "feedback"
         ],
         "title": "RequestStatisticsView",
         "type": "object"
@@ -2456,6 +2598,69 @@
           }
         },
         "summary": "Send Message",
+        "tags": [
+          "chats"
+        ]
+      }
+    },
+    "/api/v1/chats/{chat_id}/messages/{request_id}/feedback": {
+      "put": {
+        "operationId": "rate_message_api_v1_chats__chat_id__messages__request_id__feedback_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "chat_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Chat Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "request_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Request Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FeedbackInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatTurnView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Rate Message",
         "tags": [
           "chats"
         ]

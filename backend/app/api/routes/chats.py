@@ -1,7 +1,7 @@
 """Transport contracts for owned, persisted text chats."""
 
 from datetime import datetime
-from typing import Annotated, Literal
+from typing import Annotated, Literal, cast
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
@@ -77,6 +77,8 @@ class ChatTurnView(BaseModel):
     evidence_status: str | None
     status: str
     citations: list[ChatCitationView]
+    rating: Literal["up", "down"] | None
+    feedback_comment: str | None
 
 
 class ChatDetailView(ChatSummaryView):
@@ -87,6 +89,11 @@ class SendInput(BaseModel):
     request_id: UUID
     text: str = Field(min_length=1, max_length=2_000)
     starter_id: Literal["UC-01", "UC-02", "UC-03", "UC-04", "UC-05", "UC-06"] | None = None
+
+
+class FeedbackInput(BaseModel):
+    rating: Literal["up", "down"] | None
+    comment: str | None = Field(default=None, max_length=1_000)
 
 
 def _summary(data: ChatData) -> ChatSummaryView:
@@ -119,6 +126,8 @@ def _turn(data: ChatTurnData) -> ChatTurnView:
         evidence_status=data.evidence_status,
         status=data.status,
         citations=[_citation(item) for item in data.citations],
+        rating=cast(Literal["up", "down"] | None, data.rating),
+        feedback_comment=data.feedback_comment,
     )
 
 
@@ -175,3 +184,18 @@ async def send_message(
         raise HTTPException(status_code=422, detail="Chat message must contain text")
     response.headers["Cache-Control"] = "no-store"
     return _turn(await service.send(actor, chat_id, data.request_id, data.text, data.starter_id))
+
+
+@router.put("/{chat_id}/messages/{request_id}/feedback", response_model=ChatTurnView)
+async def rate_message(
+    chat_id: UUID,
+    request_id: UUID,
+    data: FeedbackInput,
+    response: Response,
+    actor: Annotated[Actor, Depends(current_user)],
+    service: Annotated[ChatService, Depends(get_chat_service)],
+) -> ChatTurnView:
+    if data.rating is None and data.comment is not None:
+        raise HTTPException(status_code=422, detail="Comment requires a rating")
+    response.headers["Cache-Control"] = "no-store"
+    return _turn(await service.rate(actor, chat_id, request_id, data.rating, data.comment))

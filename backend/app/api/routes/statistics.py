@@ -1,6 +1,6 @@
 """Administrator-only request counts without prompt inspection."""
 
-from datetime import date
+from datetime import date, datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query, Request, Response
@@ -31,6 +31,18 @@ class RequestStatisticsView(BaseModel):
     period_end: date
     daily_requests: list[DailyCountView]
     starter_requests: list[StarterCountView]
+    rated_up: int
+    rated_down: int
+    feedback: list["FeedbackItemView"]
+
+
+class FeedbackItemView(BaseModel):
+    request_id: str
+    rated_at: datetime
+    rating: str
+    comment: str | None
+    evidence_status: str | None
+    starter_id: str | None
 
 
 def get_statistics_service(request: Request) -> StatisticsService:
@@ -56,4 +68,11 @@ async def request_statistics(
                         for item in result.daily_requests],
         starter_requests=[StarterCountView(starter_id=item.starter_id, count=item.count)
                           for item in result.starter_requests],
+        rated_up=result.rated_up,
+        rated_down=result.rated_down,
+        feedback=[FeedbackItemView(
+            request_id=item.request_id, rated_at=item.rated_at, rating=item.rating,
+            comment=item.comment, evidence_status=item.evidence_status,
+            starter_id=item.starter_id,
+        ) for item in result.feedback],
     )

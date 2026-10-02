@@ -161,6 +161,16 @@ test("live synthetic source flows from admin review to cited chat and revocation
     await userPage.getByRole("textbox", { name: "Ваша задача" }).fill(approvedTask)
     await userPage.getByRole("button", { name: "Отправить" }).click()
     await expect(userPage.getByRole("heading", { name: "Подтверждено источником" })).toBeVisible({ timeout: 60_000 })
+    await userPage.getByRole("button", { name: "Не нравится ответ" }).click()
+    await expect(userPage.getByRole("button", { name: "Не нравится ответ" })).toHaveAttribute("aria-pressed", "true")
+    await userPage.getByRole("button", { name: "Комментарий" }).click()
+    await userPage.getByRole("textbox", { name: "Что стоит улучшить или сохранить?" }).fill(`Synthetic feedback ${marker}`)
+    await userPage.getByRole("button", { name: "Сохранить комментарий" }).click()
+    await expect.poll(async () => {
+      const response = await adminContext.request.get("/api/v1/admin/request-statistics?days=30")
+      const report = (await response.json()) as { feedback: { comment: string | null }[] }
+      return report.feedback.some((item) => item.comment === `Synthetic feedback ${marker}`)
+    }).toBe(true)
     await userPage.getByRole("button", { name: unsupportedChatTitle, exact: true }).click()
     await expect(userPage.getByText(/There is no approved source evidence/)).toBeVisible()
     await userPage.getByRole("button", { name: "Удалить чат" }).click()
@@ -411,8 +421,8 @@ test("live synthetic source flows from admin review to cited chat and revocation
       revision_id: approvedRevisionId, segment_id: proseSegments[1].segment_id, page: 2,
     })])
     await userPage.getByRole("button", { name: "Источник · страница 2" }).click()
-    await expect(userPage.locator(`#segment-${proseSegments[1].segment_id}`)).toBeFocused()
     await expect(userPage.getByRole("heading", { name: "Страница 2" })).toBeVisible()
+    await expect(userPage.locator(`#segment-${proseSegments[1].segment_id}`)).toBeFocused()
     await expect(userPage.getByRole("link", { name: "Открыть страницу 2 в источнике" })).toHaveAttribute(
       "href", `/api/v1/materials/${approvedRevisionId}/original#page=2`,
     )

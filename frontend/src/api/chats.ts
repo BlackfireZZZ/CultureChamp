@@ -39,3 +39,11 @@ export async function deleteChat(chatId: string, csrfToken: string): Promise<voi
   })
   if (!response.ok) throw new ApiError(response.status)
 }
+
+export async function rateChatMessage(chatId: string, requestId: string, rating: "up" | "down" | null, comment: string | null, csrfToken: string): Promise<ChatTurn> {
+  return readJson<ChatTurn>(await fetch(`/api/v1/chats/${encodeURIComponent(chatId)}/messages/${encodeURIComponent(requestId)}/feedback`, {
+    method: "PUT", credentials: "same-origin",
+    headers: { "content-type": "application/json", "x-csrf-token": csrfToken },
+    body: JSON.stringify({ rating, comment }),
+  }))
+}

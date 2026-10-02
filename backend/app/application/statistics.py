@@ -1,7 +1,7 @@
 """Aggregate request metadata for administrator reporting."""
 
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, datetime
 from typing import Protocol
 
 from app.application.access import Actor, Role, require_role
@@ -25,6 +25,19 @@ class RequestStatistics:
     period_end: date
     daily_requests: tuple[DailyCount, ...]
     starter_requests: tuple[StarterCount, ...]
+    rated_up: int
+    rated_down: int
+    feedback: tuple["FeedbackItem", ...]
+
+
+@dataclass(frozen=True, slots=True)
+class FeedbackItem:
+    request_id: str
+    rated_at: datetime
+    rating: str
+    comment: str | None
+    evidence_status: str | None
+    starter_id: str | None
 
 
 class StatisticsPort(Protocol):

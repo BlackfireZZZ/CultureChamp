@@ -313,6 +313,23 @@ export interface paths {
         readonly patch?: never;
         readonly trace?: never;
     };
+    readonly "/api/v1/chats/{chat_id}/messages/{request_id}/feedback": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly get?: never;
+        /** Rate Message */
+        readonly put: operations["rate_message_api_v1_chats__chat_id__messages__request_id__feedback_put"];
+        readonly post?: never;
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
+    };
     readonly "/api/v1/health/live": {
         readonly parameters: {
             readonly query?: never;
@@ -596,8 +613,12 @@ export interface components {
             readonly citations: readonly components["schemas"]["ChatCitationView"][];
             /** Evidence Status */
             readonly evidence_status: string | null;
+            /** Feedback Comment */
+            readonly feedback_comment: string | null;
             /** Ordinal */
             readonly ordinal: number;
+            /** Rating */
+            readonly rating: ("up" | "down") | null;
             /**
              * Request Id
              * Format: uuid
@@ -653,6 +674,31 @@ export interface components {
              * @default false
              */
             readonly user_text: boolean;
+        };
+        /** FeedbackInput */
+        readonly FeedbackInput: {
+            /** Comment */
+            readonly comment?: string | null;
+            /** Rating */
+            readonly rating: ("up" | "down") | null;
+        };
+        /** FeedbackItemView */
+        readonly FeedbackItemView: {
+            /** Comment */
+            readonly comment: string | null;
+            /** Evidence Status */
+            readonly evidence_status: string | null;
+            /**
+             * Rated At
+             * Format: date-time
+             */
+            readonly rated_at: string;
+            /** Rating */
+            readonly rating: string;
+            /** Request Id */
+            readonly request_id: string;
+            /** Starter Id */
+            readonly starter_id: string | null;
         };
         /** HTTPValidationError */
         readonly HTTPValidationError: {
@@ -798,6 +844,8 @@ export interface components {
         readonly RequestStatisticsView: {
             /** Daily Requests */
             readonly daily_requests: readonly components["schemas"]["DailyCountView"][];
+            /** Feedback */
+            readonly feedback: readonly components["schemas"]["FeedbackItemView"][];
             /**
              * Period End
              * Format: date
@@ -808,6 +856,10 @@ export interface components {
              * Format: date
              */
             readonly period_start: string;
+            /** Rated Down */
+            readonly rated_down: number;
+            /** Rated Up */
+            readonly rated_up: number;
             /** Starter Requests */
             readonly starter_requests: readonly components["schemas"]["StarterCountView"][];
         };
@@ -1541,6 +1593,42 @@ export interface operations {
         readonly requestBody: {
             readonly content: {
                 readonly "application/json": components["schemas"]["SendInput"];
+            };
+        };
+        readonly responses: {
+            /** @description Successful Response */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["ChatTurnView"];
+                };
+            };
+            /** @description Validation Error */
+            readonly 422: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    readonly rate_message_api_v1_chats__chat_id__messages__request_id__feedback_put: {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path: {
+                readonly chat_id: string;
+                readonly request_id: string;
+            };
+            readonly cookie?: never;
+        };
+        readonly requestBody: {
+            readonly content: {
+                readonly "application/json": components["schemas"]["FeedbackInput"];
             };
         };
         readonly responses: {

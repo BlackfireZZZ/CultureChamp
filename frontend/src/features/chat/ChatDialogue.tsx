@@ -1,10 +1,42 @@
 import { useEffect, useRef, useState } from "react"
-import type { ChatCitation, ChatDetail, ChatSummary } from "../../api/chats"
+import type { ChatCitation, ChatDetail, ChatSummary, ChatTurn } from "../../api/chats"
 import { sourceLocationLabel } from "../../api/locators"
 import { Embroidery } from "../../components/ui/Embroidery"
 import { answerParts } from "./answerParts"
 
-export function ChatDialogue({ summary, detail, pending, error, onRetry, onCitation, onDelete, deleting }: {
+function FeedbackControls({ turn, onRate }: {
+  turn: ChatTurn
+  onRate: (requestId: string, rating: "up" | "down" | null, comment: string | null) => Promise<unknown>
+}) {
+  const [comment, setComment] = useState(turn.feedback_comment ?? "")
+  const [editing, setEditing] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState(false)
+  async function save(rating: "up" | "down" | null, note: string | null): Promise<boolean> {
+    setSaving(true)
+    setError(false)
+    try { await onRate(turn.request_id, rating, note); if (rating === null) { setEditing(false); setComment("") }; return true }
+    catch { setError(true); return false }
+    finally { setSaving(false) }
+  }
+  return <div className="response-feedback" aria-label="Оценка ответа">
+    <div className="feedback-actions">
+      <button type="button" aria-label="Нравится ответ" aria-pressed={turn.rating === "up"} disabled={saving} onClick={() => { void save(turn.rating === "up" ? null : "up", null) }}>👍</button>
+      <button type="button" aria-label="Не нравится ответ" aria-pressed={turn.rating === "down"} disabled={saving} onClick={() => { void save(turn.rating === "down" ? null : "down", null) }}>👎</button>
+      {turn.rating && <button type="button" onClick={() => setEditing(!editing)} aria-expanded={editing}>Комментарий</button>}
+      {saving && <span role="status">Сохраняем оценку…</span>}
+    </div>
+    {editing && turn.rating && <form onSubmit={(event) => { event.preventDefault(); void save(turn.rating, comment.trim() || null).then((saved) => { if (saved) setEditing(false) }) }}>
+      <label>Что стоит улучшить или сохранить?<textarea value={comment} onChange={(event) => setComment(event.target.value)} maxLength={1000} rows={3} /></label>
+      <p>Комментарий увидит администратор сервиса.</p>
+      <button type="submit" disabled={saving}>Сохранить комментарий</button>
+    </form>}
+    {turn.feedback_comment && !editing && <p className="feedback-saved">Ваш комментарий: {turn.feedback_comment}</p>}
+    {error && <p role="alert">Не удалось сохранить оценку. Повторите попытку.</p>}
+  </div>
+}
+
+export function ChatDialogue({ summary, detail, pending, error, onRetry, onCitation, onDelete, deleting, onRate }: {
   summary: ChatSummary
   detail: ChatDetail | undefined
   pending: boolean
@@ -13,6 +45,7 @@ export function ChatDialogue({ summary, detail, pending, error, onRetry, onCitat
   onCitation: (citation: ChatCitation) => void
   onDelete: () => void
   deleting: boolean
+  onRate: (requestId: string, rating: "up" | "down" | null, comment: string | null) => Promise<unknown>
 }) {
   const [confirmDelete, setConfirmDelete] = useState(false)
   const cancelRef = useRef<HTMLButtonElement>(null)
@@ -33,6 +66,7 @@ export function ChatDialogue({ summary, detail, pending, error, onRetry, onCitat
           <button type="button" disabled={!citation.available} onClick={() => onCitation(citation)}>{`Источник · ${sourceLocationLabel(citation, true)}`}</button>
           {!citation.available && <span> Источник отозван или недоступен</span>}
         </li>)}</ul>}
+        <FeedbackControls key={`${turn.request_id}:${turn.rating}:${turn.feedback_comment ?? ""}`} turn={turn} onRate={onRate} />
       </article>}
       {turn.status === "failed" && <p role="status">Ответ не получен. Повторите отправку с тем же текстом.</p>}
     </div>)}
