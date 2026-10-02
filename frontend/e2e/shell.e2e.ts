@@ -72,6 +72,66 @@ test("responsive persisted chat, starter keyboard path and theme", async ({ page
   await expect(page.getByRole("button", { name: "Не нравится ответ" })).toHaveAttribute("aria-pressed", "true")
 })
 
+test("chat rail resizes, persists its width, and reveals row actions when needed", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 })
+  await page.route("**/api/v1/auth/me", (route) => route.fulfill({ json: { user: { id: "test-user", username: "tester", role: "user" }, csrf_token: "test-csrf" } }))
+  await page.route("**/api/v1/chats", (route) => route.fulfill({ json: [{ id: "chat-test", title: "Тестовый чат", updated_at: "2026-10-02T12:00:00Z" }] }))
+  await page.goto("/")
+  const rail = page.getByRole("complementary", { name: "Список чатов" })
+  const handle = page.getByRole("separator", { name: "Ширина панели чатов" })
+  const row = rail.getByRole("listitem")
+  const rename = row.getByRole("button", { name: "Переименовать чат «Тестовый чат»" })
+  await expect(rename).toBeHidden()
+  await row.hover()
+  await expect(rename).toBeVisible()
+  await page.mouse.move(700, 400)
+  await expect(rename).toBeHidden()
+  await row.getByRole("button", { name: "Тестовый чат", exact: true }).focus()
+  await expect(rename).toBeVisible()
+
+  const before = (await rail.boundingBox())!.width
+  const grip = (await handle.boundingBox())!
+  await page.mouse.move(grip.x + grip.width / 2, grip.y + 130)
+  await page.mouse.down()
+  await page.mouse.move(grip.x + grip.width / 2 + 95, grip.y + 130, { steps: 5 })
+  await page.mouse.up()
+  const resized = (await rail.boundingBox())!.width
+  expect(resized).toBeGreaterThan(before + 80)
+  await page.reload()
+  await expect.poll(async () => (await rail.boundingBox())!.width).toBe(resized)
+  await handle.focus()
+  await page.keyboard.press("ArrowLeft")
+  await expect.poll(async () => (await rail.boundingBox())!.width).toBe(resized - 24)
+  await page.keyboard.press("Home")
+  await expect(handle).toHaveAttribute("aria-valuenow", "220")
+  await handle.dblclick()
+  await expect(handle).toHaveAttribute("aria-valuenow", "250")
+  await page.setViewportSize({ width: 768, height: 900 })
+  await expect(handle).toBeHidden()
+})
+
+test("composer clears immediately after send and restores text on failure", async ({ page }) => {
+  await page.route("**/api/v1/auth/me", (route) => route.fulfill({ json: { user: { id: "test-user", username: "tester", role: "user" }, csrf_token: "test-csrf" } }))
+  await page.route("**/api/v1/chats**", async (route) => {
+    const path = new URL(route.request().url()).pathname
+    if (path === "/api/v1/chats" && route.request().method() === "GET") return route.fulfill({ json: [] })
+    if (path === "/api/v1/chats" && route.request().method() === "POST") return route.fulfill({ status: 201, json: { id: "chat-test", title: "Новый чат", updated_at: "2026-10-02T12:00:00Z" } })
+    if (path === "/api/v1/chats/chat-test" && route.request().method() === "GET") return route.fulfill({ json: { id: "chat-test", title: "Новый чат", updated_at: "2026-10-02T12:00:00Z", turns: [] } })
+    if (path.endsWith("/messages/stream")) {
+      await new Promise((resolve) => setTimeout(resolve, 500))
+      return route.fulfill({ status: 503, json: { detail: "Unavailable" } })
+    }
+    return route.fulfill({ status: 404 })
+  })
+  await page.goto("/")
+  const composer = page.getByRole("textbox", { name: "Ваша задача" })
+  await composer.fill("Пробная задача")
+  await page.getByRole("button", { name: "Отправить" }).click()
+  await expect(composer).toHaveValue("")
+  await expect(composer).toHaveValue("Пробная задача", { timeout: 5_000 })
+  await expect(page.getByRole("alert")).toContainText("Текст сохранён")
+})
+
 test("login is keyboard accessible and does not show protected views before authentication", async ({ page }) => {
   await page.route("**/api/v1/chats", (route) => route.fulfill({ json: [] }))
   await page.route("**/api/v1/auth/me", (route) => route.fulfill({ status: 401 }))

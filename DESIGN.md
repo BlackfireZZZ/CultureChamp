@@ -599,8 +599,11 @@ above unrelated copy: align the control with the content it affects.
   the field. After the first message, the conversation scrolls above the composer.
 - Put the new-chat action in the history rail as an obvious full-row control.
   Keep rename and delete icon buttons beside the chat they affect in that rail;
-  never place them beside the conversation heading. Give both a persistent
-  visible button treatment and a confirmation step before deletion.
+  never place them beside the conversation heading. Show the icons on the
+  selected row, on hover, and while that row has keyboard focus; selected rows
+  provide the touch path. Give revealed icons a visible button treatment and
+  require confirmation before deletion. On desktop, the history rail is
+  resizable by pointer and keyboard, with bounded width and a stored preference.
   Derive an automatic title from the user's specific subject when a starter
   prompt is edited; generic starter instructions are not useful chat names.
   Starter labels describe concrete outputs, including an image prompt.
