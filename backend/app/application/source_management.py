@@ -198,8 +198,9 @@ class SourceGateway(Protocol):
 
 
 class SourceService:
-    def __init__(self, gateway: SourceGateway) -> None:
+    def __init__(self, gateway: SourceGateway, *, local_test_mode: bool = False) -> None:
         self.gateway = gateway
+        self.local_test_mode = local_test_mode
 
     @staticmethod
     def _parse_tags(items: list[str]) -> tuple[TagData, ...]:
@@ -332,7 +333,14 @@ class SourceService:
         if not data.user_text or not data.sensitivity_cleared:
             raise SourceInputError("User text rights and sensitivity clearance required")
         evidence = urlsplit(data.evidence_url)
-        if evidence.scheme != "https" or not evidence.hostname:
+        local_attestation = (
+            self.local_test_mode
+            and evidence.scheme == "local-test"
+            and evidence.hostname == "user-attestation"
+            and bool(evidence.path.strip("/"))
+            and not data.provider_transfer
+        )
+        if not local_attestation and (evidence.scheme != "https" or not evidence.hostname):
             raise SourceInputError("HTTPS rights evidence URL required")
         await self.gateway.approve(revision_id, actor.subject_id, data)
         return await self.gateway.admin_detail(revision_id)

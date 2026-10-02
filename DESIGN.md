@@ -1,7 +1,7 @@
 ---
 version: alpha
 name: Лад
-description: "A culturally grounded creative generation service. Warm editorial interfaces meet cross-stitch-inspired ornament, with equal-quality dark and light themes."
+description: "A culturally grounded creative generation service. Warm editorial typography meets cross-stitch-inspired ornament, with equal-quality dark and light themes."
 colors:
   dark-bg: "#080706"
   dark-surface: "#12100C"
@@ -28,31 +28,31 @@ colors:
 
 typography:
   display-xl:
-    fontFamily: "Oswald, Arial Narrow, sans-serif"
+    fontFamily: "Literata, Georgia, serif"
     fontSize: 64px
     fontWeight: 600
     lineHeight: 0.98
     letterSpacing: "0.025em"
   display-lg:
-    fontFamily: "Oswald, Arial Narrow, sans-serif"
+    fontFamily: "Literata, Georgia, serif"
     fontSize: 48px
     fontWeight: 600
     lineHeight: 1
     letterSpacing: "0.02em"
   heading-md:
-    fontFamily: "Oswald, Arial Narrow, sans-serif"
+    fontFamily: "Literata, Georgia, serif"
     fontSize: 32px
     fontWeight: 500
     lineHeight: 1.08
     letterSpacing: "0.015em"
   heading-sm:
-    fontFamily: "Oswald, Arial Narrow, sans-serif"
+    fontFamily: "Literata, Georgia, serif"
     fontSize: 24px
     fontWeight: 500
     lineHeight: 1.15
     letterSpacing: "0.01em"
   label:
-    fontFamily: "Oswald, Arial Narrow, sans-serif"
+    fontFamily: "Literata, Georgia, serif"
     fontSize: 14px
     fontWeight: 600
     lineHeight: 1.2
@@ -118,7 +118,29 @@ components:
 
 # Лад — Design Contract
 
-> **One-line design language:** a culturally grounded creative workspace built with the visual grammar of embroidery — warm black or unbleached linen, restrained gold/ochre thread, tall condensed display type, geometric cross-stitch ornament, and occasional hand-drawn arrows — while the actual product remains clear, fast, task-first, and source-aware.
+Voice input is an optional browser capability. Its microphone control MUST have a
+clear listening state, a stop action, an accessible name, and a useful disabled
+state when the browser has no speech recognition. The send control MAY use an icon
+when its accessible name and hover label make the action unambiguous.
+
+Literata is the shared editorial face for the wordmark, headings and primary
+controls across the product. Noto Sans remains for long reading and form content.
+The stitched tree is an asymmetric, tall edge composition on wide screens, with
+long branches growing toward the page. Keep it outside the task and composer,
+and omit it where space is constrained. Build its trunk, branches, leaves,
+berries, flowers and birds from actual X-shaped SVG stitches on a common grid;
+the reference artwork guides the silhouette and density but is never embedded
+as a raster image. The tree uses existing accent and border colors in both
+themes. Its unequal branch lengths and sparse negative space keep it legible
+beside the centered task without turning the content into a framed card.
+
+Optional surfaces (guide, mobile chat list, source detail and search results)
+SHOULD enter with a brief opacity and position transition. Suggestions disappear
+immediately once typing begins so stale prompts do not compete with the user's
+text. Escape and navigation close surfaces immediately to return keyboard focus
+without delay. All decorative motion MUST respect reduced-motion preferences.
+
+> **One-line design language:** a culturally grounded creative workspace built with the visual grammar of embroidery — warm black or unbleached linen, restrained gold/ochre thread, editorial typography, geometric cross-stitch ornament, and occasional hand-drawn arrows — while the actual product remains clear, fast, task-first, and source-aware.
 
 This file is the visual source of truth for frontend work. It is intentionally written as a contract for both humans and coding agents.
 
@@ -281,7 +303,7 @@ Theme selection SHOULD:
 
 ### Typeface contract
 
-**Display:** `Oswald` is the implementation baseline because it provides the tall, compressed poster character needed here and supports Cyrillic. It is not claimed to be the exact font in the reference image.
+**Display:** `Literata` provides a multilingual editorial tone without tying the entire product to one community's visual tradition. Use it consistently for headings and prominent controls; body text remains `Noto Sans` for sustained reading.
 
 **Body:** `Noto Sans` provides a calm, readable counterweight and broad language coverage.
 

@@ -4,7 +4,7 @@
   --color-bg: #f4ead1; --color-surface: #fff8e7; --color-surface-raised: #ede0be;
   --color-text: #1a1710; --color-text-muted: #665a42; --color-accent: #8e5a16;
   --color-accent-strong: #704010; --color-border: #cbb887;
-  --font-display: "Oswald", "Arial Narrow", sans-serif; --font-body: "Noto Sans", Arial, sans-serif;
+  --font-display: "Literata", Georgia, serif; --font-body: "Noto Sans", Arial, sans-serif;
   color-scheme: light;
 }
 :root[data-theme="dark"] {
@@ -280,3 +280,45 @@ summary:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 
 @media (prefers-reduced-motion: reduce) { button, summary { transition: none; } }
 @media (max-width: 680px) { .site-header { gap: 8px; padding: 12px 16px; } .wordmark { font-size: 20px; } .site-header nav { order: 3; width: 100%; justify-content: space-around; } .site-header nav button { flex: 1; } .theme-toggle, .signout { padding: 6px 8px; font-size: 12px; } .login-page { padding: 48px 16px; } .login-page form { padding: 16px; } .workspace { padding: 16px; } .chat-rail { top: 16px; left: 16px; right: 16px; } .chat-topline { gap: 8px; } .chat-topline > span { display: none; } .dialogue { padding-top: 16px; } .dialogue h1 { font-size: 32px; } .dialogue-heading { flex-wrap: wrap; gap: 16px; margin-bottom: 20px; } .message { padding: 16px; } .message.user { margin-left: 0; } .chat-empty { padding-top: 16px; } .chat-empty .embroidery-band { height: 64px; margin-bottom: 12px; } .chat-empty h1 { font-size: 34px; } .chat-empty > p:not(.eyebrow) { margin-top: 12px; font-size: 16px; } .starter-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 20px; } .starter-grid button { min-height: 76px; padding: 12px; font-size: 14px; } .guide-grid { grid-template-columns: 1fr; gap: 8px; margin-top: 20px; } .guide-grid button { min-height: 56px; } .composer { padding: 12px 0 16px; } .composer textarea { height: 72px; min-height: 72px; } .composer-actions { align-items: stretch; flex-direction: column; gap: 8px; margin-top: 8px; } .composer-actions span { display: none; } .simple-page { padding: 40px 16px; } .guide-panel { padding: 16px; } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; } }
+
+.composer-tools { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+.composer button.composer-icon { display: inline-grid; place-items: center; width: 44px; height: 44px; min-width: 44px; padding: 0; border-radius: 50%; cursor: pointer; }
+.composer-icon svg { width: 20px; height: 20px; }
+.composer .voice-button { background: var(--color-surface); color: var(--color-text); }
+.composer .voice-button:hover:not(:disabled), .composer .voice-button.is-listening { border-color: var(--color-accent-strong); background: var(--color-surface-raised); }
+.composer .voice-button.is-listening { box-shadow: 0 0 0 3px var(--color-border); }
+.composer .send-button { background: var(--color-text); color: var(--color-bg); border-color: var(--color-text); }
+.composer .send-button:hover:not(:disabled) { background: var(--color-accent-strong); border-color: var(--color-accent-strong); }
+.composer .composer-icon:disabled { cursor: not-allowed; opacity: .45; }
+.voice-status { margin: 8px 0 0; color: var(--color-accent-strong); font-size: 13px; }
+@media (max-width: 680px) { .composer-actions { flex-direction: row; align-items: center; } }
+
+/* A single editorial heading family is used across product surfaces and controls. */
+.wordmark, .chat-empty h1, .materials-intro h1, .dialogue h1 { font-family: var(--font-display); font-weight: 600; letter-spacing: -.025em; }
+.wordmark { font-size: 27px; }
+.chat-empty h1 { font-size: clamp(33px, 3.7vw, 44px); }
+.simple-page.materials-page > h1 { font-size: clamp(36px, 4vw, 48px); line-height: 1.15; letter-spacing: -.025em; text-transform: none; }
+.site-header nav button, .site-header .theme-toggle, .site-header .signout, .new-chat-button, .starter-grid button, .guide-grid button, .material-filter-actions button, .chat-topline button, .starter-heading button, .advanced-filters summary { font-family: var(--font-display); }
+.chat-main.is-empty > .tree-ornament { position: fixed; width: 370px; height: auto; top: clamp(128px, 17vh, 205px); right: -95px; pointer-events: none; fill: none; stroke-linecap: square; opacity: .76; }
+.tree-thread-bark { stroke: var(--color-accent-strong); stroke-width: 2.5; }
+.tree-thread-gold { stroke: var(--color-accent); stroke-width: 2.4; }
+.tree-thread-light { stroke: var(--color-border); stroke-width: 2.3; }
+:root[data-theme="dark"] .chat-main.is-empty > .tree-ornament { opacity: .9; }
+.visual-results { max-width: 820px; margin: 36px auto; }
+.visual-results h2 { margin: 0 0 8px; font: 500 27px/1.2 var(--font-display); }
+.visual-results > p { color: var(--color-text-muted); }
+.visual-results .segment-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); gap: 12px; }
+.visual-results .segment-list li { margin: 0; padding: 18px; border: 1px solid var(--color-border); border-radius: 4px; background: var(--color-surface); }
+
+/* Entry motion gives orientation; typing, Escape and navigation remain immediate. */
+@keyframes reveal-surface { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes reveal-backdrop { from { opacity: 0; } to { opacity: 1; } }
+.chat-launch, .dialogue, .materials-layout, .visual-results, .guide-panel { animation: reveal-surface .28s cubic-bezier(.2,.7,.2,1) both; }
+.guide-backdrop { animation: reveal-backdrop .2s ease-out both; }
+.material-detail > h2, .material-detail > .segment-list, .message { animation: reveal-surface .22s ease-out both; }
+@media (max-width: 900px) { .chat-rail.open { animation: reveal-surface .24s ease-out both; } }
+@media (min-width: 1361px) { .chat-main.is-empty { position: relative; left: -45px; max-width: 620px; } }
+@media (max-width: 1360px) { .chat-main.is-empty > .tree-ornament { display: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .chat-launch, .dialogue, .materials-layout, .visual-results, .guide-panel, .guide-backdrop, .material-detail > h2, .material-detail > .segment-list, .message, .chat-rail.open { animation: none; }
+}

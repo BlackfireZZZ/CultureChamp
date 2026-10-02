@@ -72,13 +72,15 @@ class GroundedFakeProvider:
         output = json.dumps(
             {
                 "fact": excerpt,
-                "interpretation": "This excerpt may inform the brief; review its context.",
+                "interpretation": (
+                    "Фрагмент помогает понять тему; проверьте его контекст в источнике."
+                ),
                 "creative": (
-                    "Create a self-authored synthetic image of the requested subject. "
-                    "Use a clear composition, visible materials, lighting and viewpoint. "
-                    "Keep cultural details limited to the cited excerpt."
+                    "Создайте изображение по задаче: задайте композицию, видимые материалы, "
+                    "освещение и ракурс. Культурные детали ограничьте процитированным фрагментом."
                     if payload.get("requested_output") == "image_prompt" else
-                    "Use the brief to draft a contemporary concept, labelled as new work."
+                    "Используйте задачу для нового современного замысла; "
+                    "уточните форму и аудиторию."
                 ),
                 "citations": [evidence["id"]],
             },

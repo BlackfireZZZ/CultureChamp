@@ -83,7 +83,7 @@ def test_no_evidence_skips_model_and_makes_no_cultural_claim(brief: str) -> None
         result = await service.generate(Actor("user-1", Role.USER), brief, "turn-1")
         assert result.evidence_status == "insufficient"
         assert result.citations == ()
-        assert "no approved source evidence" in result.text
+        assert "не удалось найти подтверждённые фрагменты" in result.text
         assert model.calls == []
 
     asyncio.run(check())
@@ -126,8 +126,8 @@ def test_image_request_returns_model_agnostic_prompt_with_exact_citation() -> No
         )
         assert result.evidence_status == "grounded"
         assert result.citations == (Citation(revision_id, segment_id, locator),)
-        assert "Image prompt: Фотореалистичная" in result.text
-        assert "New creative proposal:" not in result.text
+        assert "Промпт для изображения: Фотореалистичная" in result.text
+        assert "Новая творческая идея:" not in result.text
         payload = json.loads(model.calls[0].prompt)
         assert payload["requested_output"] == "image_prompt"
         assert "any image generator" in model.calls[0].system
@@ -166,9 +166,9 @@ def test_fake_grounded_answer_validates_exact_citation_and_ignores_source_instru
         result = await service.generate(Actor("user-1", Role.USER), "Count brief", "turn-1")
         assert result.evidence_status == "grounded"
         assert result.citations == (Citation(revision_id, segment_id, locator),)
-        assert "Source-supported:" in result.text
-        assert "Interpretation:" in result.text
-        assert "New creative proposal:" in result.text
+        assert "Подтверждено источником:" in result.text
+        assert "Интерпретация:" in result.text
+        assert "Новая творческая идея:" in result.text
         assert "secret" not in result.text.lower()
         assert [item["id"] for item in json.loads(provider.prompts[0])["evidence"]] == [
             str(segment_id)

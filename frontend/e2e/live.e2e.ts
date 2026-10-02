@@ -92,7 +92,7 @@ test("live synthetic source flows from admin review to cited chat and revocation
     await expect(userPage.getByRole("alert")).toContainText("Текст сохранён")
     await expect(userPage.getByRole("textbox", { name: "Ваша задача" })).toHaveValue(cell)
     await userPage.getByRole("button", { name: "Отправить" }).click()
-    await expect(userPage.getByText(/There is no approved source evidence/)).toBeVisible()
+    await expect(userPage.getByText(/не удалось найти подтверждённые фрагменты/)).toBeVisible()
     expect(requestIds[1]).toBe(requestIds[0])
     const unsupportedChatTitle = cell
 
@@ -173,7 +173,7 @@ test("live synthetic source flows from admin review to cited chat and revocation
       return report.feedback.some((item) => item.comment === `Synthetic feedback ${marker}`)
     }).toBe(true)
     await userPage.getByRole("button", { name: unsupportedChatTitle, exact: true }).click()
-    await expect(userPage.getByText(/There is no approved source evidence/)).toBeVisible()
+    await expect(userPage.getByText(/не удалось найти подтверждённые фрагменты/)).toBeVisible()
     await userPage.getByRole("button", { name: "Удалить чат" }).click()
     await userPage.getByRole("button", { name: "Подтвердить удаление" }).click()
     await expect(userPage.getByRole("button", { name: unsupportedChatTitle, exact: true })).toHaveCount(0)

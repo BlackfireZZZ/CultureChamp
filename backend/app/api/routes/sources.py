@@ -52,7 +52,14 @@ def get_source_service(request: Request) -> SourceService:
     store: PrivateOriginalStore = getattr(
         request.app.state, "source_store", None
     ) or PrivateOriginalStore(Path(settings.source_storage_root))
-    return SourceService(SqlSourceGateway(factory, store))
+    return SourceService(
+        SqlSourceGateway(factory, store),
+        local_test_mode=(
+            settings.local_test_source_approval
+            and settings.app_env == "development"
+            and settings.model_provider == "fake"
+        ),
+    )
 
 
 class IntakeView(BaseModel):

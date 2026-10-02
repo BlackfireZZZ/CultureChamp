@@ -59,6 +59,7 @@ services:
       MODEL_API_NAME: ${MODEL_API_NAME:-}
       MODEL_API_KEY: ${MODEL_API_KEY:-}
       MODEL_POLICY_APPROVED: ${MODEL_POLICY_APPROVED:-false}
+      LOCAL_TEST_SOURCE_APPROVAL: ${LOCAL_TEST_SOURCE_APPROVAL:-false}
     volumes:
       - source_private:/workspace/.private
     ports:

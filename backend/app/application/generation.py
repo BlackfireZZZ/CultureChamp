@@ -32,10 +32,8 @@ SYSTEM_INSTRUCTION = (
     "unverified cultural motifs or meanings, or use model-specific commands."
 )
 NO_EVIDENCE = (
-    "There is no approved source evidence I can safely use for this brief. "
-    "I cannot make a verified "
-    "cultural claim or citation from the available materials. You can refine the "
-    "task or ask an administrator to review relevant sources."
+    "По этой задаче не удалось найти подтверждённые фрагменты источников. "
+    "Попробуйте уточнить тему или проверьте доступные материалы."
 )
 IMAGE_SUBJECT = re.compile(
     r"фото|изображени|картинк|иллюстрац|рисунк|photo|image|picture|illustration",
@@ -183,9 +181,9 @@ class GenerationService:
             ):
                 raise ValueError("fact is not a span of cited evidence")
             text = (
-                f"Source-supported: {cast(str, fields[0]).strip()}\n\n"
-                f"Interpretation: {cast(str, fields[1]).strip()}\n\n"
-                f"{'Image prompt' if image_prompt else 'New creative proposal'}: "
+                f"Подтверждено источником: {cast(str, fields[0]).strip()}\n\n"
+                f"Интерпретация: {cast(str, fields[1]).strip()}\n\n"
+                f"{'Промпт для изображения' if image_prompt else 'Новая творческая идея'}: "
                 f"{cast(str, fields[2]).strip()}"
             )
             return GeneratedAnswer(text, tuple(validated), "grounded")

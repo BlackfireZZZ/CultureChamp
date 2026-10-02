@@ -1,5 +1,15 @@
 # Source admission, rights and revocation policy (S02)
 
+## Isolated local testing
+
+An administrator may record the user's explicit attestation for a disposable local
+development corpus with a `local-test://user-attestation/<date>` evidence reference.
+This path requires `LOCAL_TEST_SOURCE_APPROVAL=true`, `APP_ENV=development`, and
+the fake model provider. Provider transfer remains prohibited. The decision reason
+must state that external reuse rights and cultural accuracy are unverified; this
+local test grant is not a publication or production rights decision. Production
+continues to require an HTTPS rights evidence reference and the review below.
+
 ## Decision principle
 
 Publication, DOI assignment and extractable text establish identity and access,

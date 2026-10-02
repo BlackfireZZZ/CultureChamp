@@ -86,11 +86,11 @@ test("visual match opens the exact approved PDF page", async () => {
   }))
   renderApp()
   fireEvent.click(await screen.findByRole("button", { name: "Материалы" }))
-  const form = screen.getByRole("form", { name: "Поиск по изображениям PDF" })
-  fireEvent.change(within(form).getByRole("textbox"), { target: { value: "red circle" } })
-  fireEvent.click(within(form).getByRole("button", { name: "Найти изображения" }))
-  expect(await screen.findByRole("link", { name: "Открыть страницу 3 в одобренном PDF" })).toHaveAttribute("href", "/api/v1/materials/rev-visual/original#page=3")
-  expect(screen.getByText(/не подтверждает культурный факт/)).toBeInTheDocument()
+  const form = screen.getByRole("form", { name: "Поиск материалов" })
+  fireEvent.change(within(form).getByRole("textbox", { name: "Поиск материалов" }), { target: { value: "red circle" } })
+  fireEvent.click(within(form).getByRole("button", { name: "Найти" }))
+  expect(await screen.findByRole("link", { name: "Открыть страницу 3 в источнике" })).toHaveAttribute("href", "/api/v1/materials/rev-visual/original#page=3")
+  expect(screen.getByText(/Проверьте страницу и контекст/)).toBeInTheDocument()
 })
 
 test("materials search uses approved-only server filters and can be reset", async () => {

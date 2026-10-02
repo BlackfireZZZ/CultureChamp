@@ -18,6 +18,7 @@ class Settings(BaseSettings):
     model_api_name: str | None = None
     model_api_key: SecretStr | None = None
     model_policy_approved: bool = False
+    local_test_source_approval: bool = False
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
