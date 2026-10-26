@@ -95,6 +95,14 @@ class GenerationRateLimited(GenerationUnavailable):
     pass
 
 
+class GenerationValidationFailure(GenerationUnavailable):
+    """A bounded diagnostic code; never contains the model's response text."""
+
+    def __init__(self, reason: str) -> None:
+        super().__init__("Model response failed validation")
+        self.reason = reason
+
+
 @dataclass(frozen=True, slots=True)
 class GeneratedAnswer:
     text: str
@@ -260,26 +268,31 @@ class GenerationService:
                         await on_delta(readable)
 
                 raw = await self.model.generate_stream(call, readable_delta)
-            answer = json.loads(raw)
+            try:
+                answer = json.loads(raw)
+            except json.JSONDecodeError as exc:
+                raise GenerationValidationFailure("invalid_json") from exc
             if not isinstance(answer, dict):
-                raise ValueError("invalid answer")
+                raise GenerationValidationFailure("invalid_object")
             fields = [answer.get(name) for name in ("fact", "interpretation", "creative")]
             if any(
                 not isinstance(field, str) or not field.strip() or len(field) > 2_000
                 for field in fields
             ):
-                raise ValueError("invalid answer fields")
+                raise GenerationValidationFailure("invalid_fields")
             ids = answer.get("citations")
             if not isinstance(ids, list) or not ids or len(ids) > len(evidence):
-                raise ValueError("missing citations")
+                raise GenerationValidationFailure("missing_citations")
+            if any(not isinstance(item, str) for item in ids):
+                raise GenerationValidationFailure("invalid_citation_type")
             if len(ids) != len(set(ids)) or any(item not in by_id for item in ids):
-                raise ValueError("fabricated citation")
+                raise GenerationValidationFailure("fabricated_citation")
             validated = []
             for segment_id in ids:
                 item: EvidenceSegment = by_id[segment_id]
                 current = await self.citations.resolve(item.revision_id, item.segment_id)
                 if current is None or current.locator != item.locator:
-                    raise ValueError("citation no longer visible")
+                    raise GenerationValidationFailure("citation_no_longer_visible")
                 validated.append(current)
             fact = " ".join(cast(str, fields[0]).split()).casefold()
             left_guard = r"(?<!\d[.,])" if fact[0].isdigit() else ""
@@ -306,4 +319,4 @@ class GenerationService:
             )
             return GeneratedAnswer(text, tuple(validated), "grounded")
         except (KeyError, TypeError, ValueError, json.JSONDecodeError) as exc:
-            raise GenerationUnavailable("Model response failed validation") from exc
+            raise GenerationValidationFailure("invalid_structure") from exc

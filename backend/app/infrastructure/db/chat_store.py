@@ -254,7 +254,10 @@ class SqlChatStore:
         async with self.factory.begin() as session:
             await self._owned(session, owner, chat_id, lock=True)
             turn = await session.get(ChatTurn, request_id, with_for_update=True)
-            if turn is not None and turn.conversation_id == chat_id and turn.attempt == attempt:
+            if (
+                turn is not None and turn.conversation_id == chat_id
+                and turn.attempt == attempt and turn.status == "pending"
+            ):
                 turn.status = "failed"
                 turn.lease_until = None
 

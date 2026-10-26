@@ -6,7 +6,12 @@ from uuid import UUID
 from sqlalchemy import delete, func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from app.infrastructure.db.chat_models import GenerationAttempt, GenerationReservation
+from app.infrastructure.db.chat_models import (
+    ChatConversation,
+    ChatTurn,
+    GenerationAttempt,
+    GenerationReservation,
+)
 from app.infrastructure.model.gateway import ModelResult
 
 USER_DAILY_LIMIT = 20
@@ -25,9 +30,25 @@ class SqlModelQuota:
         async with self.factory.begin() as session:
             await session.execute(text("SELECT pg_advisory_xact_lock(746932)"))
             existing = await session.get(GenerationReservation, key, with_for_update=True)
+            retrying_chat = False
+            if existing is not None and existing.status == "done":
+                # A provider success may still fail validation or persistence.
+                # Only an owned chat claim for a later attempt can retry that ID;
+                # standalone and completed requests retain their idempotency guard.
+                retrying_chat = await session.scalar(
+                    select(ChatTurn.id)
+                    .join(ChatConversation, ChatConversation.id == ChatTurn.conversation_id)
+                    .where(
+                        ChatTurn.id == key,
+                        ChatConversation.owner_id == subject,
+                        ChatTurn.status == "pending",
+                        ChatTurn.attempt > 1,
+                        ChatTurn.lease_until > now,
+                    )
+                ) is not None
             if existing is not None and (
                 existing.subject_id != subject
-                or existing.status == "done"
+                or (existing.status == "done" and not retrying_chat)
                 or (existing.status == "active" and existing.lease_until > now)
             ):
                 return False

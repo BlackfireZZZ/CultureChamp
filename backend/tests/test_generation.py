@@ -9,6 +9,7 @@ from app.application.evidence_hygiene import has_explicit_prompt_control
 from app.application.generation import (
     GenerationService,
     GenerationUnavailable,
+    GenerationValidationFailure,
     ModelCall,
     _AnswerPreview,
     wants_image_prompt,
@@ -74,6 +75,30 @@ class CaptureGroundedFakeProvider(GroundedFakeProvider):
     async def generate(self, request: ModelRequest):
         self.prompts.append(request.prompt)
         return await super().generate(request)
+
+
+@pytest.mark.parametrize("response, reason", [
+    ("not JSON", "invalid_json"),
+    ("[]", "invalid_object"),
+    ('{"fact": 7}', "invalid_fields"),
+    (json.dumps({"fact": "Alpha", "interpretation": "New", "creative": "Idea",
+                 "citations": [{}]}), "invalid_citation_type"),
+])
+def test_validation_failure_has_safe_specific_reason(response, reason) -> None:
+    async def check():
+        evidence = EvidenceSegment(
+            uuid4(), uuid4(), "Synthetic source", None, Locator(page=1), "Alpha", 0.9
+        )
+        service = GenerationService(
+            RetrievalService(StaticSearch((evidence,))), CaptureModel(response),
+            CurrentCitation(None),
+        )
+        with pytest.raises(GenerationValidationFailure) as caught:
+            await service.generate(Actor("synthetic-user", Role.USER), "Brief", "request")
+        assert caught.value.reason == reason
+        assert str(caught.value) == "Model response failed validation"
+
+    asyncio.run(check())
 
 
 @pytest.mark.parametrize("brief", ["Brief", "Сгенерируй фото с культурным мотивом"])

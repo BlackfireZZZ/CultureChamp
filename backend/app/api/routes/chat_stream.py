@@ -2,6 +2,7 @@
 
 import asyncio
 import json
+import logging
 from collections.abc import AsyncIterator
 from contextlib import suppress
 from typing import Annotated
@@ -14,9 +15,10 @@ from app.api.auth import current_user
 from app.api.routes.chats import SendInput, _turn, get_chat_service
 from app.application.access import Actor
 from app.application.chat import ChatConflict, ChatNotFound, ChatService
-from app.application.generation import GenerationRateLimited
+from app.application.generation import GenerationRateLimited, GenerationValidationFailure
 
 router = APIRouter(prefix="/chats", tags=["chats"])
+logger = logging.getLogger(__name__)
 
 
 @router.post("/{chat_id}/messages/stream")
@@ -37,6 +39,7 @@ async def stream_message(
 
         async def produce() -> None:
             attempt: int | None = None
+            stage = "claim"
             try:
                 claim = await service.store.claim(
                     actor.subject_id, chat_id, data.request_id, data.text.strip(),
@@ -50,12 +53,15 @@ async def stream_message(
                 attempt = claim.attempt
                 if attempt is None:
                     raise ChatConflict("Chat turn could not be claimed")
+                stage = "generation"
                 answer = await service.generation.generate_stream(
                     actor, data.text.strip(), str(data.request_id), on_delta
                 )
+                stage = "persistence"
                 turn = await service.store.finish(
                     actor.subject_id, chat_id, data.request_id, attempt, answer
                 )
+                stage = "serialization"
                 await queue.put(("complete", {"turn": _turn(turn).model_dump(mode="json")}))
             except asyncio.CancelledError:
                 if attempt is not None:
@@ -65,6 +71,13 @@ async def stream_message(
                         )
                 raise
             except Exception as exc:
+                # Exception messages and tracebacks can contain model text, SQL
+                # parameters or credentials. Log only controlled classification.
+                logger.warning(
+                    "chat_stream outcome=failed stage=%s error_type=%s reason=%s",
+                    stage, type(exc).__name__,
+                    exc.reason if isinstance(exc, GenerationValidationFailure) else "unavailable",
+                )
                 if attempt is not None:
                     with suppress(Exception):
                         await service.store.fail(

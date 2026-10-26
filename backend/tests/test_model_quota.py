@@ -1,6 +1,6 @@
 import asyncio
 import os
-from datetime import UTC, datetime, time
+from datetime import UTC, datetime, time, timedelta
 from uuid import UUID, uuid4
 
 import pytest
@@ -9,7 +9,12 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlalchemy.pool import NullPool
 
 import app.infrastructure.db.model_quota as quota_module
-from app.infrastructure.db.chat_models import GenerationAttempt, GenerationReservation
+from app.infrastructure.db.chat_models import (
+    ChatConversation,
+    ChatTurn,
+    GenerationAttempt,
+    GenerationReservation,
+)
 from app.infrastructure.db.identity_models import Account
 from app.infrastructure.db.model_quota import SqlModelQuota
 from app.infrastructure.model.gateway import ModelResult
@@ -29,6 +34,75 @@ def test_global_daily_quota_counts_failed_retry_across_users(
     if url is None:
         pytest.skip("set CORPUS_TEST_DATABASE_URL for PostgreSQL integration")
     asyncio.run(_check_global_quota(url, monkeypatch))
+
+
+def test_provider_success_with_failed_chat_can_retry_without_losing_usage() -> None:
+    url = os.getenv("CORPUS_TEST_DATABASE_URL")
+    if url is None:
+        pytest.skip("set CORPUS_TEST_DATABASE_URL for PostgreSQL integration")
+
+    async def check():
+        engine = create_async_engine(url, poolclass=NullPool)
+        factory = async_sessionmaker(engine, expire_on_commit=False)
+        account_id, chat_id, request_id = uuid4(), uuid4(), uuid4()
+        quota = SqlModelQuota(factory)
+        try:
+            async with factory.begin() as session:
+                session.add(Account(id=account_id, username=f"retry-{account_id.hex}",
+                                    password_hash="synthetic-only", role="user"))
+                await session.flush()
+                session.add(ChatConversation(
+                    id=chat_id, owner_id=account_id, title="Synthetic retry",
+                    expires_at=datetime.now(UTC) + timedelta(days=1),
+                ))
+                await session.flush()
+                session.add(ChatTurn(id=request_id, conversation_id=chat_id, ordinal=0,
+                                     user_text="Synthetic task", status="failed", attempt=1))
+            assert await quota.reserve(str(account_id), str(request_id))
+            await quota.finish(str(account_id), str(request_id), ModelResult("ok", 5, 2))
+            assert not await quota.reserve(str(account_id), str(request_id))
+            async with factory.begin() as session:
+                turn = await session.get(ChatTurn, request_id)
+                turn.status = "pending"
+                turn.lease_until = datetime.now(UTC) + timedelta(seconds=120)
+            assert not await quota.reserve(str(account_id), str(request_id))
+            async with factory.begin() as session:
+                turn = await session.get(ChatTurn, request_id)
+                turn.attempt = 2
+                turn.lease_until = datetime.now(UTC) - timedelta(seconds=1)
+            assert not await quota.reserve(str(account_id), str(request_id))
+            async with factory.begin() as session:
+                turn = await session.get(ChatTurn, request_id)
+                turn.lease_until = datetime.now(UTC) + timedelta(seconds=120)
+            assert await quota.reserve(str(account_id), str(request_id))
+            assert not await quota.reserve(str(account_id), str(request_id))
+            await quota.finish(str(account_id), str(request_id), ModelResult("ok", 7, 3))
+            async with factory.begin() as session:
+                turn = await session.get(ChatTurn, request_id)
+                turn.status = "complete"
+                turn.lease_until = None
+            assert not await quota.reserve(str(account_id), str(request_id))
+            async with factory() as session:
+                attempts = (await session.scalars(
+                    select(GenerationAttempt).where(
+                        GenerationAttempt.reservation_id == request_id
+                    ).order_by(GenerationAttempt.id)
+                )).all()
+                assert [(row.input_tokens, row.output_tokens) for row in attempts] == [
+                    (5, 2), (7, 3)
+                ]
+        finally:
+            async with factory.begin() as session:
+                await session.execute(delete(ChatConversation).where(
+                    ChatConversation.id == chat_id
+                ))
+                await session.execute(delete(GenerationReservation).where(
+                    GenerationReservation.subject_id == account_id
+                ))
+                await session.execute(delete(Account).where(Account.id == account_id))
+            await engine.dispose()
+
+    asyncio.run(check())
 
 
 async def _check_global_quota(url: str, monkeypatch: pytest.MonkeyPatch) -> None:
