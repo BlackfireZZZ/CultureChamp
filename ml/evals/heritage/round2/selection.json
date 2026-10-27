@@ -1,0 +1,51 @@
+{
+  "selected_configuration": "union-e5-small-bm25-russian-rerank100",
+  "frozen_before_test": true,
+  "selection_basis": "Development only on all84 exposed V1 queries: Hit@5/10=82/84 and MRR=.85159, tied with reranked RRF50. Preserve complete dense50+lexical50 pools to address the observed candidate truncation failure; deduped union<=100, with warm p95 .335s accepted for this local study. No performance advantage over RRF50 is claimed.",
+  "development_report_sha256": "14d2a87bc71a2a53582a12d78abf3f5f4ce5b614c1030b0e6db4ce50b623dd60",
+  "questions_sha256": "a63e306afd1f156c0f59b4858fdb4056c44cc216914340c4dab0c9f7d3923e51",
+  "chunking": {
+    "words": 120,
+    "overlap": 30,
+    "same_unit_only": true
+  },
+  "encoder": {
+    "repo": "intfloat/multilingual-e5-small",
+    "revision": "614241f622f53c4eeff9890bdc4f31cfecc418b3",
+    "query_prefix": "query: ",
+    "passage_prefix": "passage: ",
+    "normalized": true,
+    "max_tokens": 512
+  },
+  "reranker": {
+    "repo": "BAAI/bge-reranker-v2-m3",
+    "revision": "953dc6f6f85a1b2dbfca4c34a2796e7dde08d41e",
+    "candidate_depth": 100,
+    "max_tokens": 512
+  },
+  "reference_configurations": [
+    "e5-small",
+    "bm25-russian"
+  ],
+  "thresholds": {
+    "hit5": 0.9,
+    "hit10": 0.95,
+    "reciprocal_rank10": 0.75,
+    "format_hit5": 0.8
+  },
+  "deployment": "Offline experiment only; no live database, index generation or runtime settings changed.",
+  "round": 2,
+  "lexical": {
+    "implementation": "bm25s",
+    "version": "0.2.14",
+    "stemmer": "PyStemmer Russian 3.0.0",
+    "candidate_depth": 50,
+    "stopwords": []
+  },
+  "fusion": {
+    "method": "deduplicated_union",
+    "dense_depth": 50,
+    "lexical_depth": 50,
+    "maximum_candidates": 100
+  }
+}

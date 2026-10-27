@@ -11,7 +11,9 @@ from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.api.auth import current_admin, current_user
+from app.api.retrieval import get_retrieval_service
 from app.application.access import Actor
+from app.application.retrieval import RetrievalService
 from app.application.source_management import (
     AdminInventoryFilters,
     AdminRevisionData,
@@ -25,6 +27,7 @@ from app.application.source_management import (
     TagData,
 )
 from app.core.config import settings
+from app.domain.sources import Locator
 from app.infrastructure.db.governed_sources import SqlSourceGateway
 from app.infrastructure.db.session import session_factory
 from app.infrastructure.db.visual_search import SqlVisualSearch
@@ -78,6 +81,13 @@ class LocatorView(BaseModel):
     row_end: int | None
     column_start: int | None
     column_end: int | None
+
+
+def _locator_view(locator: Locator) -> LocatorView:
+    return LocatorView(
+        kind="table" if locator.row_start is not None else "page" if locator.page else "section",
+        **asdict(locator),
+    )
 
 
 class SegmentView(BaseModel):
@@ -455,6 +465,36 @@ async def materials_list(
     filters = MaterialFilters(q=q, region=region, people=people, period=period,
                               media_type=media_type)
     return [_material_view(item) for item in await service.visible_list(actor, filters)]
+
+
+class TextSearchResultView(BaseModel):
+    revision_id: UUID
+    segment_id: UUID
+    title: str
+    creator: str | None
+    locator: LocatorView
+    text: str
+    score: float
+    context_tags: list[TagView]
+
+
+@materials_router.get("/search", response_model=list[TextSearchResultView])
+async def text_search(
+    response: Response,
+    actor: Annotated[Actor, Depends(current_user)],
+    service: Annotated[RetrievalService, Depends(get_retrieval_service)],
+    q: Annotated[str, Query(min_length=1, max_length=2_000, pattern=r"\S")],
+    limit: Annotated[int, Query(ge=1, le=20)] = 5,
+    region: Annotated[str | None, Query(min_length=1, max_length=100, pattern=r"\S")] = None,
+    people: Annotated[str | None, Query(min_length=1, max_length=100, pattern=r"\S")] = None,
+) -> list[TextSearchResultView]:
+    response.headers["Cache-Control"] = "no-store"
+    items = await service.search(actor, q, limit=limit, region=region, people=people)
+    return [TextSearchResultView(
+        revision_id=item.revision_id, segment_id=item.segment_id, title=item.title,
+        creator=item.creator, locator=_locator_view(item.locator), text=item.text,
+        score=item.score, context_tags=[TagView(kind=k, value=v) for k, v in item.context_tags],
+    ) for item in items]
 
 
 @materials_router.get("/visual-search", response_model=list[VisualResultView])

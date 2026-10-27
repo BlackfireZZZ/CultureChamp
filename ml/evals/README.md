@@ -1,5 +1,10 @@
 # Preliminary retrieval and answer evaluation (S05 / R01 scaffold)
 
+For the newer 21-source, retrieval-only study, see the
+[expanded heritage benchmark](heritage/README.md) and its
+[measured report](heritage/REPORT.md). The historical results below remain
+provisional; they are not the new study’s development or held-out labels.
+
 ## Status, objective, and falsifying check
 
 These are **provisional test labels**, not expert-confirmed ground truth. The

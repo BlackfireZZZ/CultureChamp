@@ -1,6 +1,5 @@
 """Versioned local text embeddings and Qdrant candidate index."""
 
-import asyncio
 import hashlib
 import os
 from collections.abc import Sequence
@@ -11,11 +10,15 @@ from uuid import UUID
 
 import httpx
 
+from app.core.config import settings
+
 MODEL_REVISION = "614241f622f53c4eeff9890bdc4f31cfecc418b3"
 MODEL_SHA256 = "4654c156f3e4171abc9c716cdb771bf9116455d15ac1aab364aeeede0e3205b0"
-MODEL_ID = f"intfloat/multilingual-e5-small@{MODEL_REVISION}:onnx-O4:passage-query"
-COLLECTION = "culture_text_e5_small_v1"
-VECTOR_NAME = "text_e5_small_v1"
+LEGACY_MODEL_ID = f"intfloat/multilingual-e5-small@{MODEL_REVISION}:onnx-O4:passage-query"
+PRECISION = "fp16" if settings.retrieval_device.startswith("cuda") else "fp32"
+MODEL_ID = f"intfloat/multilingual-e5-small@{MODEL_REVISION}:st-5.7-torch-2.14:{PRECISION}:512:v2"
+COLLECTION = f"culture_text_e5_st_{PRECISION}_v2"
+VECTOR_NAME = "text_e5_st_v2"
 DIMENSIONS = 384
 MIN_TEXT_COSINE = 0.84  # Provisional internal gate; replace after expert-labelled calibration.
 UPSERT_BATCH_SIZE = 128
@@ -38,7 +41,7 @@ def _model():  # type: ignore[no-untyped-def]
     from fastembed.common.model_description import ModelSource, PoolingType
 
     TextEmbedding.add_custom_model(
-        model=MODEL_ID,
+        model=LEGACY_MODEL_ID,
         pooling=PoolingType.MEAN,
         normalization=True,
         sources=ModelSource(hf="intfloat/multilingual-e5-small"),
@@ -46,7 +49,7 @@ def _model():  # type: ignore[no-untyped-def]
         model_file="onnx/model_O4.onnx",
     )
     cache_dir = os.getenv("EMBEDDING_CACHE_ROOT")
-    model = TextEmbedding(model_name=MODEL_ID, cache_dir=cache_dir)
+    model = TextEmbedding(model_name=LEGACY_MODEL_ID, cache_dir=cache_dir)
     model_dir = Path(model.model._model_dir)
     weights = model_dir / "onnx" / "model_O4.onnx"
     if model_dir.name != MODEL_REVISION:
@@ -58,23 +61,17 @@ def _model():  # type: ignore[no-untyped-def]
 
 
 class LocalTextEmbedder:
+    """Selected server encoder; legacy ONNX helper is retained for old offline studies."""
+
+    def __init__(self) -> None:
+        from app.infrastructure.vector.local_retrieval import LocalE5Embedder
+        self.delegate = LocalE5Embedder(settings.retrieval_model_cache, settings.retrieval_device)
+
     async def query(self, text: str) -> list[float]:
-        try:
-            return await asyncio.to_thread(
-                lambda: list(_model().embed([f"query: {text}"]))[0].tolist()
-            )
-        except Exception as exc:
-            raise VectorUnavailable("Text embedding unavailable") from exc
+        return await self.delegate.query(text)
 
     async def passages(self, texts: Sequence[str]) -> list[list[float]]:
-        try:
-            return await asyncio.to_thread(
-                lambda: [vector.tolist() for vector in _model().embed(
-                    [f"passage: {text}" for text in texts]
-                )]
-            )
-        except Exception as exc:
-            raise VectorUnavailable("Text embedding unavailable") from exc
+        return await self.delegate.passages(texts)
 
 
 class QdrantTextIndex:
@@ -159,8 +156,11 @@ class QdrantTextIndex:
                 raise VectorUnavailable("Vector indexing unavailable") from exc
 
     async def query(
-        self, text: str, limit: int, *, allowed_revision_ids: Sequence[UUID] | None = None
+        self, text: str, limit: int, *, allowed_revision_ids: Sequence[UUID] | None = None,
+        allowed_segment_ids: Sequence[UUID] | None = None,
     ) -> tuple[tuple[UUID, float], ...]:
+        if allowed_segment_ids is not None and not allowed_segment_ids:
+            return ()
         if allowed_revision_ids is not None and not allowed_revision_ids:
             return ()
         await self.ensure_collection(create=False)
@@ -171,12 +171,16 @@ class QdrantTextIndex:
             try:
                 body: dict[str, object] = {
                     "query": vector, "using": VECTOR_NAME, "limit": limit,
-                    "with_payload": False,
+                    "with_payload": False, "params": {"exact": True},
                 }
                 if allowed_revision_ids is not None:
                     body["filter"] = {"must": [{"key": "revision_id", "match": {
                         "any": [str(item) for item in allowed_revision_ids]
                     }}]}
+                if allowed_segment_ids is not None:
+                    must = body.setdefault("filter", {"must": []})
+                    assert isinstance(must, dict)
+                    must["must"].append({"has_id": [str(i) for i in allowed_segment_ids]})
                 response = await client.post(
                     f"{self.url}/collections/{self.collection}/points/query",
                     json=body,

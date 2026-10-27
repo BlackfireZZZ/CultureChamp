@@ -1,0 +1,37 @@
+{
+  "selected_configuration": "e5-small-rerank30",
+  "frozen_before_test": true,
+  "selection_basis": "Development only: greatest Hit@5/10 (41/42), then highest MRR@10 (0.83214); smaller encoder and lower query latency than tied BGE-M3 candidate. RRF did not improve the reranked configuration.",
+  "development_report_sha256": "80be85075e0ea57bf0ff592518e38dcd5075a7d1b0aea07170fbb2378980459a",
+  "questions_sha256": "df6711df09a07af2ded745ef9cb10bf6ba9161583af54bba79d0ec232d9679b3",
+  "chunking": {
+    "words": 120,
+    "overlap": 30,
+    "same_unit_only": true
+  },
+  "encoder": {
+    "repo": "intfloat/multilingual-e5-small",
+    "revision": "614241f622f53c4eeff9890bdc4f31cfecc418b3",
+    "query_prefix": "query: ",
+    "passage_prefix": "passage: ",
+    "normalized": true,
+    "max_tokens": 512
+  },
+  "reranker": {
+    "repo": "BAAI/bge-reranker-v2-m3",
+    "revision": "953dc6f6f85a1b2dbfca4c34a2796e7dde08d41e",
+    "candidate_depth": 30,
+    "max_tokens": 512
+  },
+  "reference_configurations": [
+    "e5-small",
+    "bm25-russian"
+  ],
+  "thresholds": {
+    "hit5": 0.9,
+    "hit10": 0.95,
+    "reciprocal_rank10": 0.75,
+    "format_hit5": 0.8
+  },
+  "deployment": "Offline experiment only; no live database, index generation or runtime settings changed."
+}

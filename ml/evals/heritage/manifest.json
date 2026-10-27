@@ -1,0 +1,144 @@
+{
+  "version": "heritage-2026-10-27-v1",
+  "created": "2026-10-27",
+  "label_status": "agent_source_checked_not_expert",
+  "origin": "Owner-supplied 19 scholarly PDFs and two historical EPUBs; moved from loose Hackatons files.",
+  "consent": "Owner authorized local application processing. Redistribution rights for original files are not asserted.",
+  "geography": "Russia: Volga-Ural, Tuva, Kalmykia, Buryatia, Yakutia, Nenets tundra; comparative China/Mongolia.",
+  "time_range": "Historical accounts and contemporary scholarship, including 2011 fieldwork and 2022 survey; claims remain attributed to their sources.",
+  "leakage_controls": "42 distinct evidence families, two query styles each. Family 1 per source dev; family 2 test. No test metrics until dev selection. Same corpus indexed throughout; this evaluates unseen questions, not unseen documents. All questions frozen before retrieval.",
+  "questions_sha256": "df6711df09a07af2ded745ef9cb10bf6ba9161583af54bba79d0ec232d9679b3",
+  "extraction": "Poppler pdftotext default reading order + NFC-compatible NFKC/line dehyphenation/whitespace normalization; EPUB container OPF spine HTML text, no pagination invented.",
+  "sources": [
+    {
+      "source_id": "S01",
+      "filename": "deti-kak-nositeli-traditsii-obhodnye-obryady-u-tatar.pdf",
+      "sha256": "7917beedc6da55a3eaff9f5ad413474357c30cd2132242ea38668d3ab48d3a6a",
+      "format": "pdf"
+    },
+    {
+      "source_id": "S02",
+      "filename": "duhovno-nravstvennoe-osmyslenie-trudovyh-traditsiy-v-ustnom-narodnom-tvorchestve-narodov-uralo-povolzhya.pdf",
+      "sha256": "b0343be97667ac2810addd85c8c2b865ab11383919909cd2e783e13472942c64",
+      "format": "pdf"
+    },
+    {
+      "source_id": "S03",
+      "filename": "folklor-tuvintsev-kitaya-i-mongolii-po-rezultatam-polevoy-raboty-2011-goda.pdf",
+      "sha256": "9ad322965dc26a2d1d6c1fe5e58a31130200ce3e454de747ecc5a369c1b97bc5",
+      "format": "pdf"
+    },
+    {
+      "source_id": "S04",
+      "filename": "istoriya-izucheniya-kulta-prirody-u-tuvintsev-v-dorevolyutsionnyy-period.pdf",
+      "sha256": "c2ed6c55d3af43f0d66ee3f68b198bb19ce780bc68f9b0ca3301092646d1b2e0",
+      "format": "pdf"
+    },
+    {
+      "source_id": "S05",
+      "filename": "musulmanskaya-mifologiya-i-traditsionnaya-kultura-tatar-personazhnaya-sfera.pdf",
+      "sha256": "e5caf1adf00ad665674417de55f4a9a752b391e932ef7978b65e461ff4e273a1",
+      "format": "pdf"
+    },
+    {
+      "source_id": "S06",
+      "filename": "ob-etnokulturnyh-osobennostyah-yazykovogo-soznaniya.pdf",
+      "sha256": "196e2fda22c001e6cdc23a0a716b1a2c3314fef91ee08816174dde658789b567",
+      "format": "pdf"
+    },
+    {
+      "source_id": "S07",
+      "filename": "obraz-gory-v-tuvinskoy-paremike-kak-proyavlenie-etnomarkirovannoy-mentalnosti-na-fone-altayskih-hakasskih-buryatskih-i-kalmytskih-poslovits.pdf",
+      "sha256": "c4dbee5356861916d010a6141b5f727f846f641bc19f87a8695d3f96f673ab5f",
+      "format": "pdf"
+    },
+    {
+      "source_id": "S08",
+      "filename": "obraz-zhenschiny-materi-v-mahayanskoy-traditsii-buddizma-na-primere-buddiyskoy-kultury-oyratov.pdf",
+      "sha256": "01eaaab7272773f4078adb5e3fc39c3a6a9c266785c511170dccbd88f8b4b512",
+      "format": "pdf"
+    },
+    {
+      "source_id": "S09",
+      "filename": "obrazy-russkih-v-predaniyah-i-sovremennyh-rasskazah-korennyh-narodov-yakutii.pdf",
+      "sha256": "5fb2eb96c8382a000c9565993940cef586b2cb0737267896c7a67bababd2cd91",
+      "format": "pdf"
+    },
+    {
+      "source_id": "S10",
+      "filename": "rebenok-v-tuvinskoy-kulture.pdf",
+      "sha256": "6ac4373b838746c7c31659a133fe073b656d1e2591d5089db58131c4f2a6ea80",
+      "format": "pdf"
+    },
+    {
+      "source_id": "S11",
+      "filename": "relikty-ohotnichiego-uklada-i-promysla-v-folklornoy-traditsii-kalmykov-i-narodov-transgranichnyh-regionov-chast-2.pdf",
+      "sha256": "f6ce6ea019b810d824a7ec50187bc974d1c9e5a45e612e82688b304e07e8e31c",
+      "format": "pdf"
+    },
+    {
+      "source_id": "S12",
+      "filename": "russkaya-frazeologiya-na-fone-tuvinskoi-lingvokultury.pdf",
+      "sha256": "35e4c8d41c49b0cb047dd13108d9f98db9ea808b953a5dd6db744c59e8f7df95",
+      "format": "pdf"
+    },
+    {
+      "source_id": "S13",
+      "filename": "semeyno-bytovye-obychai-i-obryady-u-saratovskih-bashkir-svyazannye-s-pervym-godom-zhizni-rebenka.pdf",
+      "sha256": "a1ceb525b79cdffec6b4ab7fdd15deab0d513ac2a0a2b63e6a7bac677bd8c59a",
+      "format": "pdf"
+    },
+    {
+      "source_id": "S14",
+      "filename": "semeynye-obryady-i-traditsii-kak-sposob-sohraneniya-etnokonfessionalnoy-identichnosti-tatar-respubliki-mordoviya.pdf",
+      "sha256": "532b5c962abdd1d13e7a18dbbf64b719b4a3a710c7b8b188da6cd4442d5aa34b",
+      "format": "pdf"
+    },
+    {
+      "source_id": "S15",
+      "filename": "semeynye-traditsii-titulnyh-etnosov-yuzhnoy-sibiri-po-dannym-issledovaniya-2022-g.pdf",
+      "sha256": "39b668c87fd3038e48d7a0c8e3faf048782df5a87362cc7addea3c60cb5346f7",
+      "format": "pdf"
+    },
+    {
+      "source_id": "S16",
+      "filename": "sovetskaya-kulturnaya-politika-i-traditsionnye-obryady-narodov-povolzhya-opyt-vzaimodeystviya.pdf",
+      "sha256": "c2c6e85731182e97275508748ac21afe367ba8b539f36fb0445096256c463608",
+      "format": "pdf"
+    },
+    {
+      "source_id": "S17",
+      "filename": "traditsionnaya-kultura-puteshestviya-tundrovyh-nentsev.pdf",
+      "sha256": "2a932ca140037a3948e51ca1bfb2bc49f1e14a768a0efe0d1232ead4542645a2",
+      "format": "pdf"
+    },
+    {
+      "source_id": "S18",
+      "filename": "traditsionnye-kalendarnye-prazdniki-tatar-postsovetskogo-perioda-kulturno-istoricheskiy-aspekt.pdf",
+      "sha256": "eeb80899c17075dccee5a147b53e1b9b6892cf34428b0ab449ca1a123f2b4d9c",
+      "format": "pdf"
+    },
+    {
+      "source_id": "S19",
+      "filename": "transformatsiya-traditsionnyh-tsennostey-barguzinskih-buryat-v-kontse-xx-nachale-xxi-veka.pdf",
+      "sha256": "82086d561c82521a83b3c7fc46d2b618a5aa56e87449229eba82d77f088a2680",
+      "format": "pdf"
+    },
+    {
+      "source_id": "S20",
+      "filename": "Быт_русского_народа_(Терещенко).epub",
+      "sha256": "eef67751d38187012d59d062a97a557c137eaddc750cbd9e396ba91b0c6a1e6f",
+      "format": "epub"
+    },
+    {
+      "source_id": "S21",
+      "filename": "О_древнем_быте_славян_вообще_и_русских_в_особенности_на_основании_обычаев,_преданий,_поверий_и_песен_(Аксаков).epub",
+      "sha256": "fa0b23fc91da2beac981373f7682cc8272359cd72a70310171c51eed361c0235",
+      "format": "epub"
+    }
+  ],
+  "normalized_units_sha256": "dad7dfa9977a9bb76581b5a255af742ade40f8582f29d15ba9d760ee13959a38",
+  "poppler_version": "24.02.0",
+  "diagnostics_sha256": "d13143b7dea8cc67bb5c320b1b339659dc96a1a2fc59fd268d5f97271b19ade3",
+  "gold_sampling": "Two separated body passages per source; two alternative question formulations per passage. Selected manually from bounded deterministic samples; bibliography-only sample rejected. No generated external questions or calls to a generative model. Multi-hop evidence and scanned-only documents are not evaluated."
+}

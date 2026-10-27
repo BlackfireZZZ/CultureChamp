@@ -1,0 +1,10 @@
+{
+  "kind": "CPU runtime smoke, not a full benchmark",
+  "device": "cpu",
+  "model_id": "intfloat/multilingual-e5-small@614241f622f53c4eeff9890bdc4f31cfecc418b3:st-5.7-torch-2.14:fp32:512:v2",
+  "authenticated_search_status": 200,
+  "cold_search_ms": 48289,
+  "full_replay_completed": false,
+  "reason": "CPU reranking is substantially slower; full benchmark was already verified through GPU HTTP API. Interrupted redundant CPU134-question replay after successful runtime smoke.",
+  "generation_routes_called": 0
+}

@@ -20,6 +20,10 @@ dependencies = [
   "argon2-cffi==25.1.0",
   "python-multipart==0.0.32",
   "fastembed>=0.7,<1",
+  "sentence-transformers==5.7.0",
+  "torch==2.14.1",
+  "bm25s==0.2.14",
+  "PyStemmer==3.0.0",
   "openpyxl==3.1.5",
   "defusedxml>=0.7.1,<1",
 ]
@@ -54,3 +58,6 @@ plugins = ["pydantic.mypy"]
 [[tool.mypy.overrides]]
 module = ["asyncpg.*"]
 ignore_missing_imports = true
+
+[tool.uv.sources]
+torch = { index = "pytorch-cpu", marker = "sys_platform == 'linux'" }

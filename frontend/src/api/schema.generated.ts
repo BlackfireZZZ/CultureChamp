@@ -433,6 +433,23 @@ export interface paths {
         readonly patch?: never;
         readonly trace?: never;
     };
+    readonly "/api/v1/materials/search": {
+        readonly parameters: {
+            readonly query?: never;
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        /** Text Search */
+        readonly get: operations["text_search_api_v1_materials_search_get"];
+        readonly put?: never;
+        readonly post?: never;
+        readonly delete?: never;
+        readonly options?: never;
+        readonly head?: never;
+        readonly patch?: never;
+        readonly trace?: never;
+    };
     readonly "/api/v1/materials/visual-search": {
         readonly parameters: {
             readonly query?: never;
@@ -962,6 +979,30 @@ export interface components {
             readonly kind: string;
             /** Value */
             readonly value: string;
+        };
+        /** TextSearchResultView */
+        readonly TextSearchResultView: {
+            /** Context Tags */
+            readonly context_tags: readonly components["schemas"]["TagView"][];
+            /** Creator */
+            readonly creator: string | null;
+            readonly locator: components["schemas"]["LocatorView"];
+            /**
+             * Revision Id
+             * Format: uuid
+             */
+            readonly revision_id: string;
+            /** Score */
+            readonly score: number;
+            /**
+             * Segment Id
+             * Format: uuid
+             */
+            readonly segment_id: string;
+            /** Text */
+            readonly text: string;
+            /** Title */
+            readonly title: string;
         };
         /** ValidationError */
         readonly ValidationError: {
@@ -1876,6 +1917,40 @@ export interface operations {
                     readonly "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": string;
                     readonly "text/csv": string;
                     readonly "text/plain": string;
+                };
+            };
+            /** @description Validation Error */
+            readonly 422: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    readonly text_search_api_v1_materials_search_get: {
+        readonly parameters: {
+            readonly query: {
+                readonly limit?: number;
+                readonly people?: string | null;
+                readonly q: string;
+                readonly region?: string | null;
+            };
+            readonly header?: never;
+            readonly path?: never;
+            readonly cookie?: never;
+        };
+        readonly requestBody?: never;
+        readonly responses: {
+            /** @description Successful Response */
+            readonly 200: {
+                headers: {
+                    readonly [name: string]: unknown;
+                };
+                content: {
+                    readonly "application/json": readonly components["schemas"]["TextSearchResultView"][];
                 };
             };
             /** @description Validation Error */

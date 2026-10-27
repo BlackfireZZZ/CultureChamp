@@ -43,6 +43,17 @@ services:
         condition: service_healthy
     restart: "no"
 
+  retrieval-prepare:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    command: ["/workspace/.venv/bin/python", "-m", "app.infrastructure.vector.prepare_models"]
+    environment:
+      RETRIEVAL_MODEL_CACHE: /workspace/.private/retrieval-models
+    volumes:
+      - source_private:/workspace/.private
+    restart: "no"
+
   backend:
     build:
       context: .
@@ -54,6 +65,11 @@ services:
       SOURCE_STORAGE_ROOT: /workspace/.private/sources
       VECTOR_URL: http://vector:6333
       EMBEDDING_CACHE_ROOT: /workspace/.private/embedding-cache
+      RETRIEVAL_MODEL_CACHE: /workspace/.private/retrieval-models
+      RETRIEVAL_DEVICE: ${RETRIEVAL_DEVICE:-cpu}
+      OMP_NUM_THREADS: "4"
+      MKL_NUM_THREADS: "4"
+      TOKENIZERS_PARALLELISM: "false"
       MODEL_PROVIDER: ${MODEL_PROVIDER:-fake}
       MODEL_API_ENDPOINT: ${MODEL_API_ENDPOINT:-}
       MODEL_API_NAME: ${MODEL_API_NAME:-}
@@ -69,6 +85,8 @@ services:
         condition: service_completed_successfully
       vector:
         condition: service_healthy
+      retrieval-prepare:
+        condition: service_completed_successfully
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health/ready')"]
       interval: 5s
@@ -85,6 +103,11 @@ services:
       SOURCE_STORAGE_ROOT: /workspace/.private/sources
       VECTOR_URL: http://vector:6333
       EMBEDDING_CACHE_ROOT: /workspace/.private/embedding-cache
+      RETRIEVAL_MODEL_CACHE: /workspace/.private/retrieval-models
+      RETRIEVAL_DEVICE: ${RETRIEVAL_DEVICE:-cpu}
+      OMP_NUM_THREADS: "4"
+      MKL_NUM_THREADS: "4"
+      TOKENIZERS_PARALLELISM: "false"
     volumes:
       - source_private:/workspace/.private
     depends_on:
@@ -92,6 +115,8 @@ services:
         condition: service_completed_successfully
       vector:
         condition: service_healthy
+      retrieval-prepare:
+        condition: service_completed_successfully
 
   frontend:
     build:

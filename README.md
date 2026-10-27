@@ -58,6 +58,13 @@ two-role workflow on an isolated Compose stack with a self-authored CSV. The
 bounded XLSX path has a separate self-authored two-sheet integration fixture;
 neither fixture is cultural evidence.
 
+The [expanded local retrieval benchmark](ml/evals/heritage/README.md) covers the
+owner-supplied PDF/EPUB corpus without generation. Its held-out results, failed
+first selection and reproducible local search command are recorded. The selected
+local hybrid pipeline now powers server search; see the
+[retrieval operations runbook](docs/operations/retrieval.md) for model preparation,
+index replay and the generation-free search API.
+
 Feature modules and MVP boundaries should be derived from `docs/product/CONCEPT.md`.
 `DESIGN.md` supplies the visual baseline; its optional map and archive patterns do
 not define the primary workflow. Existing ADRs are retained as engineering decisions,
