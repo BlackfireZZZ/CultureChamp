@@ -33,7 +33,11 @@ files, source-containing receipts and temporary credentials are excluded from Gi
 - Clean Docker build and CPU import smoke passed. The main backend and ingestion
   worker were rebuilt/restarted, preserving database, vector and private volumes.
   Repeated preparation verifies the complete local cache without public downloads.
-- CPU first-query smoke: 48.3 seconds. Full redundant CPU replay was stopped;
+- CPU isolated first-query smoke: 48.3 seconds. The main CPU API smoke returned
+  five results with correct no-store headers in 54.6 seconds. Original hashes and
+  approvals of the four pre-existing sources were verified; generation count
+  stayed at 17 before/after. Temporary intake/smoke accounts were deactivated
+  and sessions revoked. See `round2/main-intake.json`. Full redundant CPU replay was stopped;
   GPU timing is not a CPU deployment promise. See `api-cpu-smoke.json`.
 - Independent read-only review found no authorization/integration blocker. Its
   incomplete-cache recovery finding was fixed by requiring tokenizer/config,
@@ -52,7 +56,9 @@ were hash-checked and excluded: `.env.example`, `docs/product/CONCEPT.md`,
 Models and the CUDA benchmark environment were moved to
 `/home/blackfire/.local/share/culturechamp/retrieval/` and linked from primary.
 The original corpus remains under primary `.private/corpora/heritage-2026-10-27/`.
-The retrieval worktree is archived after main integration. Seven other clean
+The app archive action remained queued, so a recoverable snapshot was committed
+on `agent/retrieval-corpus-benchmark` (`c2c59f6`) and the now-clean retrieval
+worktree was removed with Git after main integration. Seven other clean
 worktrees whose HEADs are ancestors of main were removed without force. The
 remove-brief and architecture worktrees contain unfinished changes and are
 preserved under the repository prohibition on removing dirty worktrees. The
