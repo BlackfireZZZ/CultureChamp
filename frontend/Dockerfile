@@ -5,7 +5,7 @@ RUN npm ci
 COPY . .
 RUN npm run lint && npm run test -- --run && npm run build
 
-FROM caddy:2.11.4-alpine@sha256:6aeddd44c3078b0f9a35206472a11420648a79c184603ef95957d0a20044cb2b
+FROM caddy:2.11.9-alpine@sha256:003a97808e781aa9f7e75cc2f43d34d461099031faf5e20faefb9f61126836f0
 COPY Caddyfile /etc/caddy/Caddyfile
 COPY --from=build /app/dist /srv
 RUN chown -R 65532:65532 /config /data
